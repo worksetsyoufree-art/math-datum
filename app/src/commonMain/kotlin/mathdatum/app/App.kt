@@ -26,6 +26,7 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -36,46 +37,93 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import mathdatum.core.Catalog
+import mathdatum.core.CrsDef
+import mathdatum.core.HelmertDirection
 import mathdatum.core.MatchStatus
+import mathdatum.core.Reliability
 
+/**
+ * Корень приложения. [initial] — готовый контроллер (тесты, скриншоты); иначе справочник EPSG грузится из ресурсов.
+ */
 @Composable
-fun App(controller: GeorefController = remember { GeorefController(Catalog.demo(), DemoData.surface()) }) {
-    MaterialTheme {
-        Surface(Modifier.fillMaxSize()) {
-            Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Привязка чертежа", style = MaterialTheme.typography.headlineSmall)
-                Text(controller.surface.name, style = MaterialTheme.typography.bodyMedium)
-                TabRow(selectedTabIndex = controller.mode.ordinal) {
-                    Mode.entries.forEach { m ->
-                        Tab(selected = controller.mode == m, onClick = { controller.mode = m }, modifier = Modifier.heightIn(min = 48.dp)) { Text(m.title) }
-                    }
-                }
-                Box(Modifier.weight(1f).fillMaxWidth()) {
-                    when (controller.mode) {
-                        Mode.AUTO -> AutoScreen(controller)
-                        Mode.PICK -> PickScreen(controller)
-                        Mode.POINTS -> PointsScreen(controller)
-                        Mode.CHECK -> CheckScreen(controller)
-                    }
-                }
-                StatusBar(controller)
+fun App(initial: GeorefController? = null) {
+    var controller by remember { mutableStateOf(initial) }
+    var loadNote by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(Unit) {
+        if (controller == null) {
+            controller = try {
+                GeorefController(loadEpsgCatalog(), DemoData.surface())
+            } catch (e: Throwable) {
+                loadNote = "Не удалось загрузить справочник EPSG (${e.message}). Работает урезанный демо-справочник."
+                GeorefController(Catalog.demo(), DemoData.surface())
             }
         }
+    }
+    MaterialTheme {
+        Surface(Modifier.fillMaxSize()) {
+            val c = controller
+            if (c == null) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Загрузка справочника систем координат…") }
+            else Main(c, loadNote)
+        }
+    }
+}
+
+@Composable
+private fun Main(c: GeorefController, loadNote: String?) {
+    val pick = rememberTextFilePicker { name, text -> c.open(name, text) }
+    Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Привязка чертежа", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
+            OutlinedButton(onClick = { c.openSurface(DemoData.surface()) }, modifier = Modifier.heightIn(min = 48.dp)) { Text("Демо") }
+            Button(onClick = pick, modifier = Modifier.heightIn(min = 48.dp)) { Text("Открыть файл…") }
+        }
+        SurfaceSummary(c)
+        loadNote?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        c.message?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
+        c.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        TabRow(selectedTabIndex = c.mode.ordinal) {
+            Mode.entries.forEach { m ->
+                Tab(selected = c.mode == m, onClick = { c.mode = m }, modifier = Modifier.heightIn(min = 48.dp)) { Text(m.title) }
+            }
+        }
+        Box(Modifier.weight(1f).fillMaxWidth()) {
+            when (c.mode) {
+                Mode.AUTO -> AutoScreen(c)
+                Mode.PICK -> PickScreen(c)
+                Mode.POINTS -> PointsScreen(c)
+                Mode.CHECK -> CheckScreen(c)
+            }
+        }
+        StatusBar(c)
     }
 }
 
 private fun String.num(): Double? = trim().replace(',', '.').toDoubleOrNull()
 
 @Composable
+private fun SurfaceSummary(c: GeorefController) {
+    val s = c.surface; val b = s.bounds
+    Column {
+        Text(s.name, style = MaterialTheme.typography.titleSmall)
+        Text(
+            "Вершин: ${s.vertices.size} · X ${fmt(b.minX)} … ${fmt(b.maxX)} · Y ${fmt(b.minY)} … ${fmt(b.maxY)}",
+            style = MaterialTheme.typography.bodySmall,
+        )
+    }
+}
+
+@Composable
 private fun StatusBar(c: GeorefController) {
     val a = c.applied
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            if (a == null) Text(c.error ?: "Привязка ещё не задана", color = if (c.error != null) MaterialTheme.colorScheme.error else Color.Unspecified)
+            if (a == null) Text(if (c.error != null) "Привязка не задана" else "Привязка ещё не задана")
             else {
                 Text("Привязка: ${a.description}", style = MaterialTheme.typography.titleSmall)
                 a.rmsM?.let { Text("Среднее отклонение по точкам: ${fmt(it * 1000)} мм") }
+                c.surfaceCenterWgs84()?.let { Text("Центр чертежа: ${fmt6(it.latDeg)}, ${fmt6(it.lonDeg)}", style = MaterialTheme.typography.bodySmall) }
                 a.warnings.forEach { Text("Внимание: $it", color = MaterialTheme.colorScheme.error) }
+                a.crs?.let { crs -> if (crs.helmert != null && !crs.helmertDirectionConfirmed || crs.source?.startsWith("user") == true && crs.helmert != null) DirectionPanel(c, crs) }
             }
             var saved by remember { mutableStateOf<String?>(null) }
             // «Готово» не блокируем из-за предупреждений (в духе «не отключать кнопки»)
@@ -83,6 +131,44 @@ private fun StatusBar(c: GeorefController) {
             saved?.let { Text("Файл привязки сформирован: ${it.length} символов", style = MaterialTheme.typography.bodySmall) }
         }
     }
+}
+
+/** Направление параметров перехода у пользовательской СК: подсказка по высоте и ручной выбор. */
+@Composable
+private fun DirectionPanel(c: GeorefController, crs: CrsDef) {
+    val ev = c.directionEvidence(crs)
+    val amb = c.directionAmbiguityMeters(crs)
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text("Направление параметров перехода в WGS84", style = MaterialTheme.typography.titleSmall)
+        if (amb != null) Text("Две трактовки дают положение с расхождением около ${fmt(amb)} м.")
+        if (ev != null) {
+            val s = ev.suggested
+            Text(
+                "Сдвиг высоты при переводе в WGS84: ${fmt(ev.dhIfWgs84ToLocal)} м, если параметры заданы «WGS84 → местная»; " +
+                    "${fmt(ev.dhIfLocalToWgs84)} м, если «местная → WGS84». " +
+                    when (s) {
+                        HelmertDirection.WGS84_TO_LOCAL -> "У настоящих систем высота меняется на единицы метров, поэтому вероятнее «WGS84 → местная»."
+                        HelmertDirection.LOCAL_TO_WGS84 -> "У настоящих систем высота меняется на единицы метров, поэтому вероятнее «местная → WGS84»."
+                        null -> "Однозначно решить по высоте нельзя: сверьте по известной точке."
+                    },
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            HelmertDirection.entries.forEach { d ->
+                val label = if (d == HelmertDirection.WGS84_TO_LOCAL) "WGS84 → местная" else "местная → WGS84"
+                val on = crs.helmertDirection == d
+                OutlinedButton(onClick = { c.setHelmertDirection(crs, d) }, modifier = Modifier.heightIn(min = 48.dp)) {
+                    Text(label + if (on) " (выбрано)" else "")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CrsNote(crs: CrsDef) {
+    GeorefController.datumNote(crs)?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
 }
 
 @Composable
@@ -108,10 +194,12 @@ private fun AutoScreen(c: GeorefController) {
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(cand.crs.name, style = MaterialTheme.typography.titleSmall)
+                    cand.crs.region?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
                     val status = when (cand.status) { MatchStatus.MATCH -> "подходит"; MatchStatus.NEAR -> "рядом"; MatchStatus.FAR -> "далеко" }
-                    Text("$status · ${GeorefController.unitName(cand.unitToMeters)}· ${GeorefController.axesName(cand.swapXY)}")
+                    Text("$status · ${GeorefController.unitName(cand.unitToMeters)} · ${GeorefController.axesName(cand.swapXY)}")
                     cand.distanceToAnchorM?.let { Text("До вашей метки: ${fmt(it)} м") }
-                    if (cand.reliability == mathdatum.core.Reliability.INDIRECT) Text("Выбрано по косвенным признакам, надёжность низкая")
+                    if (cand.reliability == Reliability.INDIRECT) Text("Выбрано по косвенным признакам, надёжность низкая")
+                    CrsNote(cand.crs)
                     Button(onClick = { c.apply(cand) }, modifier = Modifier.heightIn(min = 48.dp)) { Text("Применить") }
                 }
             }
@@ -122,22 +210,31 @@ private fun AutoScreen(c: GeorefController) {
 @Composable
 private fun PickScreen(c: GeorefController) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        OutlinedTextField(c.query, { c.query = it }, label = { Text("Поиск системы") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(c.pickSwap, { c.pickSwap = it }); Text("X — восток, Y — север (как в CAD)")
-        }
+        OutlinedTextField(c.query, { c.query = it }, label = { Text("Поиск: название, код EPSG, регион") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+        Text("Оси:", style = MaterialTheme.typography.labelMedium)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf(1.0, 0.001, 0.01, 1000.0).forEach { u ->
-                OutlinedButton(onClick = { c.pickUnit = u }, modifier = Modifier.heightIn(min = 48.dp)) {
-                    Text(GeorefController.unitName(u) + if (c.pickUnit == u) " (выбрано)" else "")
-                }
+            listOf<Pair<Boolean?, String>>(null to "как в системе", false to "X — север", true to "X — восток").forEach { (v, label) ->
+                OutlinedButton(onClick = { c.pickSwap = v }, modifier = Modifier.heightIn(min = 48.dp)) { Text(label + if (c.pickSwap == v) " (выбрано)" else "") }
             }
         }
+        Text("Единицы чертежа:", style = MaterialTheme.typography.labelMedium)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf<Pair<Double?, String>>(null to "как в системе", 1.0 to "метры", 0.001 to "мм", 0.01 to "см", 1000.0 to "км").forEach { (v, label) ->
+                OutlinedButton(onClick = { c.pickUnit = v }, modifier = Modifier.heightIn(min = 48.dp)) { Text(label + if (c.pickUnit == v) " (выбрано)" else "") }
+            }
+        }
+        Text("Найдено: ${c.matchCount()}${if (c.matchCount() > 200) " (показаны первые 200)" else ""}" +
+            if (c.catalog.unsupported.isNotEmpty()) " · ещё ${c.catalog.unsupported.size} систем пока не поддерживаются" else "",
+            style = MaterialTheme.typography.bodySmall)
         LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             items(c.filteredCatalog(), key = { it.id }) { crs ->
                 Card(Modifier.fillMaxWidth()) {
-                    Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(crs.name, Modifier.weight(1f))
+                    Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Column(Modifier.weight(1f)) {
+                            Text((if (crs.source?.startsWith("user") == true) "Моя СК · " else "") + crs.name, style = MaterialTheme.typography.titleSmall)
+                            Text(listOfNotNull(crs.id.takeIf { crs.epsg != null }, crs.region).joinToString(" · "), style = MaterialTheme.typography.bodySmall)
+                            CrsNote(crs)
+                        }
                         Button(onClick = { c.pick(crs) }, modifier = Modifier.heightIn(min = 48.dp)) { Text("Выбрать") }
                     }
                 }
@@ -161,6 +258,7 @@ private fun PointsScreen(c: GeorefController) {
             OutlinedTextField(lat, { lat = it }, label = { Text("Широта") }, modifier = Modifier.weight(1f), singleLine = true)
             OutlinedTextField(lon, { lon = it }, label = { Text("Долгота") }, modifier = Modifier.weight(1f), singleLine = true)
         }
+        Text("Оси: X и Y как в чертеже (X — восток, Y — север для обычного CAD).", style = MaterialTheme.typography.bodySmall)
         Button(onClick = {
             val vx = x.num(); val vy = y.num(); val la = lat.num(); val lo = lon.num()
             if (vx != null && vy != null && la != null && lo != null) { c.addPair(vx, vy, la, lo); x = ""; y = ""; lat = ""; lon = "" }
@@ -190,8 +288,9 @@ private fun PointsScreen(c: GeorefController) {
 
 @Composable
 private fun CheckScreen(c: GeorefController) {
-    var lat by remember { mutableStateOf(DemoData.DEMO_LAT.toString()) }
-    var lon by remember { mutableStateOf(DemoData.DEMO_LON.toString()) }
+    val center = c.surfaceCenterWgs84()
+    var lat by remember(c.applied, c.surface) { mutableStateOf(center?.let { fmt6(it.latDeg) } ?: DemoData.DEMO_LAT.toString()) }
+    var lon by remember(c.applied, c.surface) { mutableStateOf(center?.let { fmt6(it.lonDeg) } ?: DemoData.DEMO_LON.toString()) }
     val la = lat.num(); val lo = lon.num()
     val mark = if (la != null && lo != null) c.toSurface(la, lo) else null
     Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -208,6 +307,7 @@ private fun CheckScreen(c: GeorefController) {
                 val inside = mark.x in b.minX..b.maxX && mark.y in b.minY..b.maxY
                 Text("Метка на чертеже: X ${fmt(mark.x)}, Y ${fmt(mark.y)}")
                 Text(if (inside) "Метка внутри чертежа." else "Метка вне чертежа. Если она должна быть внутри, проверьте единицы и порядок осей.")
+                if (la != null && lo != null) Text("Карта: https://www.openstreetmap.org/?mlat=${fmt6(la)}&mlon=${fmt6(lo)}#map=17/${fmt6(la)}/${fmt6(lo)}", style = MaterialTheme.typography.bodySmall)
             }
         }
     }
@@ -218,23 +318,27 @@ private fun CheckScreen(c: GeorefController) {
 private fun SurfacePreview(c: GeorefController, modifier: Modifier, mark: Pair<Double, Double>? = null) {
     val b = c.surface.bounds
     val v = c.surface.vertices
+    // у справочных СК (X — север) картинка рисуется как есть: по горизонтали Y, по вертикали X, если применённая привязка так задана
+    val swapped = (c.applied?.georef as? mathdatum.core.CrsGeoref)?.let { !it.swapXY } ?: false
     Canvas(modifier.background(Color(0xFFF3F3F3))) {
         val pad = 12f
         val w = size.width - 2 * pad; val h = size.height - 2 * pad
-        val sx = b.maxX - b.minX; val sy = b.maxY - b.minY
+        val minH = if (swapped) b.minY else b.minX; val maxH = if (swapped) b.maxY else b.maxX
+        val minV = if (swapped) b.minX else b.minY; val maxV = if (swapped) b.maxX else b.maxY
+        val sx = maxH - minH; val sy = maxV - minV
         val k = minOf(w / (if (sx > 0) sx else 1.0), h / (if (sy > 0) sy else 1.0)).toFloat()
-        fun px(x: Double) = pad + ((x - b.minX) * k).toFloat()
-        fun py(y: Double) = size.height - pad - ((y - b.minY) * k).toFloat()
+        fun px(x: Double, y: Double) = pad + (((if (swapped) y else x) - minH) * k).toFloat()
+        fun py(x: Double, y: Double) = size.height - pad - (((if (swapped) x else y) - minV) * k).toFloat()
         val step = maxOf(1, v.size / 1500)
         for (i in 0 until v.size step step) {
-            if (v.x[i] in b.minX..b.maxX && v.y[i] in b.minY..b.maxY) drawCircle(Color(0xFF607D8B), 1.5f, Offset(px(v.x[i]), py(v.y[i])))
+            if (v.x[i] in b.minX..b.maxX && v.y[i] in b.minY..b.maxY) drawCircle(Color(0xFF607D8B), 1.5f, Offset(px(v.x[i], v.y[i]), py(v.x[i], v.y[i])))
         }
-        c.pairs.forEach { drawCircle(if (it.enabled) Color(0xFF1565C0) else Color.Gray, 6f, Offset(px(it.x), py(it.y))) }
-        mark?.let { (mx, my) -> drawCircle(Color(0xFFC62828), 8f, Offset(px(mx), py(my))) }
+        c.pairs.forEach { drawCircle(if (it.enabled) Color(0xFF1565C0) else Color.Gray, 6f, Offset(px(it.x, it.y), py(it.x, it.y))) }
+        mark?.let { (mx, my) -> drawCircle(Color(0xFFC62828), 8f, Offset(px(mx, my), py(mx, my))) }
     }
 }
 
-private fun fmt6(v: Double) = (kotlin.math.round(v * 1_000_000) / 1_000_000).toString()
+private fun fmt6(v: Double): String = (kotlin.math.round(v * 1_000_000) / 1_000_000).toString()
 
 private fun fmt(v: Double): String {
     val r = kotlin.math.round(v * 100) / 100

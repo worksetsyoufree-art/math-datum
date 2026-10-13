@@ -10,7 +10,9 @@ Kotlin Multiplatform: android, desktop, web. План и статус — [docs/
 - `Ellipsoid`, `Geodesy` — эллипсоиды, geodetic ↔ geocentric;
 - `Helmert` — 7 параметров, точный, оба соглашения вращений;
 - `TransverseMercator` — ряды Крюгера, 6-й порядок;
-- `CrsDef`, `Catalog` — СК и демо-справочник (не настоящий);
+- `CrsDef`, `Catalog` — СК, оси, единицы, статус перехода в WGS84; демо-набор в коде, полный справочник EPSG (5021 СК) — `app/src/commonMain/composeResources/files/epsg.json`;
+- `TransverseMercator`, `LambertConformalConic`, `MapProjection` — проекции;
+- `SurfaceV1`, `GsiDatumJson` — чертёж SURFACE_V1 и описание СК (`datum.json`);
 - `Georef` — единый результат: `toWgs84` / `fromWgs84`;
 - `Localization` — привязка по парам точек (подобие 2D, невязки, выбросы);
 - `DatumFinder` — поиск СК по габаритам и anchor;

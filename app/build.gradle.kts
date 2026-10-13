@@ -20,6 +20,7 @@ kotlin {
             implementation(compose.foundation)
             implementation(compose.material3)
             implementation(compose.ui)
+            implementation(compose.components.resources)
         }
         commonTest.dependencies {
             implementation(kotlin("test"))
@@ -45,6 +46,11 @@ android {
         versionCode = 1
         versionName = "0.1"
     }
+}
+
+compose.resources {
+    packageOfResClass = "mathdatum.app.res"
+    generateResClass = always
 }
 
 compose.desktop {
