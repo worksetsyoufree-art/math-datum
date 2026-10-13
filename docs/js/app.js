@@ -53,6 +53,11 @@
   var defOf = function (it) { return it.tp === "geo" ? E.geoDef(it) : it.p; };
 
   /* ---------------- helpers ---------------- */
+  function download(name, mime, text) {
+    var el = document.createElement("a");
+    el.href = URL.createObjectURL(new Blob([text], { type: mime }));
+    el.download = name; document.body.appendChild(el); el.click(); el.remove();
+  }
   function parseCoord(v) {
     v = String(v == null ? "" : v).trim().replace(",", ".");
     if (!v) return NaN;
@@ -128,6 +133,16 @@
     var seen = {}; AREAS = [];
     GEO.concat(PROJ).forEach(function (x) { if (!x.ar || seen[x.ar]) return; seen[x.ar] = 1; AREAS.push({ name: x.ar, b: x.b, lc: x.ar.toLowerCase() }); });
     return AREAS;
+  }
+  function findAreas(q0) {
+    var q = String(q0 || "").toLowerCase().trim();
+    Object.keys(ALIAS).forEach(function (k) { if (q.indexOf(k) >= 0) q = q.replace(k, ALIAS[k]); });
+    var toks = q.split(/\s+/).filter(Boolean);
+    if (!toks.length) return [];
+    return areas().filter(function (a) { return toks.every(function (w) { return a.lc.indexOf(w) >= 0; }); }).sort(function (a, b) {
+      var sa = a.lc.indexOf(toks[0]) === 0 ? 0 : 1, sb = b.lc.indexOf(toks[0]) === 0 ? 0 : 1;
+      return sa - sb || a.lc.length - b.lc.length || E.areaDeg2(b.b) - E.areaDeg2(a.b);
+    }).slice(0, 6);
   }
   $("place").addEventListener("input", function () {
     var q = this.value.toLowerCase().trim();
@@ -218,23 +233,95 @@
   }
 
   /* ---------------- IDENTIFY ---------------- */
+  var ID = { area: null };
+  function parsePoints(text) {
+    var out = [];
+    String(text || "").split(/\r?\n/).forEach(function (line, k) {
+      var nm = /name="([^"]*)"/.exec(line);
+      var body = line.replace(/<[^>]*>/g, " ");
+      var nums = body.replace(/,/g, ".").match(/-?\d+(?:\.\d+)?/g);
+      if (!nums || nums.length < 2) return;
+      out.push({ name: nm ? nm[1] : "P" + (out.length + 1), a: parseFloat(nums[0]), b: parseFloat(nums[1]), z: nums[2] != null ? parseFloat(nums[2]) : null });
+    });
+    return out;
+  }
+  function hypotheses(pt, order) {
+    var xy = { k: "xy", e: pt.b, n: pt.a }, en = { k: "en", e: pt.a, n: pt.b };
+    return order === "xy" ? [xy] : order === "en" ? [en] : [xy, en];
+  }
+  function setIdArea(a) {
+    ID.area = a || null;
+    $("id-areares").innerHTML = ID.area ? esc(t("idAreaSet")) + " <b>" + esc(short(ID.area.name, 80)) + '</b> <button class="ghost" id="id-area-x">' + esc(t("idAreaClear")) + "</button>" : "";
+    if ($("id-area-x")) $("id-area-x").onclick = function () { setIdArea(null); $("id-area").value = ""; };
+  }
+  function bindAreaSearch(inputId, resId, cb) {
+    $(inputId).addEventListener("input", function () {
+      var out = findAreas(this.value);
+      $(resId).innerHTML = out.map(function (x, i) { return '<button data-i="' + i + '">' + esc(short(x.name, 90)) + "</button>"; }).join("");
+      $(resId).querySelectorAll("button").forEach(function (b) { b.onclick = function () { cb(out[b.dataset.i]); $(resId).innerHTML = ""; }; });
+    });
+  }
+  bindAreaSearch("id-area", "id-areares", function (a) { setIdArea(a); $("id-area").value = ""; });
   $("id-ex").onclick = function () {
-    $("id-e").value = "1365816.032"; $("id-n").value = "478559.171"; $("id-lat").value = "55.75"; $("id-lon").value = "37.6"; $("id-r").value = "300"; $("id-go").click();
+    $("id-pts").value = [
+      '<P id="1" name="П_1">453594.207 2238973.376 144.153</P>', '<P id="2" name="П_2">453592.333 2238975.140 144.082</P>',
+      '<P id="3" name="П_3">453585.483 2238974.514 144.043</P>', '<P id="4" name="П_4">453585.403 2238972.128 143.971</P>',
+      '<P id="5" name="П_5">453571.586 2238973.450 143.936</P>', '<P id="6" name="П_6">453571.156 2238971.407 143.872</P>'].join("\n");
+    $("id-lat").value = ""; $("id-lon").value = ""; $("id-box").value = "55.619783, 38.310216, 55.623095, 38.304913";
+    var ru = areas().filter(function (x) { return /^Russian Federation - onshore and offshore/.test(x.name); })[0];
+    if (ru) setIdArea(ru);
+    $("id-go").click();
   };
+  function csvOf(rows) {
+    var q = function (v) { return '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"'; };
+    return "﻿" + ["name,lat,lon,z,system"].concat(rows.map(function (r) { return [r.name, r.lat.toFixed(9), r.lon.toFixed(9), r.z, r.sys].map(q).join(","); })).join("\n");
+  }
   $("id-go").onclick = function () {
-    var e = parseFloat(String($("id-e").value).replace(/\s/g, "").replace(",", ".")), n = parseFloat(String($("id-n").value).replace(/\s/g, "").replace(",", "."));
-    if (isNaN(e) || isNaN(n)) { $("id-msg").textContent = t("inE") + " / " + t("inN"); return; }
+    var pts = parsePoints($("id-pts").value);
+    if (!pts.length) { $("id-msg").textContent = t("idNoPoints"); return; }
     $("id-msg").textContent = t("idLoading");
     Promise.all([load("data/world-proj.js").then(onProj), load("data/ru.js").then(onRu)]).catch(function () { }).then(function () {
       setTimeout(function () {
         var lat = parseCoord($("id-lat").value), lon = parseCoord($("id-lon").value), r = parseFloat($("id-r").value);
-        var hint = !isNaN(lat) && !isNaN(lon) ? { lat: lat, lon: lon, radiusKm: isNaN(r) ? 300 : r } : null;
-        var res = E.identify(PROJ.concat(mskList()), e, n, window.proj4, hint);
+        var hint = {};
+        if (!isNaN(lat) && !isNaN(lon)) { hint.lat = lat; hint.lon = lon; hint.radiusKm = isNaN(r) ? 300 : r; }
+        if (ID.area) hint.area = { ar: ID.area.name, b: ID.area.b };
+        var bx = String($("id-box").value || "").replace(/,/g, " ").match(/-?\d+(?:\.\d+)?/g);
+        if (bx && bx.length) {
+          bx = bx.map(Number);
+          if (bx.length !== 4) { $("id-msg").textContent = t("idBoxBad"); return; }
+          hint.box = [Math.min(bx[0], bx[2]), Math.min(bx[1], bx[3]), Math.max(bx[0], bx[2]), Math.max(bx[1], bx[3])];
+        }
+        var list = PROJ.concat(mskList()), res = [];
+        hypotheses(pts[0], $("id-order").value).forEach(function (hy) {
+          E.identify(list, hy.e, hy.n, window.proj4, hint).forEach(function (x) { x.hy = hy.k; res.push(x); });
+        });
+        res.sort(function (a, b) { return b.score - a.score; });
         $("id-msg").textContent = res.length ? t("idShown", { n: Math.min(res.length, 30), m: res.length }) : "";
-        $("id-out").innerHTML = res.length ? '<div class="tablewrap"><table><thead><tr><th>' + esc(t("idTable")) + "</th><th>" + esc(t("idLat")) + "</th><th>" + esc(t("idLon")) + "</th><th>" + esc(t("idDist")) + "</th></tr></thead><tbody>" +
-          res.slice(0, 30).map(function (x) {
-            return "<tr><td>" + esc(x.p.tp === "msk" ? x.p.n + " (MSK)" : x.p.n + " (EPSG:" + x.p.c + ")") + '<div class="muted">' + esc(short(x.p.ar || "", 140)) + '</div></td><td class="num">' + x.lat.toFixed(5) + '</td><td class="num">' + x.lon.toFixed(5) + '</td><td class="num">' + (x.dist == null ? "—" : nf(x.dist, 1) + " " + t("km")) + "</td></tr>";
-          }).join("") + "</tbody></table></div>" : '<p class="muted">' + esc(t("idNone")) + "</p>";
+        if (!res.length) { $("id-out").innerHTML = '<p class="muted">' + esc(t("idNone")) + "</p>"; return; }
+        var rows = res.slice(0, 30);
+        $("id-out").innerHTML = '<div class="tablewrap"><table id="id-tbl"><thead><tr><th>' + esc(t("idTable")) + "</th><th>" + esc(t("idHyp")) + "</th><th>" + esc(t("idLat")) + "</th><th>" + esc(t("idLon")) + "</th><th>" + esc(t("idDist")) + "</th></tr></thead><tbody>" +
+          rows.map(function (x, i) {
+            return '<tr data-i="' + i + '" class="clickrow"><td>' + esc(x.p.tp === "msk" ? x.p.n + " (MSK)" : x.p.n + " (EPSG:" + x.p.c + ")") + '<div class="muted">' + esc(short(x.p.ar || "", 140)) + "</div></td><td>" + esc(t(x.hy === "xy" ? "idHypXY" : "idHypEN")) +
+              '</td><td class="num">' + x.lat.toFixed(6) + '</td><td class="num">' + x.lon.toFixed(6) + '</td><td class="num">' + (x.dist == null ? "—" : nf(x.dist, 1) + " " + t("km")) + "</td></tr>";
+          }).join("") + "</tbody></table></div>";
+        $("id-tbl").tBodies[0].onclick = function (ev) {
+          var tr = ev.target.closest("tr[data-i]"); if (!tr) return;
+          var nx = tr.nextElementSibling; if (nx && nx.classList.contains("detail")) { nx.remove(); return; }
+          var x = rows[tr.dataset.i], sysName = x.p.tp === "msk" ? x.p.n : "EPSG:" + x.p.c, conv = [];
+          pts.forEach(function (pt) {
+            var hy = hypotheses(pt, x.hy)[0], ll = window.proj4(x.p.p, "EPSG:4326", [hy.e, hy.n]);
+            conv.push({ name: pt.name, lat: ll[1], lon: ll[0], z: pt.z, sys: sysName });
+          });
+          var d = document.createElement("tr"); d.className = "detail";
+          d.innerHTML = '<td colspan="5"><div class="muted">' + esc(t("idAll")) + " · " + esc(t("idHeight")) + '</div><table><thead><tr><th>#</th><th>' + esc(t("idLat")) + "</th><th>" + esc(t("idLon")) + "</th><th>Z</th></tr></thead><tbody>" +
+            conv.map(function (c) { return "<tr><td>" + esc(c.name) + '</td><td class="num">' + c.lat.toFixed(8) + '</td><td class="num">' + c.lon.toFixed(8) + '</td><td class="num">' + (c.z == null ? "" : c.z) + "</td></tr>"; }).join("") +
+            '</tbody></table><div class="row"><button class="ghost" data-csv="1">' + esc(t("idCsv")) + '</button><button class="ghost" data-cp="1">' + esc(t("idCopy")) + " lat, lon</button></div></td>";
+          tr.after(d);
+          d.querySelector("[data-csv]").onclick = function () { download("points.csv", "text/csv;charset=utf-8", csvOf(conv)); };
+          d.querySelector("[data-cp]").onclick = function () { copy(conv.map(function (c) { return c.lat.toFixed(8) + ", " + c.lon.toFixed(8); }).join("\n"), d.querySelector("[data-cp]")); };
+        };
+        if ($("id-tbl").tBodies[0].rows.length) $("id-tbl").tBodies[0].rows[0].click();
       }, 20);
     });
   };

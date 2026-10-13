@@ -37,9 +37,14 @@ with sync_playwright() as p:
     # --- identify ---
     pg.click("[data-tab=identify]"); pg.click("#id-ex")
     pg.wait_for_selector("#id-out table", timeout=30000)
-    ident = pg.inner_text("#id-out table")
-    print("identify:", ident.split("\n")[3:6])
-    assert "МСК-50 зона 1" in ident, ident[:300]
+    pg.wait_for_selector("#id-tbl tr.detail", timeout=10000)        # first row auto-expanded with all points
+    ident = pg.inner_text("#id-tbl")
+    print("identify:", ident.split("\n")[3:7])
+    assert "МСК-50 зона 2" in ident, ident[:400]
+    assert pg.locator("#id-tbl tr.detail tbody tr").count() == 6, "six converted points expected"
+    first = pg.inner_text("#id-tbl tr.detail tbody tr >> nth=0")
+    print("first point:", first.replace("\n", " "))
+    assert "55.62" in first and "38.30" in first, first
     # --- convert ---
     pg.click("[data-tab=convert]")
     pg.wait_for_function("document.querySelector('#pk-to .pk-in').value.includes('32637')", timeout=20000)
@@ -49,7 +54,7 @@ with sync_playwright() as p:
     # --- catalog ---
     pg.click("[data-tab=catalog]"); pg.fill("#c-q", "Pulkovo 1995"); pg.wait_for_timeout(300)
     n = pg.locator("#c-tbl tbody tr").count(); print("catalog rows for 'Pulkovo 1995':", n); assert n > 3
-    pg.click("#c-tbl tbody tr >> nth=0"); pg.wait_for_timeout(100); assert pg.locator("tr.detail").count() == 1
+    pg.click("#c-tbl tbody tr >> nth=0"); pg.wait_for_timeout(100); assert pg.locator("#c-tbl tr.detail").count() == 1
     # --- about: no unresolved tokens ---
     pg.click("[data-tab=about]")
     about = pg.inner_text("#about")

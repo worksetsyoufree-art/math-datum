@@ -195,22 +195,32 @@
     return out;
   }
 
-  /* Which CRS could these projected coordinates be in? hint = {lat, lon, radiusKm} (optional) */
+  function falseEasting(p) {
+    if (p.fe != null) return p.fe;
+    var m = /\+x_0=([-\d.e+]+)/.exec(p.p);
+    return m ? Number(m[1]) : p.m === "utm" ? 500000 : null;
+  }
+  /* Which CRS could these projected coordinates be in?
+     hint = {lat, lon, radiusKm}, {box: [south, west, north, east]} and/or {area: {ar, b}} (country/region the data is in); both optional. */
   function identify(list, e, n, proj4, hint) {
-    var out = [];
+    var out = [], memo = {};
     for (var i = 0; i < list.length; i++) {
       var p = list[i], ll;
       try { ll = proj4(p.p, "EPSG:4326", [e, n]); } catch (err) { continue; }
       if (!ll || !isFinite(ll[0]) || !isFinite(ll[1]) || Math.abs(ll[1]) > 90) continue;
       var lon = ((ll[0] + 540) % 360) - 180, lat = ll[1];
       if (!inBox(p.b, lon, lat, 0.5)) continue;
+      if (hint && hint.area && !areaCheck({ ar: hint.area.ar, b: hint.area.b }, lat, lon, memo)) continue;
+      if (hint && hint.box && (lat < hint.box[0] || lat > hint.box[2] || lon < hint.box[1] || lon > hint.box[3])) continue; // [south, west, north, east]
       var d = null;
       if (hint && hint.lat != null && hint.lon != null) {
         d = distKm(lat, lon, hint.lat, hint.lon);
         if (hint.radiusKm && d > hint.radiusKm) continue;
       }
-      var sp = specificity(p.b);
-      var score = (d == null ? 0 : 100 / (1 + d / 25)) + 30 * sp + (p.src === "msk" ? (p.st === "verified" ? 4 : -4) : 0);
+      var sp = specificity(p.b), score = (d == null ? 0 : 100 / (1 + d / 25)) + 30 * sp + (p.src === "msk" ? (p.st === "verified" ? 6 : -4) : 0);
+      if (p.src === "msk") { var cc = centre(p.b); score += 20 * Math.max(0, 1 - distKm(lat, lon, cc[0], cc[1]) / 450); } // nearer to the middle of the region
+      var fe = falseEasting(p);
+      if (fe != null && (p.m === "tmerc" || p.m === "utm")) score += 25 * Math.max(0, 1 - Math.abs(e - fe) / 300000); // real data lies near the central meridian
       out.push({ p: p, lat: lat, lon: lon, dist: d, score: score });
     }
     out.sort(function (a, b) { return b.score - a.score; });

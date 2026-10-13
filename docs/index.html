@@ -73,10 +73,15 @@
     <div class="card">
       <h2 data-i18n="idTitle"></h2>
       <p class="muted" data-i18n="idDesc"></p>
+      <label><span data-i18n="idPoints"></span><textarea id="id-pts" rows="6" spellcheck="false" placeholder="453594.207 2238973.376 144.153"></textarea></label>
       <div class="grid2">
-        <label><span data-i18n="inE"></span><input id="id-e" inputmode="decimal" placeholder="1365816.032"></label>
-        <label><span data-i18n="inN"></span><input id="id-n" inputmode="decimal" placeholder="478559.171"></label>
+        <label><span data-i18n="idOrder"></span>
+          <select id="id-order"><option value="auto" data-i18n="idOrderAuto"></option><option value="xy" data-i18n="idOrderXY"></option><option value="en" data-i18n="idOrderEN"></option></select>
+        </label>
+        <label><span data-i18n="idArea"></span><input id="id-area" data-i18n-ph="idAreaPh" autocomplete="off"></label>
       </div>
+      <div id="id-areares" class="zones"></div>
+      <label><span data-i18n="idBox"></span><input id="id-box" data-i18n-ph="idBoxPh" autocomplete="off"></label>
       <h3 data-i18n="idHint"></h3>
       <div class="grid3b">
         <label><span data-i18n="lat"></span><input id="id-lat" inputmode="text" placeholder="55.83"></label>
@@ -85,7 +90,7 @@
       </div>
       <div class="row">
         <button id="id-go" class="primary" data-i18n="idFind"></button>
-        <button id="id-ex" class="ghost" data-i18n="idExample"></button>
+        <button id="id-ex" class="ghost" data-i18n="idPointsEx"></button>
         <span id="id-msg" class="muted"></span>
       </div>
     </div>

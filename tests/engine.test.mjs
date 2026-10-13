@@ -48,5 +48,14 @@ const [e, n] = proj4("EPSG:4326", PROJ.find((p) => p.c === 32637).p, [37.6173, 5
 const id2 = Engine.identify(PROJ, e, n, proj4, { lat: 55.75, lon: 37.6, radiusKm: 50 });
 check("Identify UTM 37N coordinates (hint Moscow)", id2.slice(0, 15).some((x) => x.p.c === 32637), id2.slice(0, 3).map((x) => x.p.n).join(" | "));
 check("Identify with a hint in a wrong place finds nothing near", Engine.identify(PROJ, e, n, proj4, { lat: -33, lon: 151, radiusKm: 100 }).every((x) => x.dist <= 100));
+const RU_AREA = { ar: "Russian Federation - onshore and offshore.", b: [18.92, 39.87, -168.97, 85.19] };
+const u1 = Engine.identify(PROJ.concat(MSK), 2238973.376, 453594.207, proj4, { area: RU_AREA });
+check("Identify user points (X=453594.207 north, Y=2238973.376 east) in Russia: MSK-50 zone 2 in top 3", u1.slice(0, 3).some((x) => /МСК-50 зона 2/.test(x.p.n)), u1.slice(0, 4).map((x) => x.p.n).join(" | "));
+check("...and every Russia-only candidate is inside Russia", u1.every((x) => x.lat > 40 && x.lat < 82));
+const BOX = [55.619783, 38.304913, 55.623095, 38.310216];
+const ub = Engine.identify(PROJ.concat(MSK), 2238973.376, 453594.207, proj4, { box: BOX });
+check("User box: MSK-50 zone 2 is first and every result is inside the box", /МСК-50 зона 2/.test(ub[0].p.n) && ub.every((x) => x.lat >= BOX[0] && x.lat <= BOX[2] && x.lon >= BOX[1] && x.lon <= BOX[3]), ub.slice(0, 3).map((x) => x.p.n + " " + x.lat.toFixed(6) + "," + x.lon.toFixed(6)).join(" | "));
+const u2 = Engine.identify(PROJ.concat(MSK), 453594.207, 2238973.376, proj4, { area: RU_AREA });
+check("Wrong axis order (E=453594, N=2238973) does not produce MSK-50", !u2.slice(0, 5).some((x) => /МСК-50/.test(x.p.n)), u2.slice(0, 3).map((x) => x.p.n).join(" | "));
 check("search by EPSG code", Engine.search(GEO, "4326", 5).some((g) => g.c === 4326));
 process.exit(fails ? 1 : 0);

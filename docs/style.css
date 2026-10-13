@@ -109,3 +109,6 @@ canvas.map { width: 100%; height: auto; border: 1px solid var(--line); border-ra
 #c-tbl td { cursor: pointer; }
 #c-tbl tr.detail td { cursor: default; }
 .tp { font-size: 11px; padding: 1px 6px; border-radius: 4px; background: var(--code); color: var(--muted); white-space: nowrap; }
+
+textarea { display: block; width: 100%; margin-top: 4px; padding: 9px 10px; font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; resize: vertical; }
+textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
