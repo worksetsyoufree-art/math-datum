@@ -31,6 +31,12 @@ object GeorefJson {
             "similarity" to linkedMapOf("aRe" to g.similarity.aRe, "aIm" to g.similarity.aIm, "tx" to g.similarity.tx, "ty" to g.similarity.ty),
             "height" to linkedMapOf("a" to g.height.a, "b" to g.height.b, "c" to g.height.c, "x0" to g.height.x0, "y0" to g.height.y0),
         )
+        is LocalizedGeoref3D -> linkedMapOf(
+            "format" to FORMAT.toDouble(), "type" to "local3d",
+            "lat0" to g.plane.lat0 / DEG, "lon0" to g.plane.lon0 / DEG, "h0" to g.h0,
+            "scale" to g.similarity.scale, "r" to g.similarity.r.toList(),
+            "t" to listOf(g.similarity.t.x, g.similarity.t.y, g.similarity.t.z),
+        )
         else -> throw IllegalArgumentException("Неизвестная реализация Georef: ${g::class}")
     }
 
@@ -67,6 +73,15 @@ object GeorefJson {
                     base, LocalPlane(m["lat0"].asDouble("lat0") * DEG, m["lon0"].asDouble("lon0") * DEG),
                     Similarity2D(s["aRe"].asDouble("aRe"), s["aIm"].asDouble("aIm"), s["tx"].asDouble("tx"), s["ty"].asDouble("ty")),
                     HeightModel(h["a"].asDouble("a"), h["b"].asDouble("b"), h["c"].asDouble("c"), h["x0"].asDouble("x0"), h["y0"].asDouble("y0")),
+                )
+            }
+            "local3d" -> {
+                val r = m["r"].asList("r").map { it.asDouble("r") }
+                val t = m["t"].asList("t").map { it.asDouble("t") }
+                if (r.size != 9 || t.size != 3) throw Json.ParseException("local3d: r — 9 чисел, t — 3 числа")
+                LocalizedGeoref3D(
+                    LocalPlane(m["lat0"].asDouble("lat0") * DEG, m["lon0"].asDouble("lon0") * DEG),
+                    Similarity3D(m["scale"].asDouble("scale"), r.toDoubleArray(), Vec3(t[0], t[1], t[2])), m["h0"].asDouble("h0"),
                 )
             }
             else -> throw Json.ParseException("Неизвестный тип привязки '$t'")

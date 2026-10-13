@@ -27,6 +27,18 @@ data class LocalizationOptions(
 
 enum class HeightMode { OFFSET, PLANE }
 
+sealed interface LocalizationResult3D {
+    class Ok(
+        val georef: Georef,
+        val similarity: Similarity3D,
+        val residualsM: List<Double>,
+        val rmsM: Double,
+        val warnings: Set<LocalizationWarning>,
+    ) : LocalizationResult3D
+
+    class Failed(val reason: String) : LocalizationResult3D
+}
+
 class PairResidual(val index: Int, val dEast: Double, val dNorth: Double) {
     val distance get() = hypot(dEast, dNorth)
 }
@@ -53,6 +65,30 @@ object Localization {
         val p = pairs.map { it.surface.x to it.surface.y }
         val dz = pairs.map { if (it.surface.z.isNaN()) Double.NaN else it.wgs84.h - it.surface.z }
         return fit(pairs, p, dz, opts) { plane, sim, h -> LocalizedGeoref(plane, sim, h) }
+    }
+
+    /**
+     * Привязка 3D по Хорну: нужны ≥ 3 неколлинеарные пары с высотами. Для наклонных поверхностей, где плоскость высоты
+     * и поворот вокруг вертикали недостаточны. Невязки — в метрах по трём осям.
+     */
+    fun localize3D(pairs: List<ControlPair>, opts: LocalizationOptions = LocalizationOptions()): LocalizationResult3D {
+        if (pairs.size < 3) return LocalizationResult3D.Failed("Для 3D нужно минимум 3 пары точек")
+        if (pairs.any { it.surface.z.isNaN() }) return LocalizationResult3D.Failed("У всех пар должна быть высота чертежа")
+        val plane = LocalPlane(pairs.map { it.wgs84.lat }.average(), circularMeanLon(pairs.map { it.wgs84.lon }))
+        val h0 = pairs.map { it.wgs84.h }.average()
+        val p = pairs.map { Vec3(it.surface.x, it.surface.y, it.surface.z) }
+        val q = pairs.map { val (e, n) = plane.toPlane(it.wgs84); Vec3(e, n, it.wgs84.h - h0) }
+        val sim = Horn.solve(p, q, opts.fixScale) ?: return LocalizationResult3D.Failed("Точки лежат на одной прямой или совпадают")
+        val res = p.indices.map { i ->
+            val m = sim.apply(p[i])
+            sqrt((m.x - q[i].x) * (m.x - q[i].x) + (m.y - q[i].y) * (m.y - q[i].y) + (m.z - q[i].z) * (m.z - q[i].z))
+        }
+        val rms = sqrt(res.sumOf { it * it } / res.size)
+        val w = mutableSetOf<LocalizationWarning>()
+        if (pairs.size == 3) w += LocalizationWarning.NO_REDUNDANCY
+        if (!opts.fixScale && abs(sim.scale - 1.0) > opts.scaleTolerance) w += LocalizationWarning.SCALE_NOT_ONE
+        if (pairs.size > 3 && rms > opts.rmsToleranceM) w += LocalizationWarning.RMS_ABOVE_TOLERANCE
+        return LocalizationResult3D.Ok(LocalizedGeoref3D(plane, sim, h0), sim, res, rms, w)
     }
 
     /**

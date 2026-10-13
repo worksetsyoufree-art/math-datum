@@ -110,3 +110,17 @@ class CalibratedGeoref(
         return base.fromWgs84(plane.fromPlane(e2, n2, p.h - height.correction(b0.x, b0.y)))
     }
 }
+
+/** Привязка 3D по Хорну: поверхность (x, y, z) —подобие 3D→ локальная (E, N, h − h0) ↔ WGS84. Для наклонных поверхностей. */
+class LocalizedGeoref3D(val plane: LocalPlane, val similarity: Similarity3D, val h0: Double) : Georef {
+    override fun toWgs84(x: Double, y: Double, z: Double): Geodetic {
+        val v = similarity.apply(Vec3(x, y, if (z.isNaN()) 0.0 else z))
+        return plane.fromPlane(v.x, v.y, v.z + h0)
+    }
+
+    override fun fromWgs84(p: Geodetic): SurfacePoint {
+        val (e, n) = plane.toPlane(p)
+        val v = similarity.applyInverse(Vec3(e, n, p.h - h0))
+        return SurfacePoint(v.x, v.y, v.z)
+    }
+}
