@@ -16,6 +16,15 @@ data class GeoBounds(val minLat: Double, val maxLat: Double, val minLon: Double,
 enum class HelmertDirection { WGS84_TO_LOCAL, LOCAL_TO_WGS84 }
 
 /**
+ * Насколько известен переход СК → WGS84.
+ * EXACT — СК на WGS84 или эквивалентной системе (нулевой сдвиг в реестре); HELMERT — параметры из реестра;
+ * HELMERT_PARTIAL — параметры из реестра, но зона их применимости покрывает меньше половины зоны СК;
+ * APPROX_GRID — в реестре только сеточный/нестандартный переход (здесь не реализован, принят нулевой сдвиг);
+ * APPROX_UNKNOWN — перехода в реестре нет (принят нулевой сдвиг, возможна ошибка до сотен метров).
+ */
+enum class DatumStatus { EXACT, HELMERT, HELMERT_PARTIAL, APPROX_GRID, APPROX_UNKNOWN }
+
+/**
  * Описание СК: эллипсоид + (опц.) Гельмерт + проекция.
  * Это «справочная» часть без калибровки (ГСКО/ВСКО/геоид — отдельный слой, см. docs/PLAN.md).
  *
@@ -37,6 +46,11 @@ class CrsDef(
     val unitToMeters: Double = 1.0,
     /** false — направление Гельмерта не подтверждено источником (см. [helmertAmbiguityMeters]). */
     val helmertDirectionConfirmed: Boolean = true,
+    val datumStatus: DatumStatus = DatumStatus.EXACT,
+    /** Заявленная точность перехода в WGS84, м (реестр); null — неизвестна. */
+    val datumAccuracyM: Double? = null,
+    /** Исходная географическая СК (например, EPSG:4284), если известна. */
+    val baseCrs: String? = null,
 ) {
     private fun toLocalCart(c: Vec3): Vec3 = helmert?.let {
         if (helmertDirection == HelmertDirection.WGS84_TO_LOCAL) it.forward(c) else it.inverse(c)
@@ -68,6 +82,7 @@ class CrsDef(
     /** Копия с другим направлением Гельмерта (для проверки обеих трактовок). */
     fun withHelmertDirection(dir: HelmertDirection, confirmed: Boolean = helmertDirectionConfirmed) = CrsDef(
         id, name, ellipsoid, helmert, projection, bounds, epsg, region, source, dir, firstAxisIsEast, unitToMeters, confirmed,
+        datumStatus, datumAccuracyM, baseCrs,
     )
 
     /**

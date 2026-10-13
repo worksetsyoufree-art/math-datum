@@ -1,6 +1,14 @@
 package mathdatum.core
 
-class Catalog(val entries: List<CrsDef>) {
+/** СК реестра, которые ядро пока не умеет считать: метод проекции, нулевой меридиан, оси. */
+class UnsupportedCrs(val id: String, val name: String, val methodCode: Int?, val methodName: String?, val reason: String, val region: String?)
+
+class Catalog(
+    val entries: List<CrsDef>,
+    val unsupported: List<UnsupportedCrs> = emptyList(),
+    val version: String = "",
+    val source: String = "",
+) {
     companion object {
         /**
          * ДЕМО-справочник для прототипа и тестов. Параметры СК-42 здесь ориентировочные;

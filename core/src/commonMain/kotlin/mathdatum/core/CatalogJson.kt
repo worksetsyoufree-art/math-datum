@@ -10,7 +10,9 @@ package mathdatum.core
  *       "helmert": null | "<ключ таблицы>" | {…},
  *       "projection": {"method": 9807|9808|9801|9802, …параметры, градусы и метры…},
  *       "axes": "NE"|"EN", "unit": метров в единице СК,
- *       "bounds": null | [minLat,maxLat,minLon,maxLon], "epsg","region","source" } ] }
+ *       "bounds": null | [minLat,maxLat,minLon,maxLon], "epsg","region","source",
+ *       "base": "<исходная географическая СК>", "dt": "exact"|"helmert"|"helmert_partial"|"approx_grid"|"approx_unknown", "dtAcc": м } ],
+ *   "unsupported": [ {"id","name","method","methodName","reason","region"} ] }
  * Параметры проекции: TM/TMS — lat0, lon0, k0, x0 (восток), y0 (север); LCC 1SP — то же;
  * LCC 2SP — latF, lonF, lat1, lat2, eF, nF. Направление Гельмерта: "wgs84_to_local" (по умолчанию) или "local_to_wgs84".
  * В v1 вместо "projection" был ключ "tm" (lat0, lon0, k0, x0, y0).
@@ -30,6 +32,9 @@ object CatalogJson {
         "epsg" to c.epsg?.toDouble(),
         "region" to c.region,
         "source" to c.source,
+        "base" to c.baseCrs,
+        "dt" to c.datumStatus.name.lowercase(),
+        "dtAcc" to c.datumAccuracyM,
     )
 
     private fun encodeEllipsoid(e: Ellipsoid): Any = e.id ?: linkedMapOf("a" to e.a, "invF" to e.invF, "name" to e.name)
@@ -111,11 +116,15 @@ object CatalogJson {
         if (axes != "NE" && axes != "EN") throw Json.ParseException("$id: axes должно быть NE или EN")
         val unit = m["unit"]?.asDouble("unit") ?: 1.0
         if (!(unit > 0.0)) throw Json.ParseException("$id: unit должен быть > 0")
+        val dt = m["dt"]?.asString("dt")?.let { n ->
+            DatumStatus.entries.firstOrNull { it.name.equals(n, ignoreCase = true) } ?: throw Json.ParseException("$id: неизвестный dt '$n'")
+        } ?: if (hel == null) DatumStatus.EXACT else DatumStatus.HELMERT
         return CrsDef(
             id, m["name"].asString("name"), ell, hel?.first, projection, bounds,
             epsg = m["epsg"]?.asInt("epsg"), region = m["region"]?.asString("region"), source = m["source"]?.asString("source"),
             helmertDirection = hel?.second ?: HelmertDirection.WGS84_TO_LOCAL,
             firstAxisIsEast = axes == "EN", unitToMeters = unit, helmertDirectionConfirmed = hel?.third ?: true,
+            datumStatus = dt, datumAccuracyM = m["dtAcc"]?.asDouble("dtAcc"), baseCrs = m["base"]?.asString("base"),
         )
     }
 
@@ -136,6 +145,13 @@ object CatalogJson {
         val ids = HashSet<String>()
         val entries = root["entries"].asList("entries").map { decodeCrs(it, tables) }
         entries.forEach { if (!ids.add(it.id)) throw Json.ParseException("Дубль id '${it.id}'") }
-        return Catalog(entries)
+        val unsupported = (root["unsupported"]?.asList("unsupported") ?: emptyList()).map {
+            val u = it.asMap("unsupported")
+            UnsupportedCrs(
+                u["id"].asString("id"), u["name"].asString("name"), u["method"]?.asInt("method"), u["methodName"]?.asString("methodName"),
+                u["reason"]?.asString("reason") ?: "", u["region"]?.asString("region"),
+            )
+        }
+        return Catalog(entries, unsupported, root["version"]?.asString("version") ?: "", root["source"]?.asString("source") ?: "")
     }
 }
