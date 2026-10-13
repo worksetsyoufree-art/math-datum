@@ -85,4 +85,48 @@ class LocalizationTest {
         assertEquals(a.rmsM, b.rmsM, 1e-9)
         assertEquals(a.similarity.scale, b.similarity.scale, 1e-12)
     }
+
+    // высота истины: H_wgs = z + 0.5 + 1e-4·x − 2e-4·y (наклон ВСКО); у truth h = 0 по построению, добавим вручную
+    private fun pairWithHeight(dx: Double, dy: Double): ControlPair {
+        val z = 100.0 + dx * 0.001
+        val hw = z + 0.5 + 1e-4 * dx - 2e-4 * dy
+        val p = pair(dx, dy, z)
+        return ControlPair(p.surface, Geodetic(p.wgs84.lat, p.wgs84.lon, hw))
+    }
+
+    @Test
+    fun heightPlaneRecoversSlopeAndOffsetMode() {
+        val pairs = grid.map { pairWithHeight(it.first, it.second) }
+        val r = Localization.localize(pairs, LocalizationOptions(heightMode = HeightMode.PLANE))
+        assertIs<LocalizationResult.Ok>(r)
+        assertTrue(r.heightRmsM!! < 1e-6, "h rms=${r.heightRmsM}")
+        assertTrue(LocalizationWarning.HEIGHT_PLANE_FALLBACK !in r.warnings)
+        val c = pairWithHeight(777.0, -888.0)
+        val w = r.georef.toWgs84(c.surface.x, c.surface.y, c.surface.z)
+        assertEquals(c.wgs84.h, w.h, 1e-5)
+        assertEquals(c.surface.z, r.georef.fromWgs84(c.wgs84).z, 1e-5)
+        val off = Localization.localize(pairs)
+        assertIs<LocalizationResult.Ok>(off)
+        assertTrue(off.heightRmsM!! > 0.1) // сдвигом наклон не убрать
+    }
+
+    @Test
+    fun heightPlaneFallsBackOnCollinearOrFewPoints() {
+        val line = listOf(0.0 to 0.0, 100.0 to 50.0, 200.0 to 100.0, 300.0 to 150.0).map { pairWithHeight(it.first, it.second) }
+        val r = Localization.localize(line, LocalizationOptions(heightMode = HeightMode.PLANE))
+        assertIs<LocalizationResult.Ok>(r)
+        assertTrue(LocalizationWarning.HEIGHT_PLANE_FALLBACK in r.warnings)
+        assertTrue(!r.heightRmsM!!.isNaN())
+        val two = Localization.localize(line.take(2), LocalizationOptions(heightMode = HeightMode.PLANE))
+        assertIs<LocalizationResult.Ok>(two)
+        assertTrue(LocalizationWarning.HEIGHT_PLANE_FALLBACK in two.warnings)
+    }
+
+    @Test
+    fun noHeightsIsReported() {
+        val r = Localization.localize(grid.map { pair(it.first, it.second) })
+        assertIs<LocalizationResult.Ok>(r)
+        assertTrue(LocalizationWarning.NO_HEIGHTS in r.warnings)
+        assertNull(r.heightRmsM)
+    }
 }

@@ -13,6 +13,8 @@ enum class LocalizationWarning {
     SCALE_NOT_ONE,                // масштаб отличается от 1 больше допуска
     RMS_ABOVE_TOLERANCE,
     OUTLIER_SUSPECTED,            // см. LocalizationResult.suspectedOutlier
+    HEIGHT_PLANE_FALLBACK,        // плоскость высоты запрошена, но данных/геометрии мало: применён сдвиг
+    NO_HEIGHTS,                   // у пар нет высот: поправка высоты нулевая
 }
 
 data class LocalizationOptions(
@@ -20,7 +22,10 @@ data class LocalizationOptions(
     val allowSinglePair: Boolean = false, // решение 0: явно разрешить «только сдвиг»
     val scaleTolerance: Double = 1e-4,    // 0,01 %
     val rmsToleranceM: Double = 0.05,
+    val heightMode: HeightMode = HeightMode.OFFSET,
 )
+
+enum class HeightMode { OFFSET, PLANE }
 
 class PairResidual(val index: Int, val dEast: Double, val dNorth: Double) {
     val distance get() = hypot(dEast, dNorth)
@@ -34,6 +39,7 @@ sealed interface LocalizationResult {
         val rmsM: Double,
         val warnings: Set<LocalizationWarning>,
         val suspectedOutlier: Int?,
+        val heightRmsM: Double? = null,
     ) : LocalizationResult
 
     /** Не NaN и не исключение, а понятная причина. */
@@ -78,10 +84,38 @@ object Localization {
         val outlier = if (pairs.size >= 4) suspectOutlier(p, q, opts, rms) else null
         if (outlier != null) warnings += LocalizationWarning.OUTLIER_SUSPECTED
 
-        val dz = pairs.filter { !it.surface.z.isNaN() }.map { it.wgs84.h - it.surface.z }
-        val heightOffset = if (dz.isEmpty()) 0.0 else dz.average()
+        val withZ = pairs.filter { !it.surface.z.isNaN() }
+        val height = fitHeight(withZ, opts.heightMode, warnings)
+        val heightRms = if (withZ.isEmpty()) null
+        else sqrt(withZ.sumOf { val d = it.wgs84.h - it.surface.z - height.correction(it.surface.x, it.surface.y); d * d } / withZ.size)
 
-        return LocalizationResult.Ok(LocalizedGeoref(plane, sim, heightOffset), sim, residuals, rms, warnings, outlier)
+        return LocalizationResult.Ok(LocalizedGeoref(plane, sim, height), sim, residuals, rms, warnings, outlier, heightRms)
+    }
+
+    /** Сдвиг по высоте или плоскость (МНК, центрирование по центроиду). Вырождение — откат к сдвигу с предупреждением. */
+    private fun fitHeight(pts: List<ControlPair>, mode: HeightMode, warnings: MutableSet<LocalizationWarning>): HeightModel {
+        if (pts.isEmpty()) { warnings += LocalizationWarning.NO_HEIGHTS; return HeightModel.ZERO }
+        val dz = pts.map { it.wgs84.h - it.surface.z }
+        val mean = dz.average()
+        if (mode == HeightMode.OFFSET) return HeightModel(0.0, 0.0, mean)
+        val x0 = pts.map { it.surface.x }.average()
+        val y0 = pts.map { it.surface.y }.average()
+        if (pts.size < 3) { warnings += LocalizationWarning.HEIGHT_PLANE_FALLBACK; return HeightModel(0.0, 0.0, mean) }
+        // нормальные уравнения для [a, b] после вычитания среднего (c = mean − a·0 − b·0 в центрированных координатах)
+        var sxx = 0.0; var sxy = 0.0; var syy = 0.0; var sxz = 0.0; var syz = 0.0
+        for (i in pts.indices) {
+            val x = pts[i].surface.x - x0; val y = pts[i].surface.y - y0; val z = dz[i] - mean
+            sxx += x * x; sxy += x * y; syy += y * y; sxz += x * z; syz += y * z
+        }
+        val det = sxx * syy - sxy * sxy
+        // относительный критерий: det/(sxx·syy) → 0 при коллинеарных точках
+        if (sxx <= 0.0 || syy <= 0.0 || det <= 1e-9 * sxx * syy) {
+            warnings += LocalizationWarning.HEIGHT_PLANE_FALLBACK
+            return HeightModel(0.0, 0.0, mean)
+        }
+        val a = (sxz * syy - syz * sxy) / det
+        val b = (syz * sxx - sxz * sxy) / det
+        return HeightModel(a, b, mean, x0, y0)
     }
 
     /** Замкнутое решение (Умеяма в комплексной форме). Для n = 1 — сдвиг, scale = 1, θ = 0. */

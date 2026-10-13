@@ -13,7 +13,9 @@ Kotlin Multiplatform: android, desktop, web. План и статус — [docs/
 - `CrsDef`, `Catalog` — СК и демо-справочник (не настоящий);
 - `Georef` — единый результат: `toWgs84` / `fromWgs84`;
 - `Localization` — привязка по парам точек (подобие 2D, невязки, выбросы);
-- `DatumFinder` — поиск СК по габаритам и anchor.
+- `DatumFinder` — поиск СК по габаритам и anchor;
+- `CatalogJson`, `GeorefJson` — справочник и файл привязки (JSON v1, без зависимостей);
+- `SurfaceAnalysis`, `SurfaceUnits` — габариты без мусорных вершин, кандидаты единиц.
 
 ```kotlin
 val r = Localization.localize(pairs)               // пары: точка чертежа ↔ WGS84
@@ -26,7 +28,8 @@ found.first().toGeoref()
 ## Тесты
 
 ```
-./gradlew :core:allTests
+./gradlew :core:allTests                       # Gradle (нужен доступ к Maven)
+KOTLINC_HOME=/path/to/kotlinc tools/run_jvm_tests.sh   # без Gradle, JVM
 ```
 
 Эталоны из PROJ: `tools/gen_golden.py` (нужен `pip install pyproj`).

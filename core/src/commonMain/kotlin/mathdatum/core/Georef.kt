@@ -57,21 +57,30 @@ class LocalPlane(val lat0: Double, val lon0: Double) {
     fun fromPlane(e: Double, n: Double, h: Double): Geodetic = tm.inverse(n, e).let { Geodetic(it.first, it.second, h) }
 }
 
+/** Поправка высоты ВСКО: H_wgs = z + a·(x − x0) + b·(y − y0) + c. При a = b = 0 — просто сдвиг c. */
+class HeightModel(val a: Double, val b: Double, val c: Double, val x0: Double = 0.0, val y0: Double = 0.0) {
+    fun correction(x: Double, y: Double) = a * (x - x0) + b * (y - y0) + c
+
+    companion object {
+        val ZERO = HeightModel(0.0, 0.0, 0.0)
+    }
+}
+
 /** Привязка по точкам: поверхность(x, y) —подобие→ локальная плоскость (E, N) ↔ WGS84. */
 class LocalizedGeoref(
     val plane: LocalPlane,
     val similarity: Similarity2D,
-    val heightOffset: Double,
+    val height: HeightModel = HeightModel.ZERO,
 ) : Georef {
     override fun toWgs84(x: Double, y: Double, z: Double): Geodetic {
         val (e, n) = similarity.apply(x, y)
-        val h = (if (z.isNaN()) 0.0 else z) + heightOffset
+        val h = (if (z.isNaN()) 0.0 else z) + height.correction(x, y)
         return plane.fromPlane(e, n, h)
     }
 
     override fun fromWgs84(p: Geodetic): SurfacePoint {
         val (e, n) = plane.toPlane(p)
         val (x, y) = similarity.applyInverse(e, n)
-        return SurfacePoint(x, y, p.h - heightOffset)
+        return SurfacePoint(x, y, p.h - height.correction(x, y))
     }
 }

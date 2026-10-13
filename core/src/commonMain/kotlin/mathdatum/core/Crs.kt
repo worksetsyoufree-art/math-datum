@@ -18,6 +18,7 @@ class CrsDef(
     val bounds: GeoBounds? = null,
     val epsg: Int? = null,
     val region: String? = null,
+    val source: String? = null,
 ) {
     /** WGS84 (геодезические, рад) → (север, восток, высота над эллипсоидом СК). */
     fun fromWgs84(p: Geodetic): Triple<Double, Double, Double> {
