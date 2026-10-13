@@ -19,6 +19,11 @@ class CrsGeoref(
     val swapXY: Boolean = false,
     val unitToMeters: Double = 1.0,
 ) : Georef {
+    companion object {
+        /** Оси и единицы так, как они заданы у самой СК (у EPSG бывают футы и порядок «восток, север»). */
+        fun native(crs: CrsDef) = CrsGeoref(crs, crs.firstAxisIsEast, crs.unitToMeters)
+    }
+
     override fun toWgs84(x: Double, y: Double, z: Double): Geodetic {
         val (n, e) = if (swapXY) y to x else x to y
         val h = if (z.isNaN()) 0.0 else z

@@ -9,7 +9,15 @@ class GoldenGridTest {
     private fun crsOf(c: GridCase): CrsDef {
         val ell = Ellipsoid.byId(c.ellipsoid)!!
         val h = c.helmert?.let { Helmert(it[0], it[1], it[2], it[3], it[4], it[5], it[6]) }
-        return CrsDef(c.id, c.id, ell, h, TransverseMercator(ell, c.lat0 * DEG, c.lon0 * DEG, c.k0, c.x0, c.y0))
+        val p = c.params
+        val proj: MapProjection = when (c.method) {
+            MapProjection.TM -> TransverseMercator(ell, p[0] * DEG, p[1] * DEG, p[2], p[3], p[4])
+            MapProjection.TM_SOUTH_ORIENTED -> TransverseMercatorSouthOriented(TransverseMercator(ell, p[0] * DEG, p[1] * DEG, p[2], p[3], p[4]))
+            MapProjection.LCC_1SP -> LambertConformalConic.oneParallel(ell, p[0] * DEG, p[1] * DEG, p[2], p[3], p[4])
+            MapProjection.LCC_2SP -> LambertConformalConic.twoParallel(ell, p[0] * DEG, p[1] * DEG, p[2] * DEG, p[3] * DEG, p[4], p[5])
+            else -> error("method ${c.method}")
+        }
+        return CrsDef(c.id, c.id, ell, h, proj)
     }
 
     @Test

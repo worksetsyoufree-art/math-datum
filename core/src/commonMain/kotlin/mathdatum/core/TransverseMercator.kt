@@ -25,11 +25,13 @@ data class Projected(val north: Double, val east: Double)
 class TransverseMercator(
     val ellipsoid: Ellipsoid,
     val lat0: Double,
-    val lon0: Double,
+    override val lon0: Double,
     val k0: Double,
-    val falseEasting: Double,
-    val falseNorthing: Double,
-) {
+    override val falseEasting: Double,
+    override val falseNorthing: Double,
+) : MapProjection {
+    override val methodCode: Int get() = MapProjection.TM
+
     private val alpha: DoubleArray
     private val beta: DoubleArray
     private val bigA: Double
@@ -64,7 +66,7 @@ class TransverseMercator(
         return atan(sinh(atanh(s) - ellipsoid.e * atanh(ellipsoid.e * s)))
     }
 
-    fun forward(lat: Double, lon: Double): Projected {
+    override fun forward(lat: Double, lon: Double): Projected {
         val lam = Geodesy.normLon(lon - lon0)
         val t = tan(conformalLat(lat))
         val xi1 = atan2(t, cos(lam))
@@ -82,7 +84,7 @@ class TransverseMercator(
     }
 
     /** Возвращает (lat, lon) в радианах; lon нормализована в (−π, π]. */
-    fun inverse(north: Double, east: Double): Pair<Double, Double> {
+    override fun inverse(north: Double, east: Double): Pair<Double, Double> {
         val xi = (north - falseNorthing) / (k0 * bigA) + xi0
         val eta = (east - falseEasting) / (k0 * bigA)
         var xi1 = xi
@@ -104,4 +106,23 @@ class TransverseMercator(
         }
         return phi to Geodesy.normLon(lon0 + lam)
     }
+}
+
+/**
+ * TM South Orientated (EPSG 9808): оси направлены на запад и на юг. Поля результата: north — южное, east — западное
+ * смещение, то есть W = 2·FE − E, S = 2·FN − N относительно обычной TM с теми же параметрами.
+ */
+class TransverseMercatorSouthOriented(private val tm: TransverseMercator) : MapProjection {
+    override val methodCode: Int get() = MapProjection.TM_SOUTH_ORIENTED
+    override val lon0: Double get() = tm.lon0
+    override val falseEasting: Double get() = tm.falseEasting
+    override val falseNorthing: Double get() = tm.falseNorthing
+    val base: TransverseMercator get() = tm
+
+    override fun forward(lat: Double, lon: Double): Projected {
+        val p = tm.forward(lat, lon)
+        return Projected(2 * tm.falseNorthing - p.north, 2 * tm.falseEasting - p.east)
+    }
+
+    override fun inverse(north: Double, east: Double) = tm.inverse(2 * tm.falseNorthing - north, 2 * tm.falseEasting - east)
 }

@@ -18,7 +18,7 @@ class FindDatumMetricsTest {
         val units = listOf(1.0, 0.001, 0.01)
         return List(n) {
             val crs = cat[(rnd.next() * cat.size).toInt()]
-            val lon = crs.tm.lon0 / DEG + rnd.range(-2.5, 2.5)
+            val lon = crs.projection.lon0 / DEG + rnd.range(-2.5, 2.5)
             val lat = rnd.range(45.0, 68.0)
             val center = Geodetic.ofDegrees(lat, lon)
             val (north, east, _) = crs.fromWgs84(center)

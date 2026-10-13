@@ -35,7 +35,7 @@ class CatalogJsonTest {
     @Test
     fun badCatalogsGiveClearErrors() {
         val bad = { s: String -> assertFailsWith<Json.ParseException> { CatalogJson.decode(s) } }
-        bad("""{"format":2,"entries":[]}""")
+        bad("""{"format":3,"entries":[]}""")
         bad("""{"format":1,"entries":[{"id":"a","name":"n","ellipsoid":"NOPE","helmert":null,"tm":{"lat0":0,"lon0":0,"k0":1,"x0":0,"y0":0}}]}""")
         val one = CatalogJson.encodeCrs(Catalog.utm(37))
         assertTrue(runCatching { CatalogJson.decode(Json.write(linkedMapOf("format" to 1.0, "entries" to listOf(one, one)))) }.exceptionOrNull() is Json.ParseException)

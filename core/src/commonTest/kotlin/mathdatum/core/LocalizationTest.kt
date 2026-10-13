@@ -10,7 +10,7 @@ class LocalizationTest {
     /** «Истина»: СК с ЦМ рядом с участком (как МСК), чертёж — CAD, x = восток, y = север, начало сдвинуто. */
     private val truth = CrsDef(
         id = "t", name = "truth", ellipsoid = Ellipsoid.WGS84, helmert = null,
-        tm = TransverseMercator(Ellipsoid.WGS84, 0.0, 37.5 * DEG, 1.0, 1_500_000.0, 0.0),
+        projection = TransverseMercator(Ellipsoid.WGS84, 0.0, 37.5 * DEG, 1.0, 1_500_000.0, 0.0),
     )
     private val e0 = 1_500_000.0 + 5_000.0 // участок рядом с ЦМ, как в МСК; при 20 км от ЦМ подобие даёт ≈7 мм (предел модели)
     private val n0 = 6_180_000.0

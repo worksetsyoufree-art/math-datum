@@ -49,12 +49,12 @@ object DatumFinder {
         bounds: SurfaceBounds, anchor: Anchor?, catalog: Catalog, opts: FindDatumOptions = FindDatumOptions(),
     ): List<Candidate> {
         val out = ArrayList<Candidate>()
-        for (crs in catalog.entries) for (swap in listOf(false, true)) for (unit in opts.unitFactors) {
+        for (crs in catalog.entries) for (swap in listOf(false, true)) for (unit in (opts.unitFactors + crs.unitToMeters).distinct()) {
             val (a, b) = bounds.centerX to bounds.centerY
             val north = (if (swap) b else a) * unit
             val east = (if (swap) a else b) * unit
             // грубый отсев: восточная координата должна быть в полосе зоны вокруг x_0
-            if (abs(east - crs.tm.falseEasting) > opts.zoneHalfWidthEastM) continue
+            if (crs.projection is TransverseMercator && abs(east - crs.projection.falseEasting) > opts.zoneHalfWidthEastM) continue
             if (abs(north) > 1.1e7) continue
             val center = crs.toWgs84(north, east, 0.0)
             if (center.latDeg !in -90.0..90.0) continue
