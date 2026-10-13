@@ -75,7 +75,7 @@ private fun StatusBar(c: GeorefController) {
             else {
                 Text("Привязка: ${a.description}", style = MaterialTheme.typography.titleSmall)
                 a.rmsM?.let { Text("Среднее отклонение по точкам: ${fmt(it * 1000)} мм") }
-                a.warnings.forEach { Text("⚠ $it", color = MaterialTheme.colorScheme.error) }
+                a.warnings.forEach { Text("Внимание: $it", color = MaterialTheme.colorScheme.error) }
             }
             var saved by remember { mutableStateOf<String?>(null) }
             // «Готово» не блокируем из-за предупреждений (в духе «не отключать кнопки»)
@@ -129,7 +129,7 @@ private fun PickScreen(c: GeorefController) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf(1.0, 0.001, 0.01, 1000.0).forEach { u ->
                 OutlinedButton(onClick = { c.pickUnit = u }, modifier = Modifier.heightIn(min = 48.dp)) {
-                    Text((if (c.pickUnit == u) "✓ " else "") + GeorefController.unitName(u))
+                    Text(GeorefController.unitName(u) + if (c.pickUnit == u) " (выбрано)" else "")
                 }
             }
         }

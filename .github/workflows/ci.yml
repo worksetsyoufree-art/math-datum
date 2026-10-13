@@ -14,3 +14,5 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - name: Tests (desktop JVM, JS/Node, Android unit)
         run: gradle --no-daemon :core:desktopTest :core:jsNodeTest :core:testDebugUnitTest
+      - name: App (desktop tests with screenshots, Android APK, web bundle)
+        run: gradle --no-daemon :app:desktopTest :app:assembleDebug :app:jsBrowserDistribution

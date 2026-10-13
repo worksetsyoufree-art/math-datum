@@ -1,11 +1,17 @@
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
+    alias(libs.plugins.androidApplication)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
 }
 
 kotlin {
     jvm("desktop")
+    androidTarget()
+    js(IR) {
+        browser()
+        binaries.executable()
+    }
 
     sourceSets {
         commonMain.dependencies {
@@ -18,11 +24,26 @@ kotlin {
         commonTest.dependencies {
             implementation(kotlin("test"))
         }
+        androidMain.dependencies {
+            implementation(libs.androidx.activity.compose)
+        }
         val desktopMain by getting {
             dependencies {
                 implementation(compose.desktop.currentOs)
             }
         }
+    }
+}
+
+android {
+    namespace = "mathdatum.app"
+    compileSdk = 35
+    defaultConfig {
+        applicationId = "mathdatum.app"
+        minSdk = 24
+        targetSdk = 35
+        versionCode = 1
+        versionName = "0.1"
     }
 }
 
