@@ -81,4 +81,29 @@ class CrsDef(
         val (n, e, h) = a.fromWgs84(at)
         return Geodesy.haversine(a.toWgs84(n, e, h), b.toWgs84(n, e, h))
     }
+
+    /**
+     * Проверка направления Гельмерта по изменению эллипсоидальной высоты: у настоящего перехода между близкими геодезическими
+     * системами высота точки меняется на единицы метров (СК-42 → WGS84 в Москве: +3,4 м), у неверно прочитанного
+     * направления — на сотни (удвоенный радиальный сдвиг). Точка задана в координатах СК (север, восток, высота), метры.
+     */
+    fun checkHelmertDirection(north: Double, east: Double, h: Double): HelmertDirectionEvidence? {
+        if (helmert == null) return null
+        val a = withHelmertDirection(HelmertDirection.WGS84_TO_LOCAL).toWgs84(north, east, h).h - h
+        val b = withHelmertDirection(HelmertDirection.LOCAL_TO_WGS84).toWgs84(north, east, h).h - h
+        val small = minOf(kotlin.math.abs(a), kotlin.math.abs(b))
+        val big = maxOf(kotlin.math.abs(a), kotlin.math.abs(b))
+        val suggested = if (small <= HelmertDirectionEvidence.SMALL_M && big >= HelmertDirectionEvidence.BIG_M) {
+            if (kotlin.math.abs(a) < kotlin.math.abs(b)) HelmertDirection.WGS84_TO_LOCAL else HelmertDirection.LOCAL_TO_WGS84
+        } else null
+        return HelmertDirectionEvidence(a, b, suggested)
+    }
+}
+
+/** Сдвиг высоты при переводе «локальная → WGS84» для каждой трактовки; [suggested] — если одна явно правдоподобна. */
+class HelmertDirectionEvidence(val dhIfWgs84ToLocal: Double, val dhIfLocalToWgs84: Double, val suggested: HelmertDirection?) {
+    companion object {
+        const val SMALL_M = 25.0
+        const val BIG_M = 60.0
+    }
 }

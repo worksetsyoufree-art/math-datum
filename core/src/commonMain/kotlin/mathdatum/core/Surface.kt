@@ -23,21 +23,27 @@ class RobustBounds(val bounds: SurfaceBounds, val used: Int, val dropped: Int)
 
 object SurfaceAnalysis {
     /**
-     * Габариты без «мусорных» вершин вдали от основного облака: вершина отбрасывается,
-     * если выходит за [Q1 − k·IQR, Q3 + k·IQR] по любой оси. Нефинитные значения тоже отбрасываются.
+     * Габариты без «мусорных» вершин вдали от основного облака (нулевая точка чертежа, ошибочные вставки).
+     * Вершина — кандидат в мусор, если выходит за [P1 − k·R, P99 + k·R] по любой оси, где R = P99 − P1.
+     * Отбрасывается только если таких кандидатов не больше [maxJunkFraction] от числа вершин: протяжённые или
+     * неравномерные реальные поверхности (плотная траншея и разреженные окрестности) целиком остаются.
+     * Нефинитные значения отбрасываются всегда.
      */
-    fun robustBounds(v: SurfaceVertices, k: Double = 10.0): RobustBounds? {
+    fun robustBounds(v: SurfaceVertices, k: Double = 3.0, maxJunkFraction: Double = 0.01): RobustBounds? {
         val finite = (0 until v.size).filter { v.x[it].isFinite() && v.y[it].isFinite() }
         if (finite.isEmpty()) return null
         val xs = DoubleArray(finite.size) { v.x[finite[it]] }
         val ys = DoubleArray(finite.size) { v.y[finite[it]] }
         val fx = fences(xs, k)
         val fy = fences(ys, k)
+        val junk = BooleanArray(xs.size) { xs[it] < fx.first || xs[it] > fx.second || ys[it] < fy.first || ys[it] > fy.second }
+        val junkCount = junk.count { it }
+        val dropJunk = junkCount > 0 && junkCount <= maxJunkFraction * xs.size
         var minX = Double.POSITIVE_INFINITY; var maxX = Double.NEGATIVE_INFINITY
         var minY = Double.POSITIVE_INFINITY; var maxY = Double.NEGATIVE_INFINITY
         var used = 0
         for (i in xs.indices) {
-            if (xs[i] < fx.first || xs[i] > fx.second || ys[i] < fy.first || ys[i] > fy.second) continue
+            if (dropJunk && junk[i]) continue
             used++
             minX = min(minX, xs[i]); maxX = max(maxX, xs[i]); minY = min(minY, ys[i]); maxY = max(maxY, ys[i])
         }
@@ -46,10 +52,10 @@ object SurfaceAnalysis {
 
     private fun fences(a: DoubleArray, k: Double): Pair<Double, Double> {
         val s = a.copyOf().also { it.sort() }
-        val q1 = quantile(s, 0.25)
-        val q3 = quantile(s, 0.75)
-        val iqr = q3 - q1
-        return (q1 - k * iqr) to (q3 + k * iqr)
+        val p1 = quantile(s, 0.01)
+        val p99 = quantile(s, 0.99)
+        val r = p99 - p1
+        return (p1 - k * r) to (p99 + k * r)
     }
 
     private fun quantile(sorted: DoubleArray, p: Double): Double {

@@ -27,6 +27,17 @@ class SurfaceTest {
     }
 
     @Test
+    fun wideRealSurfaceKeepsItsTails() {
+        // плотное ядро (95 %) + длинный разреженный хвост (5 %): хвост настоящий, отбрасывать нельзя
+        val n = 2000
+        val x = DoubleArray(n) { if (it % 20 == 0) 460_000.0 + (it % 17) * 700.0 else 461_000.0 + (it % 100) * 5.0 }
+        val y = DoubleArray(n) { if (it % 20 == 0) 2_240_000.0 + (it % 13) * 1500.0 else 2_257_000.0 + (it % 90) * 5.0 }
+        val r = assertNotNull(SurfaceAnalysis.robustBounds(SurfaceVertices(x, y)))
+        assertEquals(0, r.dropped)
+        assertEquals(x.min(), r.bounds.minX); assertEquals(y.max(), r.bounds.maxY)
+    }
+
+    @Test
     fun boundsOfSmallOrDegenerateInput() {
         assertNull(SurfaceAnalysis.robustBounds(SurfaceVertices(DoubleArray(0), DoubleArray(0))))
         assertNull(SurfaceAnalysis.robustBounds(SurfaceVertices(doubleArrayOf(Double.NaN), doubleArrayOf(1.0))))
