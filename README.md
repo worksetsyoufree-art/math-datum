@@ -28,7 +28,7 @@ found.first().toGeoref()
 ## Тесты
 
 ```
-./gradlew :core:allTests                       # Gradle (нужен доступ к Maven)
+gradle :core:desktopTest :core:jsNodeTest :core:testDebugUnitTest   # Gradle, нужен Android SDK (см. docs/PLAN.md)
 KOTLINC_HOME=/path/to/kotlinc tools/run_jvm_tests.sh   # без Gradle, JVM
 ```
 

@@ -36,7 +36,9 @@ class GeorefJsonTest {
         assertFailsWith<Json.ParseException> { GeorefJson.decode("""{"format":9,"type":"crs"}""") }
         assertFailsWith<Json.ParseException> { GeorefJson.decode("""{"format":1,"type":"zzz"}""") }
         assertFailsWith<Json.ParseException> { GeorefJson.decode("не json") }
-        val ok = GeorefJson.encode(CrsGeoref(Catalog.utm(37)))
-        assertFailsWith<Json.ParseException> { GeorefJson.decode(ok.replace("\"unitToMeters\": 1.0", "\"unitToMeters\": 0.0")) }
+        // не полагаемся на текст числа: в JS 1.0 печатается как "1"
+        val m = LinkedHashMap(GeorefJson.toMap(CrsGeoref(Catalog.utm(37))))
+        m["unitToMeters"] = 0.0
+        assertFailsWith<Json.ParseException> { GeorefJson.decode(Json.write(m)) }
     }
 }
