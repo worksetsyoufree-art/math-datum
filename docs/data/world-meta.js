@@ -1,0 +1,1 @@
+window.__META__={"epsg":"v12.029","epsg_date":"2025-10-02","proj_ver":"9.8.1","pyproj":"3.8.0","geo":611,"proj":5240,"dropped":41,"byMethod":{"tmerc":2626,"utm":1203,"somerc":5,"omerc":29,"lcc":1203,"cass":29,"sterea":19,"aea":40,"merc":11,"stere":38,"laea":23,"aeqd":3,"cea":2,"eqc":1,"krovak":3,"poly":4,"nzmg":1},"approxOver1m":603,"approxOver10m":172,"tolM":0.05};

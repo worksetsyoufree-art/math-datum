@@ -12,8 +12,10 @@ const geo = src.geo.map((g) => ({
   ba: g.best_any, en: g.ensemble ? 1 : 0, op: g.opc, opn: g.opn,
 }));
 
-const bad = [], proj = [];
+const bad = [], proj = [], seenCode = new Set();
 for (const p of src.proj) {
+  if (seenCode.has(p.code)) continue;
+  seenCode.add(p.code);
   let ok = false, d = null;
   try {
     const r = proj4("EPSG:4326", p.p4, p.ctr);
@@ -29,6 +31,13 @@ fs.mkdirSync(new URL("../docs/data/", import.meta.url), { recursive: true });
 write("world-geo.js", "GEO", geo);
 write("world-proj.js", "PROJ", proj);
 fs.writeFileSync(new URL("../build/pack_report.json", import.meta.url), JSON.stringify({ geo: geo.length, proj: proj.length, dropped: bad }, null, 1));
+let meta = {};
+try { meta = JSON.parse(fs.readFileSync(new URL("../build/meta.json", import.meta.url), "utf8")); } catch (e) { /* optional */ }
+const byMethod = {};
+for (const p of proj) byMethod[p.m] = (byMethod[p.m] || 0) + 1;
+const approx = proj.map((p) => p.ap).filter((v) => v != null).sort((a, b) => a - b);
+write("world-meta.js", "META", { epsg: meta.epsg, epsg_date: meta.epsg_date, proj_ver: meta.proj, pyproj: meta.pyproj, geo: geo.length, proj: proj.length, dropped: bad.length, byMethod,
+  approxOver1m: approx.filter((v) => v > 1).length, approxOver10m: approx.filter((v) => v > 10).length, tolM: TOL });
 const kb = (f) => Math.round(fs.statSync(new URL(`../docs/data/${f}`, import.meta.url)).size / 1024);
 console.log(`geo ${geo.length} (${kb("world-geo.js")} KB), proj ${proj.length} (${kb("world-proj.js")} KB), dropped by parity: ${bad.length}`);
 if (bad.length) console.log("examples:", JSON.stringify(bad.slice(0, 6)));

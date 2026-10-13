@@ -1,0 +1,52 @@
+// Selection-engine behaviour on the shipped data (run after scripts/pack_world.mjs and scripts/build_web.py).
+import fs from "node:fs";
+import vm from "node:vm";
+import { createRequire } from "node:module";
+const require = createRequire(import.meta.url);
+const proj4 = require("../docs/vendor/proj4-2.12.1.js");
+const Engine = require("../docs/js/engine.js");
+const ctx = { window: {} };
+for (const f of ["world-geo.js", "world-proj.js", "ru.js", "areas.js"]) vm.runInNewContext(fs.readFileSync(new URL(`../docs/data/${f}`, import.meta.url), "utf8"), ctx);
+const { __GEO__: GEO, __PROJ__: PROJ, __RU__: RU } = ctx.window;
+Engine.setAreas(ctx.window.__COUNTRIES__, ctx.window.__AREAS__);
+const MSK = RU.systems.filter((s) => s.st === "verified").map((s) => ({ ...s, tp: "msk", src: "msk", n: s.t }));
+let fails = 0;
+const check = (name, ok, info) => { console.log(`${ok ? "ok  " : "FAIL"} ${name}${info ? "  — " + info : ""}`); if (!ok) fails++; };
+const names = (r, n) => r.slice(0, n).map((x) => x.g.n);
+
+const moscow = Engine.recommendDatums(GEO, 55.7558, 37.6173, "survey", { proj4 });
+check("Moscow/survey: a Russian national datum in top 3", names(moscow, 3).some((n) => /Pulkovo|GSK-2011|PZ-90/.test(n)), names(moscow, 3).join(" | "));
+check("Moscow/survey: ETRS89/ETRF are NOT recommended (Moscow is outside their countries)", !names(moscow, 6).some((n) => /ETRS89|ETRF/.test(n)), names(moscow, 6).join(" | "));
+const berlin = Engine.recommendDatums(GEO, 52.52, 13.405, "survey", { proj4 });
+check("Berlin/survey: ETRS89 or DHDN in top 3", names(berlin, 3).some((n) => /ETRS89|DHDN/.test(n)), names(berlin, 5).join(" | "));
+const nyc = Engine.recommendDatums(GEO, 40.7128, -74.006, "gnss", { proj4 });
+check("New York/GNSS: WGS 84 or NAD83 on top", /WGS 84|NAD83/.test(nyc[0].g.n), names(nyc, 3).join(" | "));
+const syd = Engine.recommendDatums(GEO, -33.8688, 151.2093, "survey", { proj4 });
+check("Sydney/survey: GDA2020 or GDA94 in top 3", names(syd, 3).some((n) => /GDA/.test(n)), names(syd, 3).join(" | "));
+const tok = Engine.recommendDatums(GEO, 35.6762, 139.6503, "survey", { proj4 });
+check("Tokyo/survey: JGD in top 3", names(tok, 3).some((n) => /JGD/.test(n)), names(tok, 3).join(" | "));
+const legacy = Engine.recommendDatums(GEO, 55.7558, 37.6173, "legacy", { proj4 });
+check("Moscow/legacy: an outdated datum first (Pulkovo)", /Pulkovo/.test(legacy[0].g.n), names(legacy, 3).join(" | "));
+const vlad = Engine.recommendDatums(GEO, 43.1155, 131.8855, "survey", { proj4 });
+check("Vladivostok/survey: a Russian datum in top 3", names(vlad, 3).some((n) => /Pulkovo|GSK-2011|PZ-90/.test(n)), names(vlad, 3).join(" | "));
+const sev = Engine.recommendDatums(GEO, 44.6, 33.5, "survey", { proj4 });
+check("Sevastopol/survey: has candidates", sev.length > 0, names(sev, 3).join(" | "));
+const lux = Engine.recommendDatums(GEO, 49.61, 6.13, "survey", { proj4 });
+check("Luxembourg/survey: LUREF or ETRS89 in top 3 (micro-state)", names(lux, 3).some((n) => /LUREF|ETRS89/.test(n)), names(lux, 3).join(" | "));
+check("Antimeridian: Fiji (-17.7, 178.1) has candidates", Engine.recommendDatums(GEO, -17.7, 178.1, "survey", { proj4 }).length > 0);
+check("Shift reported for Pulkovo 1995 (~ >50 m at Moscow)", (Engine.recommendDatums(GEO, 55.75, 37.6, "legacy", { proj4 }).find((r) => r.g.c === 4200) || {}).shift > 50);
+
+const g4258 = GEO.find((g) => g.c === 4258);
+const pb = Engine.recommendProjections(PROJ, [], 52.52, 13.405, g4258, proj4);
+check("Berlin projections for ETRS89: UTM 33N (EPSG:25833) in top 5", pb.slice(0, 5).some((r) => r.p.c === 25833), pb.slice(0, 5).map((r) => r.p.n).join(" | "));
+const pm = Engine.recommendProjections(PROJ, MSK, 55.8317, 37.33, GEO.find((g) => g.c === 4284), proj4, { purpose: "survey" });
+check("Krasnogorsk/survey: an MSK is first and MSK-50 is in top 3", pm[0].p.src === "msk" && pm.slice(0, 3).some((r) => /МСК-50/.test(r.p.n)), pm.slice(0, 4).map((r) => r.p.n).join(" | "));
+
+const id1 = Engine.identify(PROJ.concat(MSK), 1365816.032, 478559.171, proj4, { lat: 55.75, lon: 37.6, radiusKm: 300 });
+check("Identify MSK-50 zone 1 coordinates (hint Moscow)", id1.slice(0, 5).some((x) => x.p.src === "msk" && /50 зона 1/.test(x.p.n)), id1.slice(0, 3).map((x) => x.p.n).join(" | "));
+const [e, n] = proj4("EPSG:4326", PROJ.find((p) => p.c === 32637).p, [37.6173, 55.7558]);
+const id2 = Engine.identify(PROJ, e, n, proj4, { lat: 55.75, lon: 37.6, radiusKm: 50 });
+check("Identify UTM 37N coordinates (hint Moscow)", id2.slice(0, 15).some((x) => x.p.c === 32637), id2.slice(0, 3).map((x) => x.p.n).join(" | "));
+check("Identify with a hint in a wrong place finds nothing near", Engine.identify(PROJ, e, n, proj4, { lat: -33, lon: 151, radiusKm: 100 }).every((x) => x.dist <= 100));
+check("search by EPSG code", Engine.search(GEO, "4326", 5).some((g) => g.c === 4326));
+process.exit(fails ? 1 : 0);

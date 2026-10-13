@@ -13,7 +13,9 @@ jobs:
         with: { node-version: "22" }
       - run: pip install pyproj requests beautifulsoup4 lxml playwright
       - run: playwright install --with-deps chromium
-      - name: Rebuild datasets from committed raw data and run parity test
+      - name: Rebuild Russian datasets from committed raw data and run data tests
         run: scripts/run_all.sh
+      - name: Engine tests (selection, identify)
+        run: node tests/engine.test.mjs
       - name: Browser smoke test
         run: python3 tests/web_smoke.py

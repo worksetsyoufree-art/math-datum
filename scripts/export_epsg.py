@@ -92,6 +92,18 @@ def transformations(crs, my_codes, ctr):
     return None, (min(any_acc) if any_acc else None)
 
 
+def normalize(p4, crs, g):
+    """Make the PROJ string self-contained: explicit ellipsoid constants, explicit towgs84 instead of +datum=/+ellps=."""
+    had_datum = "+datum=" in p4
+    ell = crs.ellipsoid
+    p4 = re.sub(r"\s*\+(ellps|datum)=\S+", "", p4)
+    if "+a=" not in p4 and ell is not None:
+        p4 += f" +a={ell.semi_major_metre:.10g} +rf={ell.inverse_flattening:.12g}"
+    if "+towgs84" not in p4 and g and g.get("tw") and g.get("kind") != "ballpark" and any(abs(v) > 0 for v in g["tw"]):
+        p4 += " +towgs84=" + ",".join(f"{v:.10g}" for v in g["tw"])
+    return re.sub(r"\s+", " ", p4).strip()
+
+
 def main():
     out_geo, out_proj = [], []
     codes_geo = {}
@@ -139,8 +151,7 @@ def main():
             skipped["method"] += 1
             continue
         g = codes_geo.get(base)
-        if "+towgs84" not in p4 and "+datum=" not in p4 and g and g["tw"] and any(abs(v) > 0 for v in g["tw"]):
-            p4 += " +towgs84=" + ",".join(f"{v:.10g}" for v in g["tw"])
+        p4 = normalize(p4, crs, g)
         b = r.area_of_use.bounds
         ctr = centre(b)
         try:
