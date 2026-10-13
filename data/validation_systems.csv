@@ -1,0 +1,339 @@
+id,region,name,sources,status,reasons,roundtrip_mm,zone_series
+S0001,01,Respublika_Adigeya_MSK_01_Zone1,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.0515,n/a
+S0002,01,Respublika_Adigeya_MSK_01_Zone2,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.0515,width 3.0 deg
+S0003,02,Respublika_Bashkortostan_MSK_02_Zone1,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.2898,n/a
+S0004,02,Respublika_Bashkortostan_MSK_02_Zone2,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.2898,width 3.0 deg
+S0005,03,Respublika_Buryatiya_MSK_03_Zone1,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.4212,n/a
+S0006,03,Respublika_Buryatiya_MSK_03_Zone2,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.4212,width 3.0 deg
+S0007,03,Respublika_Buryatiya_MSK_03_Zone3,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.4212,width 3.0 deg
+S0008,03,Respublika_Buryatiya_MSK_03_Zone4,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.4212,width 3.0 deg
+S0009,03,Respublika_Buryatiya_MSK_03_Zone5,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.4212,width 3.0 deg
+S0010,03,Respublika_Buryatiya_MSK_03_Zone6,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.4212,width 3.0 deg
+S0011,03,Respublika_Buryatiya_MSK_03_Zone7,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.4212,width 3.0 deg
+S0012,04,Respublika_Altay_MSK_04_Zone1,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.426,n/a
+S0013,04,Respublika_Altay_MSK_04_Zone2,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.426,width 3.0 deg
+S0014,05,Respublika_Dagestan_MSK_05,fieldworker,unverified,one source only,0.1043,n/a
+S0015,05,Respublika_Dagestan_MSK_05_old,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.2215,no zone 1 in group (unchecked)
+S0016,06,Respublika_Ingushetiya_MSK_06_Zone1,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.1605,n/a
+S0017,06,Respublika_Ingushetiya_MSK_06_Zone2,fieldworker,unverified,one source only,0.1605,width 3.0 deg
+S0018,07,МСК-07,terraingis.ru,unverified,one source only,0.1313,n/a
+S0019,07,Respublika_Kabardino_Balkariya_MSK_07_Zone1,fieldworker+geoprof.nethouse.ru,verified,,0.1313,n/a
+S0020,08,Respublika_Kalmikiya_MSK_08_Zone1,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.1421,n/a
+S0021,08,Respublika_Kalmikiya_MSK_08_Zone2,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.1421,width 3.0 deg
+S0022,08,Respublika_Kalmikiya_MSK_08_Zone3,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.1421,width 3.0 deg
+S0023,09,Respublika_Karachaevo_Cherkesiya_MSK_09,fieldworker+geoprof.nethouse.ru,verified,,0.0934,n/a
+S0024,09,МСК-09,terraingis.ru,unverified,one source only,0.0934,n/a
+S0025,10,Respublika_Kareliya_MSK_10_Zone1,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.1749,n/a
+S0026,10,Respublika_Kareliya_Uslovnaya_SK_RK,fieldworker,unverified,one source only,0.1749,n/a
+S0027,10,Respublika_Kareliya_MSK_10_Zone2,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.1749,width 6.0 deg
+S0028,11,Respublika_Komi_MSK_11_Zone1_3gr,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.137,n/a
+S0029,11,Respublika_Komi_MSK_11_Zone2_3gr,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.137,width 3.0 deg
+S0030,11,Respublika_Komi_MSK_11_Zone1_6gr,fieldworker,unverified,one source only,0.137,n/a
+S0031,11,Respublika_Komi_MSK_11_Zone3_3gr,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.137,width 3.0 deg
+S0032,11,Respublika_Komi_MSK_11_Zone4_3gr,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.137,width 3.0 deg
+S0033,11,Respublika_Komi_MSK_11_Zone2_6gr,fieldworker,unverified,one source only,0.137,width 6.0 deg
+S0034,11,Respublika_Komi_MSK_Gorod_Syktyvkar,fieldworker,unverified,one source only,0.137,n/a
+S0035,11,Respublika_Komi_MSK_11_Zone5_3gr,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.137,width 3.0 deg
+S0036,11,Respublika_Komi_MSK_11_Zone6_3gr,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.137,width 3.0 deg
+S0037,11,Respublika_Komi_MSK_11_Zone7_3gr,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.137,width 3.0 deg
+S0038,11,Respublika_Komi_MSK_11_Zone8_3gr,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.137,width 3.0 deg
+S0039,11,Respublika_Komi_MSK_11_Zone9_3gr,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.137,width 3.0 deg
+S0040,12,Respublika_Mariy_El_MSK_12_Zone1,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.1509,n/a
+S0041,12,Respublika_Mariy_El_MSK_12_Zone2,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.1509,width 3.0 deg
+S0042,13,Respublika_Mordoviya_MSK_13_Zone1,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.1225,n/a
+S0043,13,Respublika_Mordoviya_MSK_13_Zone2,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.1225,width 3.0 deg
+S0044,14,Respublika_Saha_Yakutiya_MSK_14_Zone1,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.3255,n/a
+S0045,14,Respublika_Saha_Yakutiya_MSK_14_Zone2,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.3255,width 6.0 deg
+S0046,14,Respublika_Saha_Yakutiya_MSK_14_Zone3,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.3255,width 6.0 deg
+S0047,14,Respublika_Saha_Yakutiya_MSK_14_Zone4,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.3255,width 6.0 deg
+S0048,14,Respublika_Saha_Yakutiya_MSK_14_Zone5,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.3255,width 6.0 deg
+S0049,14,Respublika_Saha_Yakutiya_MSK_14_Zone6,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.3255,width 6.0 deg
+S0050,14,Respublika_Saha_Yakutiya_MSK_14_Zone7,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.3255,width 6.0 deg
+S0051,14,Respublika_Saha_Yakutiya_MSK_14_Zone8,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.3255,width 6.0 deg
+S0052,14,Respublika_Saha_Yakutiya_MSK_14_Zone9,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.3255,width 6.0 deg
+S0053,15,Respublika_Severnaya_Osetiya_Alaniya_MSK_15_old,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.1574,n/a
+S0054,15,МСК-15 зона 1 СК-95,terraingis.ru,unverified,one source only,0.0408,n/a
+S0055,15,Respublika_Severnaya_Osetiya_Alaniya_MSK_15,fieldworker,unverified,one source only,0.0408,n/a
+S0056,16,Respublika_Tatarstan_MSK_16_Zone1,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.1797,n/a
+S0057,16,Respublika_Tatarstan_MSK_16_Zone2,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.1797,width 3.0 deg
+S0058,16,Respublika_Tatarstan_MSK_16_Zone3,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.1797,width 3.0 deg
+S0059,16,Respublika_Tatarstan_SK_63,fieldworker,unverified,one source only,0.1797,no zone 1 in group (unchecked)
+S0060,18,Respublika_Udmurtiya_MSK_18_Zone1,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.2312,n/a
+S0061,18,Respublika_Udmurtiya_MSK_18_Zone2,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.2312,width 3.0 deg
+S0062,19,Respublika_Hakasiya_MSK_166,fieldworker+terraingis.ru,verified,,0.4259,n/a
+S0063,19,МСК-19 (166),terraingis.ru,unverified,one source only,0.4259,n/a
+S0064,20,Respublika_Chechnya_MSK_20_Zone1,fieldworker+geoprof.nethouse.ru,verified,,0.1808,n/a
+S0065,20,МСК-20 зона 1,terraingis.ru,unverified,one source only,0.1808,n/a
+S0066,20,Respublika_Chechnya_MSK_20_Zone2,fieldworker+geoprof.nethouse.ru,verified,,0.1808,width 3.0 deg
+S0067,21,Respublika_Chuvashiya_MSK_21_Zone1,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.1443,n/a
+S0068,21,Respublika_Chuvashiya_MSK_21_Zone2,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.1443,width 3.0 deg
+S0069,22,Altayskiy_kray_MSK_22_Zone1,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.4306,n/a
+S0070,22,Altayskiy_kray_MSK_22_Zone2,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.4306,width 3.0 deg
+S0071,22,Altayskiy_kray_MSK_22_Zone3,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.4306,width 3.0 deg
+S0072,23,Krasnodarskiy_kray_MSK_23_Zone1,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.0426,n/a
+S0073,23,Krasnodarskiy_kray_MSK_Gorod_Adler,fieldworker,unverified,one source only,0.0486,n/a
+S0074,23,Krasnodarskiy_kray_MSK_23_Zone2,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.0426,width 3.0 deg
+S0075,24,МСК-163,terraingis.ru,unverified,one source only,0.429,n/a
+S0076,24,Krasnoyarskiy_kray_MSK_24_Zone1,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.429,no zone 1 in group (unchecked)
+S0077,24,Krasnoyarskiy_kray_MSK_164,fieldworker+terraingis.ru,verified,,0.429,n/a
+S0078,24,Krasnoyarskiy_kray_MSK_165,fieldworker+terraingis.ru,verified,,0.429,n/a
+S0079,24,Krasnoyarskiy_kray_MSK_24_Zone2,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.429,no zone 1 in group (unchecked)
+S0080,24,Krasnoyarskiy_kray_MSK_166,fieldworker+terraingis.ru,verified,,0.429,n/a
+S0081,24,Krasnoyarskiy_kray_MSK_Gorod_Krasnoyarsk,fieldworker+terraingis.ru,verified,,0.429,n/a
+S0082,24,Krasnoyarskiy_kray_MSK_167,fieldworker+terraingis.ru,verified,,0.429,n/a
+S0083,24,Krasnoyarskiy_kray_MSK_24_Zone3,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.429,no zone 1 in group (unchecked)
+S0084,24,Krasnoyarskiy_kray_MSK_168,fieldworker+terraingis.ru,verified,,0.429,n/a
+S0085,24,Krasnoyarskiy_kray_MSK_169,fieldworker+terraingis.ru,verified,,0.429,n/a
+S0086,24,Krasnoyarskiy_kray_MSK_24_Zone4,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.429,no zone 1 in group (unchecked)
+S0087,24,МСК-170,terraingis.ru,unverified,one source only,0.429,n/a
+S0088,24,Krasnoyarskiy_kray_MSK_24_Zone5,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.429,no zone 1 in group (unchecked)
+S0089,24,Krasnoyarskiy_kray_MSK_24_Zone6,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.429,no zone 1 in group (unchecked)
+S0090,25,Primorskiy_kray_MSK_25_Zone1,fieldworker+geoprof.nethouse.ru,verified,,0.4533,n/a
+S0091,25,Primorskiy_kray_MSK_25_Zone2,fieldworker+geoprof.nethouse.ru,verified,,0.4533,width 3.0 deg
+S0092,25,Primorskiy_kray_MSK_25_Zone3,fieldworker+geoprof.nethouse.ru,verified,,0.4533,width 3.0 deg
+S0093,25,Primorskiy_kray_MSK_25_Zone4,fieldworker+geoprof.nethouse.ru,verified,,0.4533,width 3.0 deg
+S0094,26,Stavropolskiy_kray_MSK_26_Zone1,fieldworker+geoprof.nethouse.ru,verified,,0.0909,n/a
+S0095,26,МСК-26 зона 1,terraingis.ru,unverified,one source only,0.0225,n/a
+S0096,26,Stavropolskiy_kray_MSK_26_Zone2,fieldworker+geoprof.nethouse.ru,verified,,0.0909,width 3.0 deg
+S0097,26,МСК-26 зона 2,terraingis.ru,unverified,one source only,0.0225,width 3.0 deg
+S0098,27,Habarovskiy_kray_MSK_27_Zone1,fieldworker+geoprof.nethouse.ru,verified,,0.4199,n/a
+S0099,27,Habarovskiy_kray_MSK_27_Zone2,fieldworker+geoprof.nethouse.ru,verified,,0.4199,width 3.0 deg
+S0100,27,Habarovskiy_kray_MSK_Gorod_Habarovsk,fieldworker,unverified,one source only,0.4199,n/a
+S0101,27,Habarovskiy_kray_MSK_27_Zone3,fieldworker+geoprof.nethouse.ru,verified,,0.4199,width 3.0 deg
+S0102,27,Habarovskiy_kray_MSK_27_Zone4,fieldworker+geoprof.nethouse.ru,verified,,0.4199,width 3.0 deg
+S0103,27,Habarovskiy_kray_MSK_27_Zone5,fieldworker+geoprof.nethouse.ru,verified,,0.4199,width 3.0 deg
+S0104,27,Habarovskiy_kray_MSK_27_Zone6,fieldworker+geoprof.nethouse.ru,verified,,0.4199,width 3.0 deg
+S0105,28,Amurskaya_oblast_MSK_28_Zone1,fieldworker+geoprof.nethouse.ru,verified,,0.4402,n/a
+S0106,28,Amurskaya_oblast_MSK_28_Zone2,fieldworker+geoprof.nethouse.ru,verified,,0.4402,width 3.0 deg
+S0107,28,Amurskaya_oblast_MSK_28_Zone3,fieldworker+geoprof.nethouse.ru,verified,,0.4402,width 3.0 deg
+S0108,28,Amurskaya_oblast_MSK_28_Zone4,fieldworker+geoprof.nethouse.ru,verified,,0.4402,width 3.0 deg
+S0109,28,Amurskaya_oblast_MSK_28_Zone5,fieldworker+geoprof.nethouse.ru,verified,,0.4402,width 3.0 deg
+S0110,29,Arhangelskaya_oblast_MSK_29_Zone1,fieldworker,unverified,one source only,0.0775,n/a
+S0111,29,Arhangelskaya_oblast_MSK_29_Zone2,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.0775,width 6.0 deg
+S0112,29,Arhangelskaya_oblast_MSK_29_Zone3,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.0775,width 6.0 deg
+S0113,29,Arhangelskaya_oblast_MSK_29_Zone4,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.0775,width 6.0 deg
+S0114,29,Arhangelskaya_oblast_MSK_29_Zone5,fieldworker+terraingis.ru,verified,,0.0775,width 6.0 deg
+S0115,29,"МСК-29 зона 6, 6 градусная",terraingis.ru,unverified,one source only,0.0775,width 6.0 deg
+S0116,29,"МСК-29 зона 2, 6 градусная",terraingis.ru,unverified,one source only; zone 2 lon0 68.0333 does not fit any series starting from zone 1,0.0775,zone 2 lon0 68.0333 does not fit any series starting from zone 1
+S0117,30,Astrakhanskaya_oblast_SK_63_Zone1,fieldworker,unverified,one source only,0.223,n/a
+S0118,30,Astrakhanskaya_oblast_SK_63_Zone1_alt_IGD,fieldworker,unverified,one source only; round trip 12.84 mm,12.8385,n/a
+S0119,30,Astrakhanskaya_oblast_MSK_30_Zone1,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.223,n/a
+S0120,30,Astrakhanskaya_oblast_SK_63_Zone2,fieldworker,unverified,one source only,0.223,width 3.0 deg
+S0121,30,Astrakhanskaya_oblast_SK_63_Zone2_alt_IGD,fieldworker,unverified,one source only; round trip 12.84 mm,12.8385,width 3.0 deg
+S0122,30,Astrakhanskaya_oblast_MSK_Gorod_Astrakhan,fieldworker,unverified,one source only,0.223,n/a
+S0123,30,Astrakhanskaya_oblast_SK_Gorod_Astrakhan_alt_IGD,fieldworker,unverified,one source only; round trip 12.84 mm,12.8385,n/a
+S0124,30,Astrakhanskaya_oblast_MSK_30_Zone2,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.223,width 3.0 deg
+S0125,30,Astrakhanskaya_oblast_SK_63_Zone3,fieldworker,unverified,one source only,0.223,width 3.0 deg
+S0126,30,Astrakhanskaya_oblast_SK_63_Zone3_alt_IGD,fieldworker,unverified,one source only; round trip 12.84 mm,12.8385,width 3.0 deg
+S0127,31,Belgorodskaya_oblast_MSK_31_Zone1,fieldworker+geoprof.nethouse.ru,verified,,0.0826,n/a
+S0128,31,Belgorodskaya_oblast_MSK_31_Zone2,fieldworker+geoprof.nethouse.ru,verified,,0.0826,width 3.0 deg
+S0129,32,Bryanskaya_oblast_MSK_32_Zone1,fieldworker+geoprof.nethouse.ru,verified,,0.1432,n/a
+S0130,32,Bryanskaya_oblast_MSK_32_Zone2,fieldworker+geoprof.nethouse.ru,verified,,0.1432,width 3.0 deg
+S0131,33,Vladimirskaya_oblast_MSK_33_Zone1,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.0342,n/a
+S0132,33,Vladimirskaya_oblast_MSK_33_2009_SK_95,fieldworker,unverified,one source only,0.0698,n/a
+S0133,33,МСК-33 от СК-95,geoprof.nethouse.ru+terraingis.ru,verified,,0.0342,n/a
+S0134,33,Vladimirskaya_oblast_MSK_33_Zone2,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.0342,width 3.0 deg
+S0135,33,Vladimirskaya_oblast_MSK_33_Zone3,fieldworker+geoprof.nethouse.ru,verified,,0.0342,width 3.0 deg
+S0136,34,Volgogradskaya_oblast_MSK_34_Zone1,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.1401,n/a
+S0137,34,МСК-34 г. Волгоград,terraingis.ru,unverified,one source only,0.1401,n/a
+S0138,34,Volgogradskaya_oblast_MSK_34_Zone2,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.1401,width 3.0 deg
+S0139,35,Vologodskaya_oblast_MSK_35_Zone1,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.0448,n/a
+S0140,35,Vologodskaya_oblast_MSK_35_Zone2,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.0448,width 3.0 deg
+S0141,35,Vologodskaya_oblast_MSK_35_Zone3,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.0448,width 3.0 deg
+S0142,35,Vologodskaya_oblast_MSK_35_Zone4,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.0448,width 3.0 deg
+S0143,35,Vologodskaya_oblast_MSK_35_Zone5,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.0448,width 3.0 deg
+S0144,36,Voronegskaya_oblast_MSK_36_Zone1,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.0386,n/a
+S0145,36,Voronegskaya_oblast_MSK_36_Zone2,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.0386,width 3.0 deg
+S0146,37,Ivanovskaya_oblast_MSK_37_Zone1,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.0342,n/a
+S0147,37,Ivanovskaya_oblast_MSK_37_Zone2,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.0342,width 3.0 deg
+S0148,38,Irkutsraya_oblast_MSK_38_Zone1,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.4192,n/a
+S0149,38,Irkutsraya_oblast_MSK_38_Zone2,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.4192,width 3.0 deg
+S0150,38,Irkutsraya_oblast_MSK_38_Zone3,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.4192,width 3.0 deg
+S0151,38,Irkutsraya_oblast_MSK_38_Zone4,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.4192,width 3.0 deg
+S0152,38,Irkutsraya_oblast_MSK_38_Zone5,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.4192,width 3.0 deg
+S0153,38,Irkutsraya_oblast_MSK_38_Zone6,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.4192,width 3.0 deg
+S0154,38,Irkutsraya_oblast_MSK_38_Zone7,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.4192,width 3.0 deg
+S0155,38,Irkutsraya_oblast_MSK_38_Zone8,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.4192,width 3.0 deg
+S0156,39,Kaliningradskaya_oblast_SK_Gorod_Kaliningrad_Old,fieldworker,unverified,one source only,0.5705,n/a
+S0157,39,Kaliningradskaya_oblast_MSK_39_Zone1,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.5705,n/a
+S0158,39,Kaliningradskaya_oblast_MSK_39_Zone2,fieldworker,unverified,one source only,0.5705,width 3.0 deg
+S0159,40,Kalugskaya_oblast_MSK_40_Zone1,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.0971,n/a
+S0160,40,Kalugskaya_oblast_MSK_40_Zone2,fieldworker,unverified,one source only,0.0971,width 3.0 deg
+S0161,41,Kamchatskiy_kray_MSK_41_Zone1,fieldworker+geoprof.nethouse.ru,verified,,0.0474,n/a
+S0162,41,Kamchatskiy_kray_MSK_41_Zone2,fieldworker+geoprof.nethouse.ru,verified,,0.0474,width 6.0 deg
+S0163,41,Kamchatskiy_kray_MSK_41_Zone3,fieldworker+geoprof.nethouse.ru,verified,,0.0474,width 6.0 deg
+S0164,42,Kemerovskaya_oblast_MSK_42_Zone1,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.4294,n/a
+S0165,42,Kemerovskaya_oblast_MSK_42_Zone2,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.4294,width 3.0 deg
+S0166,42,Kemerovskaya_oblast_MSK_42_Zone3,fieldworker,unverified,one source only,0.4294,width 3.0 deg
+S0167,43,Kirovskaya_oblast_MSK_43_Zone1,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.1587,n/a
+S0168,43,Kirovskaya_oblast_MSK_43_Zone2,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.1587,width 3.0 deg
+S0169,43,Kirovskaya_oblast_MSK_43_Zone3,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.1587,width 3.0 deg
+S0170,44,Kostromskaya_oblast_MSK_44_Zone1,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.0325,n/a
+S0171,44,Kostromskaya_oblast_MSK_44_Zone2,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.0325,width 3.0 deg
+S0172,44,Kostromskaya_oblast_MSK_44_Zone3,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.0325,width 3.0 deg
+S0173,45,Kurganskaya_oblast_MSK_45_Zone1,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.3725,n/a
+S0174,45,Kurganskaya_oblast_MSK_45_Zone2,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.3725,width 3.0 deg
+S0175,45,Kurganskaya_oblast_MSK_45_Zone3,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.3725,width 3.0 deg
+S0176,46,Kurskaya_oblast_MSK_46_Zone1,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.0935,n/a
+S0177,46,Kurskaya_oblast_MSK_46_Zone2,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.0935,width 3.0 deg
+S0178,47,Leningradskaya_oblast_MSK_47_Zone1,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.266,n/a
+S0179,47,Leningradskaya_oblast_MSK_47_Zone2,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.266,width 3.0 deg
+S0180,47,Leningradskaya_oblast_MSK_47_Zone3,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.266,width 3.0 deg
+S0181,48,Lipeckaya_oblast_MSK_48_Zone1,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.0374,n/a
+S0182,48,Lipeckaya_oblast_MSK_48_Zone2,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.0374,width 3.0 deg
+S0183,49,Magadanskaya_oblast_MSK_49_Zone1,fieldworker+geoprof.nethouse.ru,verified,,0.1292,n/a
+S0184,49,Magadanskaya_oblast_MSK_Susumanskiy_rayon,fieldworker,unverified,one source only,0.1292,n/a
+S0185,49,Magadanskaya_oblast_MSK_Matrosovo,fieldworker,unverified,one source only,0.1292,n/a
+S0186,49,Magadanskaya_oblast_MSK_Yagodinskiy_rayon,fieldworker,unverified,one source only,0.1292,n/a
+S0187,49,Magadanskaya_oblast_MSK_49_Zone2,fieldworker+geoprof.nethouse.ru,verified,,0.1292,width 6.0 deg
+S0188,49,Magadanskaya_oblast_MSK_49_Zone3,fieldworker+geoprof.nethouse.ru,verified,,0.1292,width 6.0 deg
+S0189,49,Magadanskaya_oblast_MSK_49_Zone4,fieldworker+geoprof.nethouse.ru,verified,,0.1292,width 6.0 deg
+S0190,50,Moskovskaya_oblast_SK_1963_Zone1,fieldworker,unverified,one source only,0.0769,n/a
+S0191,50,Moskovskaya_oblast_SK_1963_Zone1_Trimble,fieldworker,unverified,one source only,0.1357,n/a
+S0192,50,Moskovskaya_oblast_MSK_50_Zone1_MGGT,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.7541,n/a
+S0193,50,Moskovskaya_oblast_MSK_50_Zone1,fieldworker,unverified,one source only,0.136,n/a
+S0194,50,Moskovskaya_oblast_SK_1963_Zone2,fieldworker,unverified,one source only,0.0769,width 3.0 deg
+S0195,50,Moskovskaya_oblast_SK_1963_Zone2_Trimble,fieldworker,unverified,one source only,0.1357,width 3.0 deg
+S0196,50,Moskovskaya_oblast_MSK_50_Zone2_MGGT,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.7541,width 3.0 deg
+S0197,50,Moskovskaya_oblast_MSK_50_Zone2,fieldworker,unverified,one source only,0.136,width 3.0 deg
+S0198,50,Moskovskaya_oblast_SK_1963_Zone3,fieldworker,unverified,one source only,0.0769,width 3.0 deg
+S0199,50,Moskovskaya_oblast_SK_1963_Zone3_Trimble,fieldworker,unverified,one source only,0.1357,width 3.0 deg
+S0200,50,Moskovskaya_oblast_SK_1963_Zone4,fieldworker,unverified,one source only,0.0769,width 3.0 deg
+S0201,50,Moskovskaya_oblast_SK_1963_Zone4_Trimble,fieldworker,unverified,one source only,0.1357,width 3.0 deg
+S0202,51,Murmanskaya_oblast_MSK_51_Zone1,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.2587,n/a
+S0203,51,Murmanskaya_oblast_MSK_51_Zone2,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.2587,width 6.0 deg
+S0204,52,Nigegorodskaya_oblast_MSK_52_Zone1,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.0839,n/a
+S0205,52,Nigegorodskaya_oblast_MSK_52_Zone2,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.0839,width 3.0 deg
+S0206,52,Nigegorodskaya_oblast_MSK_52_Zone3,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.0839,width 3.0 deg
+S0207,53,Novgorodskaya_oblast_MSK_53_Zone1,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.2343,n/a
+S0208,53,Novgorodskaya_oblast_MSK_53_Zone2,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.2343,width 3.0 deg
+S0209,53,Novgorodskaya_oblast_MSK_53_Zone3,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.2343,width 3.0 deg
+S0210,54,Novosibirskaya_oblast_MSK_54_Zone1,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.4294,n/a
+S0211,54,Novosibirskaya_oblast_MSK_54_Zone2,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.4294,width 3.0 deg
+S0212,54,Novosibirskaya_oblast_MSK_54_Zone3,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.4294,width 3.0 deg
+S0213,54,Novosibirskaya_oblast_MSK_54_Zone4,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.4294,width 3.0 deg
+S0214,55,Omskaya_oblast_MSK_55_Zone1_1,fieldworker,unverified,one source only,0.415,n/a
+S0215,55,Omskaya_oblast_MSK_55_Zone1,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.415,n/a
+S0216,55,Omskaya_oblast_MSK_55_Zone2,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.415,width 3.0 deg
+S0217,56,Orenburgskaya_oblast_MSK_56_Zone1,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.305,n/a
+S0218,56,Orenburgskaya_oblast_MSK_56_Zone2,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.305,width 3.0 deg
+S0219,56,Orenburgskaya_oblast_MSK_56_Zone3,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.305,width 3.0 deg
+S0220,56,Orenburgskaya_oblast_MSK_Gorod_Orsk,fieldworker,unverified,one source only,0.3503,n/a
+S0221,56,Orenburgskaya_oblast_MSK_56_Zone4,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.305,width 3.0 deg
+S0222,57,Orlovskaya_oblast_MSK_57_Zone1,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.0985,n/a
+S0223,57,МСК-57 зона 1,terraingis.ru,unverified,one source only,0.0985,n/a
+S0224,57,Orlovskaya_oblast_MSK_57_Zone2,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.0985,width 3.0 deg
+S0225,57,МСК-57 зона 2,terraingis.ru,unverified,one source only,0.0985,width 3.0 deg
+S0226,57,Orlovskaya_oblast_MSK_57_Zone3,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.0985,width 3.0 deg
+S0227,57,МСК-57 зона 3,terraingis.ru,unverified,one source only,0.0985,width 3.0 deg
+S0228,58,Penzenskaya_oblast_MSK_58_Zone1,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.1265,n/a
+S0229,58,Penzenskaya_oblast_MSK_58_Zone2,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.1265,width 3.0 deg
+S0230,59,Permskiy_kray_MSK_59_Zone1,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.2575,n/a
+S0231,59,Permskiy_kray_MSK_59_Zone2,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.2575,width 3.0 deg
+S0232,59,Permskiy_kray_MSK_59_Zone3,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.2575,width 3.0 deg
+S0233,60,Pskovskaya_oblast_MSK_60_Zone1,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.3119,n/a
+S0234,60,Pskovskaya_oblast_MSK_60_Zone2,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.3119,width 3.0 deg
+S0235,60,Pskovskaya_oblast_MSK_60_Zone3,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.3119,width 3.0 deg
+S0236,61,Rostovskaya_oblast_MSK_61_Zone1,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.0447,n/a
+S0237,61,Rostovskaya_oblast_MSK_61_Zone2,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.0447,width 3.0 deg
+S0238,61,Rostovskaya_oblast_MSK_61_Zone3,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.0447,width 3.0 deg
+S0239,62,Ryazanskaya_oblast_MSK_62_Zone1,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.0361,n/a
+S0240,62,Ryazanskaya_oblast_MSK_62_Zone2,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.0361,width 3.0 deg
+S0241,62,Ryazanskaya_oblast_MSK_62_Zone3,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.0361,width 3.0 deg
+S0242,63,Samarskaya_oblast_MSK_63_Zone1,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.219,n/a
+S0243,63,Samarskaya_oblast_MSK_Gorod_Samara_Calculated,fieldworker,unverified,one source only,0.049,n/a
+S0244,63,Samarskaya_oblast_MSK_63_Zone2,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.219,width 3.0 deg
+S0245,64,Saratovskaya_oblast_MSK_64_Zone1,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.1572,n/a
+S0246,64,Saratovskaya_oblast_MSK_64_Zone2,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.1572,width 3.0 deg
+S0247,64,Saratovskaya_oblast_MSK_64_Zone3,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.1572,width 3.0 deg
+S0248,65,Sahalinskaya_oblast_MSK_65_Zone1,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.3581,n/a
+S0249,65,МСК-65 зона 2,terraingis.ru,unverified,one source only,0.3581,width 3.0 deg
+S0250,65,МСК-65 зона 3,terraingis.ru,unverified,one source only,0.3581,width 3.0 deg
+S0251,65,МСК-65 зона 4,terraingis.ru,unverified,one source only,0.3581,width 3.0 deg
+S0252,65,МСК-65 зона 5,terraingis.ru,unverified,one source only,0.3581,width 3.0 deg
+S0253,66,Sverdlovskaya_oblast_MSK_66_Zone1_3gr_alt,fieldworker,unverified,one source only,0.3188,n/a
+S0254,66,Sverdlovskaya_oblast_MSK_66_Zone1_3gr,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.3188,no zone 1 in group (unchecked)
+S0255,66,Sverdlovskaya_oblast_MSK_66_Zone2_3gr_alt,fieldworker,unverified,one source only,0.3188,width 3.0 deg
+S0256,66,Sverdlovskaya_oblast_MSK_66_Zone2_3gr,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.3188,no zone 1 in group (unchecked)
+S0257,66,Sverdlovskaya_oblast_MSK_66_Zone3_3gr_alt,fieldworker,unverified,one source only,0.3188,width 3.0 deg
+S0258,66,Sverdlovskaya_oblast_MSK_66_Zone2_6gr,fieldworker+geoprof.nethouse.ru,verified,,0.3188,no zone 1 in group (unchecked)
+S0259,66,Sverdlovskaya_oblast_MSK_66_Zone3_3gr,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.3188,no zone 1 in group (unchecked)
+S0260,66,Sverdlovskaya_oblast_MSK_66_Zone4_3gr_alt,fieldworker,unverified,one source only,0.3188,width 3.0 deg
+S0261,67,Smolenskaya_oblast_MSK_67_Zone1,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.2083,n/a
+S0262,67,Smolenskaya_oblast_MSK_67_Zone2,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.2083,width 3.0 deg
+S0263,67,Smolenskaya_oblast_MSK_67_Zone3,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.2083,width 3.0 deg
+S0264,68,Tambovskaya_oblast_MSK_68_Zone1,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.0589,n/a
+S0265,68,Tambovskaya_oblast_MSK_68_Zone2,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.0589,width 3.0 deg
+S0266,68,Tambovskaya_oblast_MSK_68_Zone3,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.0589,width 3.0 deg
+S0267,69,Tverskaya_oblast_MSK_69_Zone1,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.1133,n/a
+S0268,69,Tverskaya_oblast_MSK_69_Zone2,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.1133,width 3.0 deg
+S0269,69,Tverskaya_oblast_MSK_69_Zone3,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.1133,width 3.0 deg
+S0270,70,Tomskaya_oblast_MSK_70_Zone1,fieldworker+geoprof.nethouse.ru,verified,,0.4265,n/a
+S0271,70,Tomskaya_oblast_MSK_70_Zone2,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.4265,width 3.0 deg
+S0272,70,Tomskaya_oblast_MSK_70_Zone3,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.4265,width 3.0 deg
+S0273,70,Tomskaya_oblast_MSK_70_Zone4,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.4265,width 3.0 deg
+S0274,70,Tomskaya_oblast_MSK_Gorod_Tomsk,fieldworker,unverified,one source only,0.4265,n/a
+S0275,70,Tomskaya_oblast_MSK_70_Zone5,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.4265,width 3.0 deg
+S0276,70,Tomskaya_oblast_MSK_70_Zone6,fieldworker+geoprof.nethouse.ru,verified,,0.4265,width 3.0 deg
+S0277,71,Tulskaya_oblast_MSK_71_Zone1,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.0653,n/a
+S0278,71,Tulskaya_oblast_MSK_71_1,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.1267,n/a
+S0279,71,Tulskaya_oblast_MSK_71_Zone2,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.0653,width 3.0 deg
+S0280,72,Tumenskaya_oblast_MSK_72_Zone1_3gr,fieldworker+geoprof.nethouse.ru,verified,,0.3569,no zone 1 in group (unchecked)
+S0281,72,Tumenskaya_oblast_MSK_72_Zone2_3gr,fieldworker+geoprof.nethouse.ru,verified,,0.3569,no zone 1 in group (unchecked)
+S0282,72,Tumenskaya_oblast_MSK_72_Zone1_1_5gr,fieldworker+geoprof.nethouse.ru,verified,,0.3569,no zone 1 in group (unchecked)
+S0283,72,Tumenskaya_oblast_MSK_72_Zone2_1_5gr,fieldworker+geoprof.nethouse.ru,verified,,0.3569,no zone 1 in group (unchecked)
+S0284,72,Tumenskaya_oblast_MSK_72_Zone2_6gr,fieldworker+geoprof.nethouse.ru,verified,,0.3569,no zone 1 in group (unchecked)
+S0285,72,Tumenskaya_oblast_MSK_72_Zone3_3gr,fieldworker+geoprof.nethouse.ru,verified,,0.3569,no zone 1 in group (unchecked)
+S0286,72,Tumenskaya_oblast_MSK_72_Zone3_1_5gr,fieldworker+geoprof.nethouse.ru,verified,,0.3569,no zone 1 in group (unchecked)
+S0287,72,Tumenskaya_oblast_MSK_72_Zone4_1_5gr,fieldworker+geoprof.nethouse.ru,verified,,0.3569,no zone 1 in group (unchecked)
+S0288,72,Tumenskaya_oblast_MSK_72_Zone4_3gr,fieldworker+geoprof.nethouse.ru,verified,,0.3569,no zone 1 in group (unchecked)
+S0289,72,Tumenskaya_oblast_MSK_72_Zone5_1_5gr,fieldworker+geoprof.nethouse.ru,verified,,0.3569,no zone 1 in group (unchecked)
+S0290,72,Tumenskaya_oblast_MSK_72_Zone6_1_5gr,fieldworker+geoprof.nethouse.ru,verified,,0.3569,no zone 1 in group (unchecked)
+S0291,72,Tumenskaya_oblast_MSK_72_Zone3_6gr,fieldworker+geoprof.nethouse.ru,verified,,0.3569,no zone 1 in group (unchecked)
+S0292,72,Tumenskaya_oblast_MSK_72_Zone5_3gr,fieldworker+geoprof.nethouse.ru,verified,,0.3569,no zone 1 in group (unchecked)
+S0293,73,Ulyanovskaya_oblast_MSK_73_Zone1,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.1804,n/a
+S0294,73,Ulyanovskaya_oblast_MSK_73_Zone2,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.1804,width 3.0 deg
+S0295,74,Chelyabinskaya_oblast_MSK_74_Zone1,fieldworker+geoprof.nethouse.ru,verified,,0.3441,n/a
+S0296,74,Chelyabinskaya_oblast_MSK_74_Zone2,fieldworker+geoprof.nethouse.ru,verified,,0.3441,width 3.0 deg
+S0297,74,Chelyabinskaya_oblast_MSK_74_Zone3,fieldworker+geoprof.nethouse.ru,verified,,0.3441,width 3.0 deg
+S0298,75,Zabaykalskiy_kray_MSK_75_Zone1,fieldworker+geoprof.nethouse.ru,verified,,0.4323,n/a
+S0299,75,Zabaykalskiy_kray_MSK_75_Zone2,fieldworker+geoprof.nethouse.ru,verified,,0.4323,width 3.0 deg
+S0300,75,Zabaykalskiy_kray_MSK_75_Zone3,fieldworker+geoprof.nethouse.ru,verified,,0.4323,width 3.0 deg
+S0301,75,Zabaykalskiy_kray_MSK_75_Zone4,fieldworker+geoprof.nethouse.ru,verified,,0.4323,width 3.0 deg
+S0302,75,Zabaykalskiy_kray_MSK_75_Zone5,fieldworker+geoprof.nethouse.ru,verified,,0.4323,width 3.0 deg
+S0303,76,Yaroslavskaya_oblast_MSK_76_Zone1,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.0384,n/a
+S0304,76,Yaroslavskaya_oblast_MSK_76_Zone2,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.0384,width 3.0 deg
+S0305,77,Moscow_MSK_77_MGGT,fieldworker+geoprof.nethouse.ru,verified,,0.9638,n/a
+S0306,77,Moscow_MSK_77_MLAT_1,fieldworker,unverified,one source only,1.2938,n/a
+S0307,77,Moscow_MSK_77_MLAT_2,fieldworker,unverified,one source only,0.6598,n/a
+S0308,77,Moscow_MSK_77_Metro,fieldworker,unverified,one source only,1.1738,n/a
+S0309,77,Московская СК (МГГТ),terraingis.ru,unverified,one source only,0.9638,n/a
+S0310,78,SPb_MSK_64_Kalibrovka,fieldworker,unverified,one source only,0.2615,n/a
+S0311,78,SPb_MSK_78,fieldworker,unverified,one source only,0.5014,n/a
+S0312,78,SPb_MSK_78_GP,fieldworker,unverified,one source only,0.5319,n/a
+S0313,78,SPb_MSK_78_GP_EGM2008,fieldworker,unverified,one source only,0.5336,n/a
+S0314,78,SPb_MSK_78_GP_EGM96,fieldworker,unverified,one source only,0.4469,n/a
+S0315,78,SPb_MSK_64,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.2615,n/a
+S0316,83,"""МСК-83 зона 3, 6 градусная",fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.0663,no zone 1 in group (unchecked)
+S0317,83,NAO_MSK_83_Zone4,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.0663,no zone 1 in group (unchecked)
+S0318,83,NAO_MSK_83_Zone5,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.0663,no zone 1 in group (unchecked)
+S0319,83,NAO_MSK_83_Zone6,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.0663,no zone 1 in group (unchecked)
+S0320,83,NAO_MSK_83_Zone7,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.0663,no zone 1 in group (unchecked)
+S0321,86,HMAO_MSK_86_Zone1,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.3337,no zone 1 in group (unchecked)
+S0322,86,HMAO_MSK_86_Zone2,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.3337,no zone 1 in group (unchecked)
+S0323,86,HMAO_MSK_86_Zone3,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.3337,no zone 1 in group (unchecked)
+S0324,86,HMAO_MSK_86_Zone4,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.3337,no zone 1 in group (unchecked)
+S0325,86,HMAO_MSK_86_Zone5,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.3337,no zone 1 in group (unchecked)
+S0326,87,ChAO_MSK_87_Zone3,fieldworker+geoprof.nethouse.ru,verified,,0.4862,no zone 1 in group (unchecked)
+S0327,87,ChAO_MSK_87_Zone4,fieldworker+geoprof.nethouse.ru,verified,,0.4862,no zone 1 in group (unchecked)
+S0328,87,ChAO_MSK_87_Zone5,fieldworker+geoprof.nethouse.ru,verified,,0.4862,no zone 1 in group (unchecked)
+S0329,87,ChAO_MSK_87,fieldworker,unverified,one source only,0.4862,n/a
+S0330,87,ChAO_MSK_87_Zone6,fieldworker+geoprof.nethouse.ru,verified,,0.4862,no zone 1 in group (unchecked)
+S0331,87,ChAO_MSK_87_Zone7,fieldworker+geoprof.nethouse.ru,verified,,0.4862,no zone 1 in group (unchecked)
+S0332,87,ChAO_MSK_87_Zone8,fieldworker+geoprof.nethouse.ru,verified,,0.4862,no zone 1 in group (unchecked)
+S0333,90,МСК-90 зона 1,terraingis.ru,unverified,one source only,0.1839,no zone 1 in group (unchecked)
+S0334,90,МСК-90 зона 2,terraingis.ru,unverified,one source only,0.1839,no zone 1 in group (unchecked)
+S0335,,Oktyabrskaya_railway_MGSK_Okt_Zone5,fieldworker,unverified,one source only; no test point for this system,,no zone 1 in group (unchecked)
+S0336,,Oktyabrskaya_railway_MGSK_Okt_Zone6,fieldworker,unverified,one source only; no test point for this system,,no zone 1 in group (unchecked)
+S0337,,Road_M11_Moscow_SPb_MSK_M11,fieldworker,unverified,one source only; no test point for this system,,no zone 1 in group (unchecked)
+S0338,,Oktyabrskaya_railway_MGSK_Okt_Zone7,fieldworker,unverified,one source only; no test point for this system,,no zone 1 in group (unchecked)

@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Датумы России — МСК, СК-42, СК-95, ГСК-2011</title>
+<meta name="description" content="Каталог местных систем координат (МСК) и параметров перехода к WGS-84 с проверкой и онлайн-конвертером.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <h1>Датумы России</h1>
+    <p class="sub" id="sub">Местные системы координат, параметры перехода к WGS-84, конвертер и результаты проверок</p>
+    <nav class="tabs" role="tablist">
+      <button role="tab" data-tab="conv" aria-selected="true">Конвертер</button>
+      <button role="tab" data-tab="sys" aria-selected="false">Системы</button>
+      <button role="tab" data-tab="dat" aria-selected="false">Датумы</button>
+      <button role="tab" data-tab="chk" aria-selected="false">Проверки</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <section id="tab-conv" class="panel">
+    <div class="card">
+      <div class="grid2">
+        <label>Регион
+          <select id="region"></select>
+        </label>
+        <label>Система координат
+          <select id="system"></select>
+        </label>
+      </div>
+      <label class="check"><input type="checkbox" id="showUnv"> показывать неподтверждённые системы (один источник)</label>
+      <div id="sysinfo" class="info"></div>
+    </div>
+
+    <div class="card">
+      <div class="seg" role="group" aria-label="Направление">
+        <button id="m-fwd" aria-pressed="true">WGS-84 → МСК</button>
+        <button id="m-inv" aria-pressed="false">МСК → WGS-84</button>
+      </div>
+      <div id="in-fwd" class="grid2">
+        <label>Широта <input id="lat" inputmode="text" placeholder="55.7558 или 55°45′21″" value="55.7558"></label>
+        <label>Долгота <input id="lon" inputmode="text" placeholder="37.6173 или 37°37′02″" value="37.6173"></label>
+      </div>
+      <div id="in-inv" class="grid2" hidden>
+        <label>X (на север), м <input id="xin" inputmode="decimal" placeholder="478559.171"></label>
+        <label>Y (на восток), м <input id="yin" inputmode="decimal" placeholder="1365816.032"></label>
+      </div>
+      <div id="out" class="out" aria-live="polite"></div>
+      <div class="row">
+        <button id="find" class="ghost">Подобрать зону региона по точке</button>
+        <button id="copy-p4" class="ghost">Копировать PROJ</button>
+        <button id="copy-mi" class="ghost">Копировать строку MapInfo</button>
+      </div>
+      <div id="zones" class="zones"></div>
+      <p class="note">В российской записи <b>X — на север, Y — на восток</b> (в ГИС и PROJ порядок обратный: E, N).</p>
+    </div>
+  </section>
+
+  <section id="tab-sys" class="panel" hidden>
+    <div class="card">
+      <div class="grid3">
+        <label>Поиск <input id="q" placeholder="регион, название, осевой меридиан…"></label>
+        <label>Статус
+          <select id="f-status">
+            <option value="verified">подтверждённые</option>
+            <option value="all">все</option>
+            <option value="unverified">неподтверждённые</option>
+          </select>
+        </label>
+        <label>Источник
+          <select id="f-src">
+            <option value="">любой</option>
+            <option value="fieldworker">Fieldworker-экспорт</option>
+            <option value="geoprof.nethouse.ru">geoprof.nethouse.ru</option>
+            <option value="terraingis.ru">terraingis.ru</option>
+          </select>
+        </label>
+      </div>
+      <div class="row"><span id="count" class="muted"></span>
+        <button id="dl-json" class="ghost">Скачать JSON</button>
+        <button id="dl-csv" class="ghost">Скачать CSV</button></div>
+    </div>
+    <div class="tablewrap"><table id="tbl"><thead><tr>
+      <th>ID</th><th>Регион</th><th>Название</th><th class="num">Осевой, °</th><th class="num">Ложный восток</th><th class="num">Ложный север</th><th>Источники</th><th>Статус</th>
+    </tr></thead><tbody></tbody></table></div>
+  </section>
+
+  <section id="tab-dat" class="panel" hidden>
+    <div class="card"><h2>Параметры перехода к WGS-84 (из Fieldworker-экспорта)</h2>
+      <p class="muted">Форма ГОСТ: локальная СК → WGS-84, повороты «coordinate frame» (″), масштаб в ppm. Поворот вокруг оси Y в экспорте отсутствует и восстановлен там, где остальные шесть параметров совпали с известным набором.</p></div>
+    <div class="tablewrap"><table id="tbl-dt"><thead><tr><th>Код</th><th>Эллипсоид</th><th class="num">ΔX</th><th class="num">ΔY</th><th class="num">ΔZ</th><th class="num">ωx</th><th class="num">ωy</th><th class="num">ωz</th><th class="num">m, ppm</th><th>Статус</th></tr></thead><tbody></tbody></table></div>
+    <div class="card"><h2>Федеральные СК в реестре EPSG</h2></div>
+    <div class="tablewrap"><table id="tbl-fed"><thead><tr><th>EPSG</th><th>Название</th><th>Датум</th><th>Эллипсоид</th><th class="num">a, м</th><th class="num">1/f</th><th>Преобразований в WGS 84</th></tr></thead><tbody></tbody></table></div>
+  </section>
+
+  <section id="tab-chk" class="panel" hidden>
+    <div id="chk"></div>
+  </section>
+</main>
+
+<footer class="wrap foot">
+  <span id="built"></span> · Данные: <a href="https://geoprof.nethouse.ru/parametry-mestnyh-sistem-koordinat">geoprof.nethouse.ru</a>,
+  <a href="https://terraingis.ru/category/dannye-dlya-gis/msk">terraingis.ru</a>, Fieldworker-экспорт, реестр EPSG ·
+  <a href="https://github.com/worksetsyoufree-art/math-datum">исходный код</a> ·
+  Не заменяет официальный каталог Росреестра: для кадастровых работ сверяйте параметры с первоисточником.
+</footer>
+
+<script src="vendor/proj4-2.12.1.js"></script>
+<script src="data/data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

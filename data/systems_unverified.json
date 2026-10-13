@@ -1,0 +1,3615 @@
+[
+ {
+  "region_code": "05",
+  "region": "Республика Дагестан",
+  "names": [
+   "Respublika_Dagestan_MSK_05"
+  ],
+  "geometry": {
+   "lon0": 46.891666666666666,
+   "lat0": 0.0,
+   "fe": 300000.0,
+   "fn": -4542821.0
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   24.47,
+   -130.89,
+   -81.56,
+   -0.0,
+   0.0,
+   -0.13000870737754483,
+   -0.22
+  ],
+  "datum_basis": "fieldworker export",
+  "sources": [
+   "fieldworker"
+  ],
+  "source_urls": [],
+  "flags": [
+   "false northing is truncated to integer in source, fraction unknown (error < 1 m)"
+  ],
+  "origin": "fieldworker",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=46.891666667 +k=1 +x_0=300000.000000 +y_0=-4542821.000000 +ellps=krass +towgs84=24.47,-130.89,-81.56,0,-0,0.1300087074,-0.22 +units=m +no_defs",
+  "id": "S0014",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.1043,
+   "zone_series": "n/a",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "06",
+  "region": "Республика Ингушетия",
+  "names": [
+   "Respublika_Ingushetiya_MSK_06_Zone2"
+  ],
+  "geometry": {
+   "lon0": 46.983333333333334,
+   "lat0": 0.0,
+   "fe": 2300000.0,
+   "fn": -4311057.63
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   23.57,
+   -140.95,
+   -79.8,
+   -0.0,
+   -0.35,
+   -0.789994207926379,
+   -0.22
+  ],
+  "datum_basis": "fieldworker export",
+  "sources": [
+   "fieldworker"
+  ],
+  "source_urls": [],
+  "flags": [
+   "false northing fraction restored from sibling zone Respublika_Ingushetiya_MSK_06_Zone1",
+   "omega_y restored from matching GOST parameter set"
+  ],
+  "origin": "fieldworker",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=46.983333333 +k=1 +x_0=2300000.000000 +y_0=-4311057.630000 +ellps=krass +towgs84=23.57,-140.95,-79.8,0,0.35,0.7899942079,-0.22 +units=m +no_defs",
+  "id": "S0017",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.1605,
+   "zone_series": "width 3.0 deg",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "07",
+  "region": "Кабардино-Балкарской Республики",
+  "names": [
+   "МСК-07"
+  ],
+  "geometry": {
+   "lon0": 43.98299000000051,
+   "lat0": 0.0,
+   "fe": 300000.0,
+   "fn": -4300000.0
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   23.57,
+   -140.95,
+   -79.8,
+   0.0,
+   -0.35,
+   -0.79,
+   -0.22
+  ],
+  "datum_basis": "scraped (GOST 51794-2008 line)",
+  "sources": [
+   "terraingis.ru"
+  ],
+  "source_urls": [
+   "https://terraingis.ru/msk-07.html"
+  ],
+  "flags": [],
+  "origin": "scraped",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=43.98299 +k=1 +x_0=300000.000000 +y_0=-4300000.000000 +ellps=krass +towgs84=23.57,-140.95,-79.8,-0,0.35,0.79,-0.22 +units=m +no_defs",
+  "id": "S0018",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.1313,
+   "zone_series": "n/a",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "09",
+  "region": "Республики Карачаево-Черкесия",
+  "names": [
+   "МСК-09"
+  ],
+  "geometry": {
+   "lon0": 41.7166666666667,
+   "lat0": 0.0997890000000002,
+   "fe": 301549.2,
+   "fn": -4300000.0
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   23.57,
+   -140.95,
+   -79.8,
+   0.0,
+   -0.35,
+   -0.79,
+   -0.22
+  ],
+  "datum_basis": "scraped (GOST 51794-2008 line)",
+  "sources": [
+   "terraingis.ru"
+  ],
+  "source_urls": [
+   "https://terraingis.ru/msk-09.html"
+  ],
+  "flags": [],
+  "origin": "scraped",
+  "proj4": "+proj=tmerc +lat_0=0.099789 +lon_0=41.716666667 +k=1 +x_0=301549.200000 +y_0=-4300000.000000 +ellps=krass +towgs84=23.57,-140.95,-79.8,-0,0.35,0.79,-0.22 +units=m +no_defs",
+  "id": "S0024",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.0934,
+   "zone_series": "n/a",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "10",
+  "region": "Республика Карелия",
+  "names": [
+   "Respublika_Kareliya_Uslovnaya_SK_RK"
+  ],
+  "geometry": {
+   "lon0": 33.0,
+   "lat0": 0.0,
+   "fe": 300147.0,
+   "fn": -6399853.0
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   23.57,
+   -140.95,
+   -79.8,
+   -0.0,
+   -0.35,
+   -0.789994207926379,
+   -0.22
+  ],
+  "datum_basis": "fieldworker export",
+  "sources": [
+   "fieldworker"
+  ],
+  "source_urls": [],
+  "flags": [
+   "false northing is truncated to integer in source, fraction unknown (error < 1 m)",
+   "omega_y restored from matching GOST parameter set"
+  ],
+  "origin": "fieldworker",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=33 +k=1 +x_0=300147.000000 +y_0=-6399853.000000 +ellps=krass +towgs84=23.57,-140.95,-79.8,0,0.35,0.7899942079,-0.22 +units=m +no_defs",
+  "id": "S0026",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.1749,
+   "zone_series": "n/a",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "11",
+  "region": "Республика Коми",
+  "names": [
+   "Respublika_Komi_MSK_11_Zone1_6gr"
+  ],
+  "geometry": {
+   "lon0": 44.03333333333333,
+   "lat0": 0.0,
+   "fe": 1400000.0,
+   "fn": -6211057.628
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   23.57,
+   -140.95,
+   -79.8,
+   -0.0,
+   -0.35,
+   -0.789994207926379,
+   -0.22
+  ],
+  "datum_basis": "fieldworker export",
+  "sources": [
+   "fieldworker"
+  ],
+  "source_urls": [],
+  "flags": [
+   "false northing fraction restored from sibling zone Respublika_Komi_MSK_11_Zone1_3gr",
+   "omega_y restored from matching GOST parameter set"
+  ],
+  "origin": "fieldworker",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=44.033333333 +k=1 +x_0=1400000.000000 +y_0=-6211057.628000 +ellps=krass +towgs84=23.57,-140.95,-79.8,0,0.35,0.7899942079,-0.22 +units=m +no_defs",
+  "id": "S0030",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.137,
+   "zone_series": "n/a",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "11",
+  "region": "Республика Коми",
+  "names": [
+   "Respublika_Komi_MSK_11_Zone2_6gr"
+  ],
+  "geometry": {
+   "lon0": 50.03333333333333,
+   "lat0": 0.0,
+   "fe": 2400000.0,
+   "fn": -6211057.628
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   23.57,
+   -140.95,
+   -79.8,
+   -0.0,
+   -0.35,
+   -0.789994207926379,
+   -0.22
+  ],
+  "datum_basis": "fieldworker export",
+  "sources": [
+   "fieldworker"
+  ],
+  "source_urls": [],
+  "flags": [
+   "false northing fraction restored from sibling zone Respublika_Komi_MSK_11_Zone1_3gr",
+   "omega_y restored from matching GOST parameter set"
+  ],
+  "origin": "fieldworker",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=50.033333333 +k=1 +x_0=2400000.000000 +y_0=-6211057.628000 +ellps=krass +towgs84=23.57,-140.95,-79.8,0,0.35,0.7899942079,-0.22 +units=m +no_defs",
+  "id": "S0033",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.137,
+   "zone_series": "width 6.0 deg",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "11",
+  "region": "Республика Коми",
+  "names": [
+   "Respublika_Komi_MSK_Gorod_Syktyvkar"
+  ],
+  "geometry": {
+   "lon0": 51.0,
+   "lat0": 0.0,
+   "fe": 22926.0,
+   "fn": -6824968.0
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   23.57,
+   -140.95,
+   -79.8,
+   -0.0,
+   -0.35,
+   -0.789994207926379,
+   -0.22
+  ],
+  "datum_basis": "fieldworker export",
+  "sources": [
+   "fieldworker"
+  ],
+  "source_urls": [],
+  "flags": [
+   "false northing is truncated to integer in source, fraction unknown (error < 1 m)",
+   "omega_y restored from matching GOST parameter set"
+  ],
+  "origin": "fieldworker",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=51 +k=1 +x_0=22926.000000 +y_0=-6824968.000000 +ellps=krass +towgs84=23.57,-140.95,-79.8,0,0.35,0.7899942079,-0.22 +units=m +no_defs",
+  "id": "S0034",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.137,
+   "zone_series": "n/a",
+   "region_capital_inside_some_zone": true,
+   "city_offset_km:Сыктывкар": 8.6
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "15",
+  "region": "Республики Северная Осетия — Алания",
+  "names": [
+   "МСК-15 зона 1 СК-95"
+  ],
+  "geometry": {
+   "lon0": 44.18333333333,
+   "lat0": 0.0,
+   "fe": 300000.0,
+   "fn": -4706350.577
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   24.47,
+   -130.89,
+   -81.56,
+   0.0,
+   0.0,
+   0.13,
+   -0.22
+  ],
+  "datum_basis": "scraped (GOST 51794-2008 line)",
+  "sources": [
+   "terraingis.ru"
+  ],
+  "source_urls": [
+   "https://terraingis.ru/msk-15.html"
+  ],
+  "flags": [],
+  "origin": "scraped",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=44.183333333 +k=1 +x_0=300000.000000 +y_0=-4706350.577000 +ellps=krass +towgs84=24.47,-130.89,-81.56,-0,-0,-0.13,-0.22 +units=m +no_defs",
+  "id": "S0054",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.0408,
+   "zone_series": "n/a",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "15",
+  "region": "Республики Северная Осетия — Алания",
+  "names": [
+   "Respublika_Severnaya_Osetiya_Alaniya_MSK_15"
+  ],
+  "geometry": {
+   "lon0": 44.18333333333333,
+   "lat0": 0.0,
+   "fe": 300000.0,
+   "fn": -4706350.577
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   24.47,
+   -130.89,
+   -81.56,
+   -0.0,
+   0.0,
+   -0.13000870737754483,
+   -0.22
+  ],
+  "datum_basis": "fieldworker export",
+  "sources": [
+   "fieldworker"
+  ],
+  "source_urls": [],
+  "flags": [
+   "false northing fraction restored from sibling zone МСК-15 зона 1 СК-95",
+   "same projection as МСК-15 зона 1 СК-95 but different datum"
+  ],
+  "origin": "fieldworker",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=44.183333333 +k=1 +x_0=300000.000000 +y_0=-4706350.577000 +ellps=krass +towgs84=24.47,-130.89,-81.56,0,-0,0.1300087074,-0.22 +units=m +no_defs",
+  "id": "S0055",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.0408,
+   "zone_series": "n/a",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "16",
+  "region": "Республики Татарстан",
+  "names": [
+   "Respublika_Tatarstan_SK_63"
+  ],
+  "geometry": {
+   "lon0": 55.03333333333333,
+   "lat0": 0.0,
+   "fe": 2300000.0,
+   "fn": -9414.0
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   23.57,
+   -140.95,
+   -79.8,
+   -0.0,
+   -0.35,
+   -0.789994207926379,
+   -0.22
+  ],
+  "datum_basis": "fieldworker export",
+  "sources": [
+   "fieldworker"
+  ],
+  "source_urls": [],
+  "flags": [
+   "false northing is truncated to integer in source, fraction unknown (error < 1 m)",
+   "omega_y restored from matching GOST parameter set"
+  ],
+  "origin": "fieldworker",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=55.033333333 +k=1 +x_0=2300000.000000 +y_0=-9414.000000 +ellps=krass +towgs84=23.57,-140.95,-79.8,0,0.35,0.7899942079,-0.22 +units=m +no_defs",
+  "id": "S0059",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.1797,
+   "zone_series": "no zone 1 in group (unchecked)",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "19",
+  "region": "Республики Хакасия",
+  "names": [
+   "МСК-19 (166)"
+  ],
+  "geometry": {
+   "lon0": 90.0,
+   "lat0": 0.37,
+   "fe": 107543.3,
+   "fn": -5540944.5
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   23.57,
+   -140.95,
+   -79.8,
+   0.0,
+   -0.35,
+   -0.79,
+   -0.22
+  ],
+  "datum_basis": "scraped (GOST 51794-2008 line)",
+  "sources": [
+   "terraingis.ru"
+  ],
+  "source_urls": [
+   "https://terraingis.ru/msk-19.html"
+  ],
+  "flags": [
+   "calc/gost2008 variants disagree on lat0/k0/false_northing - one of them is likely a typo in the source"
+  ],
+  "origin": "scraped",
+  "proj4": "+proj=tmerc +lat_0=0.37 +lon_0=90 +k=1 +x_0=107543.300000 +y_0=-5540944.500000 +ellps=krass +towgs84=23.57,-140.95,-79.8,-0,0.35,0.79,-0.22 +units=m +no_defs",
+  "id": "S0063",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.4259,
+   "zone_series": "n/a",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "20",
+  "region": "Чеченской Республики",
+  "names": [
+   "МСК-20 зона 1"
+  ],
+  "geometry": {
+   "lon0": 45.5083333,
+   "lat0": 0.0,
+   "fe": 300000.0,
+   "fn": -4702747.48
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   23.57,
+   -140.95,
+   -79.8,
+   0.0,
+   -0.35,
+   -0.79,
+   -0.22
+  ],
+  "datum_basis": "scraped (GOST 51794-2008 line)",
+  "sources": [
+   "terraingis.ru"
+  ],
+  "source_urls": [
+   "https://terraingis.ru/msk-20.html"
+  ],
+  "flags": [],
+  "origin": "scraped",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=45.5083333 +k=1 +x_0=300000.000000 +y_0=-4702747.480000 +ellps=krass +towgs84=23.57,-140.95,-79.8,-0,0.35,0.79,-0.22 +units=m +no_defs",
+  "id": "S0065",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.1808,
+   "zone_series": "n/a",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "23",
+  "region": "Краснодарский край",
+  "names": [
+   "Krasnodarskiy_kray_MSK_Gorod_Adler",
+   "Krasnodarskiy_kray_MSK_Gorod_Soshi"
+  ],
+  "geometry": {
+   "lon0": 39.0,
+   "lat0": 0.0,
+   "fe": 7.0,
+   "fn": -4784573.0
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   23.57,
+   -140.95,
+   -79.8,
+   -0.0,
+   -0.35,
+   -0.789994207926379,
+   -0.22
+  ],
+  "datum_basis": "fieldworker export",
+  "sources": [
+   "fieldworker"
+  ],
+  "source_urls": [],
+  "flags": [
+   "false northing is truncated to integer in source, fraction unknown (error < 1 m)",
+   "omega_y restored from matching GOST parameter set"
+  ],
+  "origin": "fieldworker",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=39 +k=1 +x_0=7.000000 +y_0=-4784573.000000 +ellps=krass +towgs84=23.57,-140.95,-79.8,0,0.35,0.7899942079,-0.22 +units=m +no_defs",
+  "id": "S0073",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.0486,
+   "zone_series": "n/a",
+   "region_capital_inside_some_zone": true,
+   "city_offset_km:Адлер": 74.9,
+   "city_offset_km:Сочи": 58.5
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "24",
+  "region": "Красноярского края",
+  "names": [
+   "МСК-163"
+  ],
+  "geometry": {
+   "lon0": 81.0,
+   "lat0": 0.0,
+   "fe": 65425.7,
+   "fn": -7434483.2
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   23.57,
+   -140.95,
+   -79.8,
+   0.0,
+   -0.35,
+   -0.79,
+   -0.22
+  ],
+  "datum_basis": "assumed GOST 51794-2008 (site gives only MapInfo datum 1001)",
+  "sources": [
+   "terraingis.ru"
+  ],
+  "source_urls": [
+   "https://terraingis.ru/msk-24.html"
+  ],
+  "flags": [],
+  "origin": "scraped",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=81 +k=1 +x_0=65425.700000 +y_0=-7434483.200000 +ellps=krass +towgs84=23.57,-140.95,-79.8,-0,0.35,0.79,-0.22 +units=m +no_defs",
+  "id": "S0075",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.429,
+   "zone_series": "n/a",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "24",
+  "region": "Красноярского края",
+  "names": [
+   "МСК-170"
+  ],
+  "geometry": {
+   "lon0": 102.0,
+   "lat0": 0.0,
+   "fe": 90338.9,
+   "fn": -6357146.1
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   23.57,
+   -140.95,
+   -79.8,
+   0.0,
+   -0.35,
+   -0.79,
+   -0.22
+  ],
+  "datum_basis": "assumed GOST 51794-2008 (site gives only MapInfo datum 1001)",
+  "sources": [
+   "terraingis.ru"
+  ],
+  "source_urls": [
+   "https://terraingis.ru/msk-24.html"
+  ],
+  "flags": [],
+  "origin": "scraped",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=102 +k=1 +x_0=90338.900000 +y_0=-6357146.100000 +ellps=krass +towgs84=23.57,-140.95,-79.8,-0,0.35,0.79,-0.22 +units=m +no_defs",
+  "id": "S0087",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.429,
+   "zone_series": "n/a",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "26",
+  "region": "Ставропольского края",
+  "names": [
+   "МСК-26 зона 1",
+   "МСК-26 от СК-95 зона 1"
+  ],
+  "geometry": {
+   "lon0": 41.75,
+   "lat0": 0.0,
+   "fe": 1300000.0,
+   "fn": -4512890.197
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   24.83,
+   -130.97,
+   -81.74,
+   0.0,
+   0.0,
+   0.13,
+   -0.22
+  ],
+  "datum_basis": "scraped (GOST 51794-2008 line)",
+  "sources": [
+   "terraingis.ru"
+  ],
+  "source_urls": [
+   "https://terraingis.ru/msk-26.html"
+  ],
+  "flags": [],
+  "origin": "scraped",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=41.75 +k=1 +x_0=1300000.000000 +y_0=-4512890.197000 +ellps=krass +towgs84=24.83,-130.97,-81.74,-0,-0,-0.13,-0.22 +units=m +no_defs",
+  "id": "S0095",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.0225,
+   "zone_series": "n/a",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "26",
+  "region": "Ставропольского края",
+  "names": [
+   "МСК-26 зона 2",
+   "МСК-26 от СК-95 зона 2"
+  ],
+  "geometry": {
+   "lon0": 44.75,
+   "lat0": 0.0,
+   "fe": 2300000.0,
+   "fn": -4512890.197
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   24.83,
+   -130.97,
+   -81.74,
+   0.0,
+   0.0,
+   0.13,
+   -0.22
+  ],
+  "datum_basis": "scraped (GOST 51794-2008 line)",
+  "sources": [
+   "terraingis.ru"
+  ],
+  "source_urls": [
+   "https://terraingis.ru/msk-26.html"
+  ],
+  "flags": [],
+  "origin": "scraped",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=44.75 +k=1 +x_0=2300000.000000 +y_0=-4512890.197000 +ellps=krass +towgs84=24.83,-130.97,-81.74,-0,-0,-0.13,-0.22 +units=m +no_defs",
+  "id": "S0097",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.0225,
+   "zone_series": "width 3.0 deg",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "27",
+  "region": "Хабаровский край",
+  "names": [
+   "Habarovskiy_kray_MSK_Gorod_Habarovsk"
+  ],
+  "geometry": {
+   "lon0": 135.0,
+   "lat0": 0.0,
+   "fe": 41.0,
+   "fn": -5355553.0
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   23.57,
+   -140.95,
+   -79.8,
+   -0.0,
+   -0.35,
+   -0.789994207926379,
+   -0.22
+  ],
+  "datum_basis": "fieldworker export",
+  "sources": [
+   "fieldworker"
+  ],
+  "source_urls": [],
+  "flags": [
+   "false northing is truncated to integer in source, fraction unknown (error < 1 m)",
+   "omega_y restored from matching GOST parameter set"
+  ],
+  "origin": "fieldworker",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=135 +k=1 +x_0=41.000000 +y_0=-5355553.000000 +ellps=krass +towgs84=23.57,-140.95,-79.8,0,0.35,0.7899942079,-0.22 +units=m +no_defs",
+  "id": "S0100",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.4199,
+   "zone_series": "n/a",
+   "region_capital_inside_some_zone": true,
+   "city_offset_km:Хабаровск": 5.2
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "29",
+  "region": "Архангельской области",
+  "names": [
+   "Arhangelskaya_oblast_MSK_29_Zone1"
+  ],
+  "geometry": {
+   "lon0": 32.03333333333333,
+   "lat0": 0.0,
+   "fe": 1400000.0,
+   "fn": -6511057.628
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   23.57,
+   -140.95,
+   -79.8,
+   -0.0,
+   -0.35,
+   -0.789994207926379,
+   -0.22
+  ],
+  "datum_basis": "fieldworker export",
+  "sources": [
+   "fieldworker"
+  ],
+  "source_urls": [],
+  "flags": [
+   "false northing fraction restored from sibling zone МСК-29 зона 2, 6 градусная",
+   "omega_y restored from matching GOST parameter set"
+  ],
+  "origin": "fieldworker",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=32.033333333 +k=1 +x_0=1400000.000000 +y_0=-6511057.628000 +ellps=krass +towgs84=23.57,-140.95,-79.8,0,0.35,0.7899942079,-0.22 +units=m +no_defs",
+  "id": "S0110",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.0775,
+   "zone_series": "n/a",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "29",
+  "region": "Архангельской области",
+  "names": [
+   "МСК-29 зона 6, 6 градусная"
+  ],
+  "geometry": {
+   "lon0": 62.03333333333,
+   "lat0": 0.0,
+   "fe": 6400000.0,
+   "fn": -6511057.628
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   23.57,
+   -140.95,
+   -79.8,
+   0.0,
+   -0.35,
+   -0.79,
+   -0.22
+  ],
+  "datum_basis": "scraped (GOST 51794-2008 line)",
+  "sources": [
+   "terraingis.ru"
+  ],
+  "source_urls": [
+   "https://terraingis.ru/msk-29.html"
+  ],
+  "flags": [],
+  "origin": "scraped",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=62.033333333 +k=1 +x_0=6400000.000000 +y_0=-6511057.628000 +ellps=krass +towgs84=23.57,-140.95,-79.8,-0,0.35,0.79,-0.22 +units=m +no_defs",
+  "id": "S0115",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.0775,
+   "zone_series": "width 6.0 deg",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "29",
+  "region": "Архангельской области",
+  "names": [
+   "МСК-29 зона 2, 6 градусная"
+  ],
+  "geometry": {
+   "lon0": 68.03333333333,
+   "lat0": 0.0,
+   "fe": 2400000.0,
+   "fn": -6511057.628
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   23.57,
+   -140.95,
+   -79.8,
+   0.0,
+   -0.35,
+   -0.79,
+   -0.22
+  ],
+  "datum_basis": "assumed GOST 51794-2008 (site gives only MapInfo datum 1001)",
+  "sources": [
+   "terraingis.ru"
+  ],
+  "source_urls": [
+   "https://terraingis.ru/msk-29.html"
+  ],
+  "flags": [],
+  "origin": "scraped",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=68.033333333 +k=1 +x_0=2400000.000000 +y_0=-6511057.628000 +ellps=krass +towgs84=23.57,-140.95,-79.8,-0,0.35,0.79,-0.22 +units=m +no_defs",
+  "id": "S0116",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.0775,
+   "zone_series": "zone 2 lon0 68.0333 does not fit any series starting from zone 1",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only",
+   "zone 2 lon0 68.0333 does not fit any series starting from zone 1"
+  ]
+ },
+ {
+  "region_code": "30",
+  "region": "Астраханская область",
+  "names": [
+   "Astrakhanskaya_oblast_SK_63_Zone1"
+  ],
+  "geometry": {
+   "lon0": 43.05,
+   "lat0": 0.0,
+   "fe": 1300000.0,
+   "fn": -14743.0
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   23.57,
+   -140.95,
+   -79.8,
+   -0.0,
+   -0.35,
+   -0.789994207926379,
+   -0.22
+  ],
+  "datum_basis": "fieldworker export",
+  "sources": [
+   "fieldworker"
+  ],
+  "source_urls": [],
+  "flags": [
+   "false northing is truncated to integer in source, fraction unknown (error < 1 m)",
+   "omega_y restored from matching GOST parameter set",
+   "same projection as Astrakhanskaya_oblast_SK_63_Zone1_alt_IGD but different datum"
+  ],
+  "origin": "fieldworker",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=43.05 +k=1 +x_0=1300000.000000 +y_0=-14743.000000 +ellps=krass +towgs84=23.57,-140.95,-79.8,0,0.35,0.7899942079,-0.22 +units=m +no_defs",
+  "id": "S0117",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.223,
+   "zone_series": "n/a",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "30",
+  "region": "Астраханская область",
+  "names": [
+   "Astrakhanskaya_oblast_SK_63_Zone1_alt_IGD"
+  ],
+  "geometry": {
+   "lon0": 43.05,
+   "lat0": 0.0,
+   "fe": 1300000.0,
+   "fn": -14743.0
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   -188.39,
+   258.619,
+   161.377,
+   -0.3840031897902193,
+   null,
+   5.4229905269649095,
+   -4.882
+  ],
+  "datum_basis": "fieldworker export",
+  "sources": [
+   "fieldworker"
+  ],
+  "source_urls": [],
+  "flags": [
+   "false northing is truncated to integer in source, fraction unknown (error < 1 m)",
+   "omega_y not in source and no matching GOST set: assumed 0"
+  ],
+  "origin": "fieldworker",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=43.05 +k=1 +x_0=1300000.000000 +y_0=-14743.000000 +ellps=krass +towgs84=-188.39,258.619,161.377,0.3840031898,-0,-5.422990527,-4.882 +units=m +no_defs",
+  "id": "S0118",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 12.8385,
+   "zone_series": "n/a",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only",
+   "round trip 12.84 mm"
+  ]
+ },
+ {
+  "region_code": "30",
+  "region": "Астраханская область",
+  "names": [
+   "Astrakhanskaya_oblast_SK_63_Zone2"
+  ],
+  "geometry": {
+   "lon0": 46.05,
+   "lat0": 0.0,
+   "fe": 2300000.0,
+   "fn": -14743.0
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   23.57,
+   -140.95,
+   -79.8,
+   -0.0,
+   -0.35,
+   -0.789994207926379,
+   -0.22
+  ],
+  "datum_basis": "fieldworker export",
+  "sources": [
+   "fieldworker"
+  ],
+  "source_urls": [],
+  "flags": [
+   "false northing is truncated to integer in source, fraction unknown (error < 1 m)",
+   "omega_y restored from matching GOST parameter set",
+   "same projection as Astrakhanskaya_oblast_SK_63_Zone2_alt_IGD but different datum"
+  ],
+  "origin": "fieldworker",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=46.05 +k=1 +x_0=2300000.000000 +y_0=-14743.000000 +ellps=krass +towgs84=23.57,-140.95,-79.8,0,0.35,0.7899942079,-0.22 +units=m +no_defs",
+  "id": "S0120",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.223,
+   "zone_series": "width 3.0 deg",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "30",
+  "region": "Астраханская область",
+  "names": [
+   "Astrakhanskaya_oblast_SK_63_Zone2_alt_IGD"
+  ],
+  "geometry": {
+   "lon0": 46.05,
+   "lat0": 0.0,
+   "fe": 2300000.0,
+   "fn": -14743.0
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   -188.39,
+   258.619,
+   161.377,
+   -0.3840031897902193,
+   null,
+   5.4229905269649095,
+   -4.882
+  ],
+  "datum_basis": "fieldworker export",
+  "sources": [
+   "fieldworker"
+  ],
+  "source_urls": [],
+  "flags": [
+   "false northing is truncated to integer in source, fraction unknown (error < 1 m)",
+   "omega_y not in source and no matching GOST set: assumed 0"
+  ],
+  "origin": "fieldworker",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=46.05 +k=1 +x_0=2300000.000000 +y_0=-14743.000000 +ellps=krass +towgs84=-188.39,258.619,161.377,0.3840031898,-0,-5.422990527,-4.882 +units=m +no_defs",
+  "id": "S0121",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 12.8385,
+   "zone_series": "width 3.0 deg",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only",
+   "round trip 12.84 mm"
+  ]
+ },
+ {
+  "region_code": "30",
+  "region": "Астраханская область",
+  "names": [
+   "Astrakhanskaya_oblast_MSK_Gorod_Astrakhan"
+  ],
+  "geometry": {
+   "lon0": 48.0,
+   "lat0": 0.0,
+   "fe": -2685.0,
+   "fn": -5135035.0
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   23.57,
+   -140.95,
+   -79.8,
+   -0.0,
+   -0.35,
+   -0.789994207926379,
+   -0.22
+  ],
+  "datum_basis": "fieldworker export",
+  "sources": [
+   "fieldworker"
+  ],
+  "source_urls": [],
+  "flags": [
+   "false northing is truncated to integer in source, fraction unknown (error < 1 m)",
+   "omega_y restored from matching GOST parameter set",
+   "same projection as Astrakhanskaya_oblast_SK_Gorod_Astrakhan_alt_IGD but different datum"
+  ],
+  "origin": "fieldworker",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=48 +k=1 +x_0=-2685.000000 +y_0=-5135035.000000 +ellps=krass +towgs84=23.57,-140.95,-79.8,0,0.35,0.7899942079,-0.22 +units=m +no_defs",
+  "id": "S0122",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.223,
+   "zone_series": "n/a",
+   "region_capital_inside_some_zone": true,
+   "city_offset_km:Астрахань": 3.2
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "30",
+  "region": "Астраханская область",
+  "names": [
+   "Astrakhanskaya_oblast_SK_Gorod_Astrakhan_alt_IGD"
+  ],
+  "geometry": {
+   "lon0": 48.0,
+   "lat0": 0.0,
+   "fe": -2685.0,
+   "fn": -5135035.0
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   -188.39,
+   258.619,
+   161.377,
+   -0.3840031897902193,
+   null,
+   5.4229905269649095,
+   -4.882
+  ],
+  "datum_basis": "fieldworker export",
+  "sources": [
+   "fieldworker"
+  ],
+  "source_urls": [],
+  "flags": [
+   "false northing is truncated to integer in source, fraction unknown (error < 1 m)",
+   "omega_y not in source and no matching GOST set: assumed 0"
+  ],
+  "origin": "fieldworker",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=48 +k=1 +x_0=-2685.000000 +y_0=-5135035.000000 +ellps=krass +towgs84=-188.39,258.619,161.377,0.3840031898,-0,-5.422990527,-4.882 +units=m +no_defs",
+  "id": "S0123",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 12.8385,
+   "zone_series": "n/a",
+   "region_capital_inside_some_zone": true,
+   "city_offset_km:Астрахань": 2.9
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only",
+   "round trip 12.84 mm"
+  ]
+ },
+ {
+  "region_code": "30",
+  "region": "Астраханская область",
+  "names": [
+   "Astrakhanskaya_oblast_SK_63_Zone3"
+  ],
+  "geometry": {
+   "lon0": 49.05,
+   "lat0": 0.0,
+   "fe": 3300000.0,
+   "fn": -14743.0
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   23.57,
+   -140.95,
+   -79.8,
+   -0.0,
+   -0.35,
+   -0.789994207926379,
+   -0.22
+  ],
+  "datum_basis": "fieldworker export",
+  "sources": [
+   "fieldworker"
+  ],
+  "source_urls": [],
+  "flags": [
+   "false northing is truncated to integer in source, fraction unknown (error < 1 m)",
+   "omega_y restored from matching GOST parameter set",
+   "same projection as Astrakhanskaya_oblast_SK_63_Zone3_alt_IGD but different datum"
+  ],
+  "origin": "fieldworker",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=49.05 +k=1 +x_0=3300000.000000 +y_0=-14743.000000 +ellps=krass +towgs84=23.57,-140.95,-79.8,0,0.35,0.7899942079,-0.22 +units=m +no_defs",
+  "id": "S0125",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.223,
+   "zone_series": "width 3.0 deg",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "30",
+  "region": "Астраханская область",
+  "names": [
+   "Astrakhanskaya_oblast_SK_63_Zone3_alt_IGD"
+  ],
+  "geometry": {
+   "lon0": 49.05,
+   "lat0": 0.0,
+   "fe": 3300000.0,
+   "fn": -14743.0
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   -188.39,
+   258.619,
+   161.377,
+   -0.3840031897902193,
+   null,
+   5.4229905269649095,
+   -4.882
+  ],
+  "datum_basis": "fieldworker export",
+  "sources": [
+   "fieldworker"
+  ],
+  "source_urls": [],
+  "flags": [
+   "false northing is truncated to integer in source, fraction unknown (error < 1 m)",
+   "omega_y not in source and no matching GOST set: assumed 0"
+  ],
+  "origin": "fieldworker",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=49.05 +k=1 +x_0=3300000.000000 +y_0=-14743.000000 +ellps=krass +towgs84=-188.39,258.619,161.377,0.3840031898,-0,-5.422990527,-4.882 +units=m +no_defs",
+  "id": "S0126",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 12.8385,
+   "zone_series": "width 3.0 deg",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only",
+   "round trip 12.84 mm"
+  ]
+ },
+ {
+  "region_code": "33",
+  "region": "Владимирская область",
+  "names": [
+   "Vladimirskaya_oblast_MSK_33_2009_SK_95"
+  ],
+  "geometry": {
+   "lon0": 39.0,
+   "lat0": 0.0,
+   "fe": 134156.0,
+   "fn": -6032524.376
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   24.47,
+   -130.89,
+   -81.56,
+   -0.0,
+   0.0,
+   -0.13000870737754483,
+   -0.22
+  ],
+  "datum_basis": "fieldworker export",
+  "sources": [
+   "fieldworker"
+  ],
+  "source_urls": [],
+  "flags": [
+   "false northing fraction restored from sibling zone МСК-33 от СК-95",
+   "same projection as МСК-33 от СК-95 but different datum"
+  ],
+  "origin": "fieldworker",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=39 +k=1 +x_0=134156.000000 +y_0=-6032524.376000 +ellps=krass +towgs84=24.47,-130.89,-81.56,0,-0,0.1300087074,-0.22 +units=m +no_defs",
+  "id": "S0132",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.0698,
+   "zone_series": "n/a",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "34",
+  "region": "Волгоградской области",
+  "names": [
+   "МСК-34 г. Волгоград"
+  ],
+  "geometry": {
+   "lon0": 44.5133333333,
+   "lat0": 0.0,
+   "fe": 108.716,
+   "fn": -5397448.283
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   23.57,
+   -140.95,
+   -79.8,
+   0.0,
+   -0.35,
+   -0.79,
+   -0.22
+  ],
+  "datum_basis": "scraped (GOST 51794-2008 line)",
+  "sources": [
+   "terraingis.ru"
+  ],
+  "source_urls": [
+   "https://terraingis.ru/msk-34.html"
+  ],
+  "flags": [],
+  "origin": "scraped",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=44.513333333 +k=1 +x_0=108.716000 +y_0=-5397448.283000 +ellps=krass +towgs84=23.57,-140.95,-79.8,-0,0.35,0.79,-0.22 +units=m +no_defs",
+  "id": "S0137",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.1401,
+   "zone_series": "n/a",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "39",
+  "region": "Калининградская область",
+  "names": [
+   "Kaliningradskaya_oblast_SK_Gorod_Kaliningrad_Old"
+  ],
+  "geometry": {
+   "lon0": 21.0,
+   "lat0": 0.0,
+   "fe": 42499.0,
+   "fn": -6058499.0
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   23.57,
+   -140.95,
+   -79.8,
+   -0.0,
+   -0.35,
+   -0.789994207926379,
+   -0.22
+  ],
+  "datum_basis": "fieldworker export",
+  "sources": [
+   "fieldworker"
+  ],
+  "source_urls": [],
+  "flags": [
+   "false northing is truncated to integer in source, fraction unknown (error < 1 m)",
+   "omega_y restored from matching GOST parameter set"
+  ],
+  "origin": "fieldworker",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=21 +k=1 +x_0=42499.000000 +y_0=-6058499.000000 +ellps=krass +towgs84=23.57,-140.95,-79.8,0,0.35,0.7899942079,-0.22 +units=m +no_defs",
+  "id": "S0156",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.5705,
+   "zone_series": "n/a",
+   "region_capital_inside_some_zone": true,
+   "city_offset_km:Калининград": 35.2
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "39",
+  "region": "Калининградская область",
+  "names": [
+   "Kaliningradskaya_oblast_MSK_39_Zone2"
+  ],
+  "geometry": {
+   "lon0": 24.45,
+   "lat0": 0.0,
+   "fe": 2250000.0,
+   "fn": -5711057.628
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   23.57,
+   -140.95,
+   -79.8,
+   -0.0,
+   -0.35,
+   -0.789994207926379,
+   -0.22
+  ],
+  "datum_basis": "fieldworker export",
+  "sources": [
+   "fieldworker"
+  ],
+  "source_urls": [],
+  "flags": [
+   "false northing fraction restored from sibling zone Kaliningradskaya_oblast_MSK_39_Zone1",
+   "omega_y restored from matching GOST parameter set"
+  ],
+  "origin": "fieldworker",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=24.45 +k=1 +x_0=2250000.000000 +y_0=-5711057.628000 +ellps=krass +towgs84=23.57,-140.95,-79.8,0,0.35,0.7899942079,-0.22 +units=m +no_defs",
+  "id": "S0158",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.5705,
+   "zone_series": "width 3.0 deg",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "40",
+  "region": "Калужской области",
+  "names": [
+   "Kalugskaya_oblast_MSK_40_Zone2"
+  ],
+  "geometry": {
+   "lon0": 38.483333333333334,
+   "lat0": 0.0,
+   "fe": 2250000.0,
+   "fn": -5612900.566
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   23.57,
+   -140.95,
+   -79.8,
+   -0.0,
+   -0.35,
+   -0.789994207926379,
+   -0.22
+  ],
+  "datum_basis": "fieldworker export",
+  "sources": [
+   "fieldworker"
+  ],
+  "source_urls": [],
+  "flags": [
+   "false northing fraction restored from sibling zone Kalugskaya_oblast_MSK_40_Zone1",
+   "omega_y restored from matching GOST parameter set"
+  ],
+  "origin": "fieldworker",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=38.483333333 +k=1 +x_0=2250000.000000 +y_0=-5612900.566000 +ellps=krass +towgs84=23.57,-140.95,-79.8,0,0.35,0.7899942079,-0.22 +units=m +no_defs",
+  "id": "S0160",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.0971,
+   "zone_series": "width 3.0 deg",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "42",
+  "region": "Кемеровской области",
+  "names": [
+   "Kemerovskaya_oblast_MSK_42_Zone3"
+  ],
+  "geometry": {
+   "lon0": 91.46666666666667,
+   "lat0": 0.0,
+   "fe": 3300000.0,
+   "fn": -5512900.56
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   23.57,
+   -140.95,
+   -79.8,
+   -0.0,
+   -0.35,
+   -0.789994207926379,
+   -0.22
+  ],
+  "datum_basis": "fieldworker export",
+  "sources": [
+   "fieldworker"
+  ],
+  "source_urls": [],
+  "flags": [
+   "false northing fraction restored from sibling zone Kemerovskaya_oblast_MSK_42_Zone1",
+   "omega_y restored from matching GOST parameter set"
+  ],
+  "origin": "fieldworker",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=91.466666667 +k=1 +x_0=3300000.000000 +y_0=-5512900.560000 +ellps=krass +towgs84=23.57,-140.95,-79.8,0,0.35,0.7899942079,-0.22 +units=m +no_defs",
+  "id": "S0166",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.4294,
+   "zone_series": "width 3.0 deg",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "49",
+  "region": "Магаданская область",
+  "names": [
+   "Magadanskaya_oblast_MSK_Susumanskiy_rayon"
+  ],
+  "geometry": {
+   "lon0": 147.0,
+   "lat0": 0.0,
+   "fe": -120000.0,
+   "fn": -6700000.0
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   23.57,
+   -140.95,
+   -79.8,
+   -0.0,
+   -0.35,
+   -0.789994207926379,
+   -0.22
+  ],
+  "datum_basis": "fieldworker export",
+  "sources": [
+   "fieldworker"
+  ],
+  "source_urls": [],
+  "flags": [
+   "false northing is truncated to integer in source, fraction unknown (error < 1 m)",
+   "omega_y restored from matching GOST parameter set"
+  ],
+  "origin": "fieldworker",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=147 +k=1 +x_0=-120000.000000 +y_0=-6700000.000000 +ellps=krass +towgs84=23.57,-140.95,-79.8,0,0.35,0.7899942079,-0.22 +units=m +no_defs",
+  "id": "S0184",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.1292,
+   "zone_series": "n/a",
+   "region_capital_inside_some_zone": true,
+   "city_offset_km:Сусуман": 59.4
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "49",
+  "region": "Магаданская область",
+  "names": [
+   "Magadanskaya_oblast_MSK_Matrosovo"
+  ],
+  "geometry": {
+   "lon0": 147.0,
+   "lat0": 0.0,
+   "fe": -110000.0,
+   "fn": -6600000.0
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   23.57,
+   -140.95,
+   -79.8,
+   -0.0,
+   -0.35,
+   -0.789994207926379,
+   -0.22
+  ],
+  "datum_basis": "fieldworker export",
+  "sources": [
+   "fieldworker"
+  ],
+  "source_urls": [],
+  "flags": [
+   "false northing is truncated to integer in source, fraction unknown (error < 1 m)",
+   "omega_y restored from matching GOST parameter set"
+  ],
+  "origin": "fieldworker",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=147 +k=1 +x_0=-110000.000000 +y_0=-6600000.000000 +ellps=krass +towgs84=23.57,-140.95,-79.8,0,0.35,0.7899942079,-0.22 +units=m +no_defs",
+  "id": "S0185",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.1292,
+   "zone_series": "n/a",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "49",
+  "region": "Магаданская область",
+  "names": [
+   "Magadanskaya_oblast_MSK_Yagodinskiy_rayon"
+  ],
+  "geometry": {
+   "lon0": 150.0,
+   "lat0": 0.0,
+   "fe": -130000.0,
+   "fn": -6500000.0
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   23.57,
+   -140.95,
+   -79.8,
+   -0.0,
+   -0.35,
+   -0.789994207926379,
+   -0.22
+  ],
+  "datum_basis": "fieldworker export",
+  "sources": [
+   "fieldworker"
+  ],
+  "source_urls": [],
+  "flags": [
+   "false northing is truncated to integer in source, fraction unknown (error < 1 m)",
+   "omega_y restored from matching GOST parameter set"
+  ],
+  "origin": "fieldworker",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=150 +k=1 +x_0=-130000.000000 +y_0=-6500000.000000 +ellps=krass +towgs84=23.57,-140.95,-79.8,0,0.35,0.7899942079,-0.22 +units=m +no_defs",
+  "id": "S0186",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.1292,
+   "zone_series": "n/a",
+   "region_capital_inside_some_zone": true,
+   "city_offset_km:Ягодное": 19.0
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "50",
+  "region": "Московская область",
+  "names": [
+   "Moskovskaya_oblast_SK_1963_Zone1"
+  ],
+  "geometry": {
+   "lon0": 32.483333333333334,
+   "lat0": 0.0,
+   "fe": 1250000.0,
+   "fn": -12900.0
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   23.57,
+   -140.95,
+   -79.8,
+   -0.0,
+   -0.35,
+   -0.789994207926379,
+   -0.22
+  ],
+  "datum_basis": "fieldworker export",
+  "sources": [
+   "fieldworker"
+  ],
+  "source_urls": [],
+  "flags": [
+   "false northing is truncated to integer in source, fraction unknown (error < 1 m)",
+   "omega_y restored from matching GOST parameter set"
+  ],
+  "origin": "fieldworker",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=32.483333333 +k=1 +x_0=1250000.000000 +y_0=-12900.000000 +ellps=krass +towgs84=23.57,-140.95,-79.8,0,0.35,0.7899942079,-0.22 +units=m +no_defs",
+  "id": "S0190",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.0769,
+   "zone_series": "n/a",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "50",
+  "region": "Московская область",
+  "names": [
+   "Moskovskaya_oblast_SK_1963_Zone1_Trimble"
+  ],
+  "geometry": {
+   "lon0": 32.483333333333334,
+   "lat0": 0.0,
+   "fe": 1250000.0,
+   "fn": -12900.0
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   25.0,
+   -141.0,
+   -78.5,
+   -0.0,
+   -0.35,
+   -0.7359940816508892,
+   -0.0
+  ],
+  "datum_basis": "fieldworker export",
+  "sources": [
+   "fieldworker"
+  ],
+  "source_urls": [],
+  "flags": [
+   "false northing is truncated to integer in source, fraction unknown (error < 1 m)",
+   "omega_y restored from matching GOST parameter set",
+   "same projection as Moskovskaya_oblast_SK_1963_Zone1 but different datum"
+  ],
+  "origin": "fieldworker",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=32.483333333 +k=1 +x_0=1250000.000000 +y_0=-12900.000000 +ellps=krass +towgs84=25,-141,-78.5,0,0.35,0.7359940817,-0 +units=m +no_defs",
+  "id": "S0191",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.1357,
+   "zone_series": "n/a",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "50",
+  "region": "Московская область",
+  "names": [
+   "Moskovskaya_oblast_MSK_50_Zone1"
+  ],
+  "geometry": {
+   "lon0": 35.483333333333334,
+   "lat0": 0.0,
+   "fe": 1250000.0,
+   "fn": -5712900.566
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   24.47,
+   -130.89,
+   -81.56,
+   -0.0,
+   0.0,
+   -0.13000870737754483,
+   -0.22
+  ],
+  "datum_basis": "fieldworker export",
+  "sources": [
+   "fieldworker"
+  ],
+  "source_urls": [],
+  "flags": [
+   "false northing fraction restored from sibling zone Moskovskaya_oblast_MSK_50_Zone1_MGGT",
+   "same projection as МСК-50 зона 1 but different datum"
+  ],
+  "origin": "fieldworker",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=35.483333333 +k=1 +x_0=1250000.000000 +y_0=-5712900.566000 +ellps=krass +towgs84=24.47,-130.89,-81.56,0,-0,0.1300087074,-0.22 +units=m +no_defs",
+  "id": "S0193",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.136,
+   "zone_series": "n/a",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "50",
+  "region": "Московская область",
+  "names": [
+   "Moskovskaya_oblast_SK_1963_Zone2"
+  ],
+  "geometry": {
+   "lon0": 35.483333333333334,
+   "lat0": 0.0,
+   "fe": 2250000.0,
+   "fn": -12900.0
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   23.57,
+   -140.95,
+   -79.8,
+   -0.0,
+   -0.35,
+   -0.789994207926379,
+   -0.22
+  ],
+  "datum_basis": "fieldworker export",
+  "sources": [
+   "fieldworker"
+  ],
+  "source_urls": [],
+  "flags": [
+   "false northing is truncated to integer in source, fraction unknown (error < 1 m)",
+   "omega_y restored from matching GOST parameter set"
+  ],
+  "origin": "fieldworker",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=35.483333333 +k=1 +x_0=2250000.000000 +y_0=-12900.000000 +ellps=krass +towgs84=23.57,-140.95,-79.8,0,0.35,0.7899942079,-0.22 +units=m +no_defs",
+  "id": "S0194",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.0769,
+   "zone_series": "width 3.0 deg",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "50",
+  "region": "Московская область",
+  "names": [
+   "Moskovskaya_oblast_SK_1963_Zone2_Trimble"
+  ],
+  "geometry": {
+   "lon0": 35.483333333333334,
+   "lat0": 0.0,
+   "fe": 2250000.0,
+   "fn": -12900.0
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   25.0,
+   -141.0,
+   -78.5,
+   -0.0,
+   -0.35,
+   -0.7359940816508892,
+   -0.0
+  ],
+  "datum_basis": "fieldworker export",
+  "sources": [
+   "fieldworker"
+  ],
+  "source_urls": [],
+  "flags": [
+   "false northing is truncated to integer in source, fraction unknown (error < 1 m)",
+   "omega_y restored from matching GOST parameter set",
+   "same projection as Moskovskaya_oblast_SK_1963_Zone2 but different datum"
+  ],
+  "origin": "fieldworker",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=35.483333333 +k=1 +x_0=2250000.000000 +y_0=-12900.000000 +ellps=krass +towgs84=25,-141,-78.5,0,0.35,0.7359940817,-0 +units=m +no_defs",
+  "id": "S0195",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.1357,
+   "zone_series": "width 3.0 deg",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "50",
+  "region": "Московская область",
+  "names": [
+   "Moskovskaya_oblast_MSK_50_Zone2"
+  ],
+  "geometry": {
+   "lon0": 38.483333333333334,
+   "lat0": 0.0,
+   "fe": 2250000.0,
+   "fn": -5712900.566
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   24.47,
+   -130.89,
+   -81.56,
+   -0.0,
+   0.0,
+   -0.13000870737754483,
+   -0.22
+  ],
+  "datum_basis": "fieldworker export",
+  "sources": [
+   "fieldworker"
+  ],
+  "source_urls": [],
+  "flags": [
+   "false northing fraction restored from sibling zone Moskovskaya_oblast_MSK_50_Zone1_MGGT",
+   "same projection as МСК-50 зона 2 but different datum"
+  ],
+  "origin": "fieldworker",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=38.483333333 +k=1 +x_0=2250000.000000 +y_0=-5712900.566000 +ellps=krass +towgs84=24.47,-130.89,-81.56,0,-0,0.1300087074,-0.22 +units=m +no_defs",
+  "id": "S0197",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.136,
+   "zone_series": "width 3.0 deg",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "50",
+  "region": "Московская область",
+  "names": [
+   "Moskovskaya_oblast_SK_1963_Zone3"
+  ],
+  "geometry": {
+   "lon0": 38.483333333333334,
+   "lat0": 0.0,
+   "fe": 3250000.0,
+   "fn": -12900.0
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   23.57,
+   -140.95,
+   -79.8,
+   -0.0,
+   -0.35,
+   -0.789994207926379,
+   -0.22
+  ],
+  "datum_basis": "fieldworker export",
+  "sources": [
+   "fieldworker"
+  ],
+  "source_urls": [],
+  "flags": [
+   "false northing is truncated to integer in source, fraction unknown (error < 1 m)",
+   "omega_y restored from matching GOST parameter set"
+  ],
+  "origin": "fieldworker",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=38.483333333 +k=1 +x_0=3250000.000000 +y_0=-12900.000000 +ellps=krass +towgs84=23.57,-140.95,-79.8,0,0.35,0.7899942079,-0.22 +units=m +no_defs",
+  "id": "S0198",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.0769,
+   "zone_series": "width 3.0 deg",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "50",
+  "region": "Московская область",
+  "names": [
+   "Moskovskaya_oblast_SK_1963_Zone3_Trimble"
+  ],
+  "geometry": {
+   "lon0": 38.483333333333334,
+   "lat0": 0.0,
+   "fe": 3250000.0,
+   "fn": -12900.0
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   25.0,
+   -141.0,
+   -78.5,
+   -0.0,
+   -0.35,
+   -0.7359940816508892,
+   -0.0
+  ],
+  "datum_basis": "fieldworker export",
+  "sources": [
+   "fieldworker"
+  ],
+  "source_urls": [],
+  "flags": [
+   "false northing is truncated to integer in source, fraction unknown (error < 1 m)",
+   "omega_y restored from matching GOST parameter set",
+   "same projection as Moskovskaya_oblast_SK_1963_Zone3 but different datum"
+  ],
+  "origin": "fieldworker",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=38.483333333 +k=1 +x_0=3250000.000000 +y_0=-12900.000000 +ellps=krass +towgs84=25,-141,-78.5,0,0.35,0.7359940817,-0 +units=m +no_defs",
+  "id": "S0199",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.1357,
+   "zone_series": "width 3.0 deg",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "50",
+  "region": "Московская область",
+  "names": [
+   "Moskovskaya_oblast_SK_1963_Zone4"
+  ],
+  "geometry": {
+   "lon0": 41.483333333333334,
+   "lat0": 0.0,
+   "fe": 4250000.0,
+   "fn": -12900.0
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   23.57,
+   -140.95,
+   -79.8,
+   -0.0,
+   -0.35,
+   -0.789994207926379,
+   -0.22
+  ],
+  "datum_basis": "fieldworker export",
+  "sources": [
+   "fieldworker"
+  ],
+  "source_urls": [],
+  "flags": [
+   "false northing is truncated to integer in source, fraction unknown (error < 1 m)",
+   "omega_y restored from matching GOST parameter set"
+  ],
+  "origin": "fieldworker",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=41.483333333 +k=1 +x_0=4250000.000000 +y_0=-12900.000000 +ellps=krass +towgs84=23.57,-140.95,-79.8,0,0.35,0.7899942079,-0.22 +units=m +no_defs",
+  "id": "S0200",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.0769,
+   "zone_series": "width 3.0 deg",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "50",
+  "region": "Московская область",
+  "names": [
+   "Moskovskaya_oblast_SK_1963_Zone4_Trimble"
+  ],
+  "geometry": {
+   "lon0": 41.483333333333334,
+   "lat0": 0.0,
+   "fe": 4250000.0,
+   "fn": -12900.0
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   25.0,
+   -141.0,
+   -78.5,
+   -0.0,
+   -0.35,
+   -0.7359940816508892,
+   -0.0
+  ],
+  "datum_basis": "fieldworker export",
+  "sources": [
+   "fieldworker"
+  ],
+  "source_urls": [],
+  "flags": [
+   "false northing is truncated to integer in source, fraction unknown (error < 1 m)",
+   "omega_y restored from matching GOST parameter set",
+   "same projection as Moskovskaya_oblast_SK_1963_Zone4 but different datum"
+  ],
+  "origin": "fieldworker",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=41.483333333 +k=1 +x_0=4250000.000000 +y_0=-12900.000000 +ellps=krass +towgs84=25,-141,-78.5,0,0.35,0.7359940817,-0 +units=m +no_defs",
+  "id": "S0201",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.1357,
+   "zone_series": "width 3.0 deg",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "55",
+  "region": "Омской области",
+  "names": [
+   "Omskaya_oblast_MSK_55_Zone1_1"
+  ],
+  "geometry": {
+   "lon0": 71.73277777777778,
+   "lat0": 0.0,
+   "fe": 1249965.0,
+   "fn": -5612877.0
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   23.57,
+   -140.95,
+   -79.8,
+   -0.0,
+   -0.35,
+   -0.789994207926379,
+   -0.22
+  ],
+  "datum_basis": "fieldworker export",
+  "sources": [
+   "fieldworker"
+  ],
+  "source_urls": [],
+  "flags": [
+   "false northing is truncated to integer in source, fraction unknown (error < 1 m)",
+   "omega_y restored from matching GOST parameter set"
+  ],
+  "origin": "fieldworker",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=71.732777778 +k=1 +x_0=1249965.000000 +y_0=-5612877.000000 +ellps=krass +towgs84=23.57,-140.95,-79.8,0,0.35,0.7899942079,-0.22 +units=m +no_defs",
+  "id": "S0214",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.415,
+   "zone_series": "n/a",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "56",
+  "region": "Оренбургская область",
+  "names": [
+   "Orenburgskaya_oblast_MSK_Gorod_Orsk"
+  ],
+  "geometry": {
+   "lon0": 58.5,
+   "lat0": 0.0,
+   "fe": 10000.0,
+   "fn": -5670000.0
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   23.57,
+   -140.95,
+   -79.8,
+   -0.0,
+   -0.35,
+   -0.789994207926379,
+   -0.22
+  ],
+  "datum_basis": "fieldworker export",
+  "sources": [
+   "fieldworker"
+  ],
+  "source_urls": [],
+  "flags": [
+   "false northing is truncated to integer in source, fraction unknown (error < 1 m)",
+   "omega_y restored from matching GOST parameter set"
+  ],
+  "origin": "fieldworker",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=58.5 +k=1 +x_0=10000.000000 +y_0=-5670000.000000 +ellps=krass +towgs84=23.57,-140.95,-79.8,0,0.35,0.7899942079,-0.22 +units=m +no_defs",
+  "id": "S0220",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.3503,
+   "zone_series": "n/a",
+   "region_capital_inside_some_zone": true,
+   "city_offset_km:Орск": 4.8
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "57",
+  "region": "Орловской области",
+  "names": [
+   "МСК-57 зона 1"
+  ],
+  "geometry": {
+   "lon0": 35.48333333333,
+   "lat0": 0.0,
+   "fe": 1250000.0,
+   "fn": -5512900.566
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   23.57,
+   -140.95,
+   -79.8,
+   0.0,
+   -0.35,
+   -0.79,
+   -0.22
+  ],
+  "datum_basis": "assumed GOST 51794-2008 (site gives only MapInfo datum 1001)",
+  "sources": [
+   "terraingis.ru"
+  ],
+  "source_urls": [
+   "https://terraingis.ru/msk-57.html"
+  ],
+  "flags": [],
+  "origin": "scraped",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=35.483333333 +k=1 +x_0=1250000.000000 +y_0=-5512900.566000 +ellps=krass +towgs84=23.57,-140.95,-79.8,-0,0.35,0.79,-0.22 +units=m +no_defs",
+  "id": "S0223",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.0985,
+   "zone_series": "n/a",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "57",
+  "region": "Орловской области",
+  "names": [
+   "МСК-57 зона 2"
+  ],
+  "geometry": {
+   "lon0": 38.48333333333,
+   "lat0": 0.0,
+   "fe": 2250000.0,
+   "fn": -5512900.566
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   23.57,
+   -140.95,
+   -79.8,
+   0.0,
+   -0.35,
+   -0.79,
+   -0.22
+  ],
+  "datum_basis": "assumed GOST 51794-2008 (site gives only MapInfo datum 1001)",
+  "sources": [
+   "terraingis.ru"
+  ],
+  "source_urls": [
+   "https://terraingis.ru/msk-57.html"
+  ],
+  "flags": [],
+  "origin": "scraped",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=38.483333333 +k=1 +x_0=2250000.000000 +y_0=-5512900.566000 +ellps=krass +towgs84=23.57,-140.95,-79.8,-0,0.35,0.79,-0.22 +units=m +no_defs",
+  "id": "S0225",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.0985,
+   "zone_series": "width 3.0 deg",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "57",
+  "region": "Орловской области",
+  "names": [
+   "МСК-57 зона 3"
+  ],
+  "geometry": {
+   "lon0": 41.48333333333,
+   "lat0": 0.0,
+   "fe": 3250000.0,
+   "fn": -5512900.566
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   23.57,
+   -140.95,
+   -79.8,
+   0.0,
+   -0.35,
+   -0.79,
+   -0.22
+  ],
+  "datum_basis": "assumed GOST 51794-2008 (site gives only MapInfo datum 1001)",
+  "sources": [
+   "terraingis.ru"
+  ],
+  "source_urls": [
+   "https://terraingis.ru/msk-57.html"
+  ],
+  "flags": [],
+  "origin": "scraped",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=41.483333333 +k=1 +x_0=3250000.000000 +y_0=-5512900.566000 +ellps=krass +towgs84=23.57,-140.95,-79.8,-0,0.35,0.79,-0.22 +units=m +no_defs",
+  "id": "S0227",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.0985,
+   "zone_series": "width 3.0 deg",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "63",
+  "region": "Самарская область",
+  "names": [
+   "Samarskaya_oblast_MSK_Gorod_Samara_Calculated"
+  ],
+  "geometry": {
+   "lon0": 50.09916666666667,
+   "lat0": 0.0,
+   "fe": -256.0,
+   "fn": -5896475.0
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   26.3,
+   -132.6,
+   -76.3,
+   -0.220002042343153,
+   null,
+   -0.8999952290979556,
+   -0.12
+  ],
+  "datum_basis": "fieldworker export",
+  "sources": [
+   "fieldworker"
+  ],
+  "source_urls": [],
+  "flags": [
+   "false northing is truncated to integer in source, fraction unknown (error < 1 m)",
+   "omega_y not in source and no matching GOST set: assumed 0"
+  ],
+  "origin": "fieldworker",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=50.099166667 +k=1 +x_0=-256.000000 +y_0=-5896475.000000 +ellps=krass +towgs84=26.3,-132.6,-76.3,0.2200020423,-0,0.8999952291,-0.12 +units=m +no_defs",
+  "id": "S0243",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.049,
+   "zone_series": "n/a",
+   "region_capital_inside_some_zone": true,
+   "city_offset_km:Самара": 0.2
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "65",
+  "region": "Сахалинской области",
+  "names": [
+   "МСК-65 зона 2"
+  ],
+  "geometry": {
+   "lon0": 145.71666666667,
+   "lat0": 0.0,
+   "fe": 2300000.0,
+   "fn": -4516586.439
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   23.57,
+   -140.95,
+   -79.8,
+   0.0,
+   -0.35,
+   -0.79,
+   -0.22
+  ],
+  "datum_basis": "scraped (GOST 51794-2008 line)",
+  "sources": [
+   "terraingis.ru"
+  ],
+  "source_urls": [
+   "https://terraingis.ru/msk-65.html"
+  ],
+  "flags": [],
+  "origin": "scraped",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=145.71666667 +k=1 +x_0=2300000.000000 +y_0=-4516586.439000 +ellps=krass +towgs84=23.57,-140.95,-79.8,-0,0.35,0.79,-0.22 +units=m +no_defs",
+  "id": "S0249",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.3581,
+   "zone_series": "width 3.0 deg",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "65",
+  "region": "Сахалинской области",
+  "names": [
+   "МСК-65 зона 3"
+  ],
+  "geometry": {
+   "lon0": 148.71666666667,
+   "lat0": 0.0,
+   "fe": 3300000.0,
+   "fn": -4516586.439
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   23.57,
+   -140.95,
+   -79.8,
+   0.0,
+   -0.35,
+   -0.79,
+   -0.22
+  ],
+  "datum_basis": "scraped (GOST 51794-2008 line)",
+  "sources": [
+   "terraingis.ru"
+  ],
+  "source_urls": [
+   "https://terraingis.ru/msk-65.html"
+  ],
+  "flags": [],
+  "origin": "scraped",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=148.71666667 +k=1 +x_0=3300000.000000 +y_0=-4516586.439000 +ellps=krass +towgs84=23.57,-140.95,-79.8,-0,0.35,0.79,-0.22 +units=m +no_defs",
+  "id": "S0250",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.3581,
+   "zone_series": "width 3.0 deg",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "65",
+  "region": "Сахалинской области",
+  "names": [
+   "МСК-65 зона 4"
+  ],
+  "geometry": {
+   "lon0": 151.71666666667,
+   "lat0": 0.0,
+   "fe": 4300000.0,
+   "fn": -4516586.439
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   23.57,
+   -140.95,
+   -79.8,
+   0.0,
+   -0.35,
+   -0.79,
+   -0.22
+  ],
+  "datum_basis": "scraped (GOST 51794-2008 line)",
+  "sources": [
+   "terraingis.ru"
+  ],
+  "source_urls": [
+   "https://terraingis.ru/msk-65.html"
+  ],
+  "flags": [],
+  "origin": "scraped",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=151.71666667 +k=1 +x_0=4300000.000000 +y_0=-4516586.439000 +ellps=krass +towgs84=23.57,-140.95,-79.8,-0,0.35,0.79,-0.22 +units=m +no_defs",
+  "id": "S0251",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.3581,
+   "zone_series": "width 3.0 deg",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "65",
+  "region": "Сахалинской области",
+  "names": [
+   "МСК-65 зона 5"
+  ],
+  "geometry": {
+   "lon0": 154.71666666667,
+   "lat0": 0.0,
+   "fe": 5300000.0,
+   "fn": -4516586.439
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   23.57,
+   -140.95,
+   -79.8,
+   0.0,
+   -0.35,
+   -0.79,
+   -0.22
+  ],
+  "datum_basis": "scraped (GOST 51794-2008 line)",
+  "sources": [
+   "terraingis.ru"
+  ],
+  "source_urls": [
+   "https://terraingis.ru/msk-65.html"
+  ],
+  "flags": [],
+  "origin": "scraped",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=154.71666667 +k=1 +x_0=5300000.000000 +y_0=-4516586.439000 +ellps=krass +towgs84=23.57,-140.95,-79.8,-0,0.35,0.79,-0.22 +units=m +no_defs",
+  "id": "S0252",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.3581,
+   "zone_series": "width 3.0 deg",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "66",
+  "region": "Свердловской области",
+  "names": [
+   "Sverdlovskaya_oblast_MSK_66_Zone1_3gr_alt"
+  ],
+  "geometry": {
+   "lon0": 58.03333333333333,
+   "lat0": 0.0,
+   "fe": 1300000.0,
+   "fn": -9214.0
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   23.57,
+   -140.95,
+   -79.8,
+   -0.0,
+   -0.35,
+   -0.789994207926379,
+   -0.22
+  ],
+  "datum_basis": "fieldworker export",
+  "sources": [
+   "fieldworker"
+  ],
+  "source_urls": [],
+  "flags": [
+   "false northing is truncated to integer in source, fraction unknown (error < 1 m)",
+   "omega_y restored from matching GOST parameter set"
+  ],
+  "origin": "fieldworker",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=58.033333333 +k=1 +x_0=1300000.000000 +y_0=-9214.000000 +ellps=krass +towgs84=23.57,-140.95,-79.8,0,0.35,0.7899942079,-0.22 +units=m +no_defs",
+  "id": "S0253",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.3188,
+   "zone_series": "n/a",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "66",
+  "region": "Свердловской области",
+  "names": [
+   "Sverdlovskaya_oblast_MSK_66_Zone2_3gr_alt"
+  ],
+  "geometry": {
+   "lon0": 61.03333333333333,
+   "lat0": 0.0,
+   "fe": 2300000.0,
+   "fn": -9214.0
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   23.57,
+   -140.95,
+   -79.8,
+   -0.0,
+   -0.35,
+   -0.789994207926379,
+   -0.22
+  ],
+  "datum_basis": "fieldworker export",
+  "sources": [
+   "fieldworker"
+  ],
+  "source_urls": [],
+  "flags": [
+   "false northing is truncated to integer in source, fraction unknown (error < 1 m)",
+   "omega_y restored from matching GOST parameter set"
+  ],
+  "origin": "fieldworker",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=61.033333333 +k=1 +x_0=2300000.000000 +y_0=-9214.000000 +ellps=krass +towgs84=23.57,-140.95,-79.8,0,0.35,0.7899942079,-0.22 +units=m +no_defs",
+  "id": "S0255",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.3188,
+   "zone_series": "width 3.0 deg",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "66",
+  "region": "Свердловской области",
+  "names": [
+   "Sverdlovskaya_oblast_MSK_66_Zone3_3gr_alt"
+  ],
+  "geometry": {
+   "lon0": 64.03333333333333,
+   "lat0": 0.0,
+   "fe": 3300000.0,
+   "fn": -9214.0
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   23.57,
+   -140.95,
+   -79.8,
+   -0.0,
+   -0.35,
+   -0.789994207926379,
+   -0.22
+  ],
+  "datum_basis": "fieldworker export",
+  "sources": [
+   "fieldworker"
+  ],
+  "source_urls": [],
+  "flags": [
+   "false northing is truncated to integer in source, fraction unknown (error < 1 m)",
+   "omega_y restored from matching GOST parameter set"
+  ],
+  "origin": "fieldworker",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=64.033333333 +k=1 +x_0=3300000.000000 +y_0=-9214.000000 +ellps=krass +towgs84=23.57,-140.95,-79.8,0,0.35,0.7899942079,-0.22 +units=m +no_defs",
+  "id": "S0257",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.3188,
+   "zone_series": "width 3.0 deg",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "66",
+  "region": "Свердловской области",
+  "names": [
+   "Sverdlovskaya_oblast_MSK_66_Zone4_3gr_alt"
+  ],
+  "geometry": {
+   "lon0": 67.03333333333333,
+   "lat0": 0.0,
+   "fe": 4300000.0,
+   "fn": -9214.0
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   23.57,
+   -140.95,
+   -79.8,
+   -0.0,
+   -0.35,
+   -0.789994207926379,
+   -0.22
+  ],
+  "datum_basis": "fieldworker export",
+  "sources": [
+   "fieldworker"
+  ],
+  "source_urls": [],
+  "flags": [
+   "false northing is truncated to integer in source, fraction unknown (error < 1 m)",
+   "omega_y restored from matching GOST parameter set"
+  ],
+  "origin": "fieldworker",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=67.033333333 +k=1 +x_0=4300000.000000 +y_0=-9214.000000 +ellps=krass +towgs84=23.57,-140.95,-79.8,0,0.35,0.7899942079,-0.22 +units=m +no_defs",
+  "id": "S0260",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.3188,
+   "zone_series": "width 3.0 deg",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "70",
+  "region": "Томской области",
+  "names": [
+   "Tomskaya_oblast_MSK_Gorod_Tomsk"
+  ],
+  "geometry": {
+   "lon0": 85.0,
+   "lat0": 0.0,
+   "fe": 8743.0,
+   "fn": -6252679.0
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   23.57,
+   -140.95,
+   -79.8,
+   -0.0,
+   -0.35,
+   -0.789994207926379,
+   -0.22
+  ],
+  "datum_basis": "fieldworker export",
+  "sources": [
+   "fieldworker"
+  ],
+  "source_urls": [],
+  "flags": [
+   "false northing is truncated to integer in source, fraction unknown (error < 1 m)",
+   "omega_y restored from matching GOST parameter set"
+  ],
+  "origin": "fieldworker",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=85 +k=1 +x_0=8743.000000 +y_0=-6252679.000000 +ellps=krass +towgs84=23.57,-140.95,-79.8,0,0.35,0.7899942079,-0.22 +units=m +no_defs",
+  "id": "S0274",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.4265,
+   "zone_series": "n/a",
+   "region_capital_inside_some_zone": true,
+   "city_offset_km:Томск": 3.2
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "77",
+  "region": "Москва",
+  "names": [
+   "Moscow_MSK_77_MLAT_1"
+  ],
+  "geometry": {
+   "lon0": 37.5,
+   "lat0": 55.666666666666664,
+   "fe": 0.0,
+   "fn": 0.0
+  },
+  "ellipsoid": "bessel",
+  "datum_gost_form": [
+   332.37,
+   33.28,
+   627.08,
+   2.9999978479802683,
+   null,
+   -3.4000071867352624,
+   5.06
+  ],
+  "datum_basis": "fieldworker export",
+  "sources": [
+   "fieldworker"
+  ],
+  "source_urls": [],
+  "flags": [
+   "false northing is truncated to integer in source, fraction unknown (error < 1 m)",
+   "omega_y not in source and no matching GOST set: assumed 0",
+   "same projection as Moscow_MSK_77_MLAT_2, Moscow_MSK_77_Metro but different datum"
+  ],
+  "origin": "fieldworker",
+  "proj4": "+proj=tmerc +lat_0=55.666666667 +lon_0=37.5 +k=1 +x_0=0.000000 +y_0=0.000000 +ellps=bessel +towgs84=332.37,33.28,627.08,-2.999997848,-0,3.400007187,5.06 +units=m +no_defs",
+  "id": "S0306",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 1.2938,
+   "zone_series": "n/a",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "77",
+  "region": "Москва",
+  "names": [
+   "Moscow_MSK_77_MLAT_2"
+  ],
+  "geometry": {
+   "lon0": 37.5,
+   "lat0": 55.666666666666664,
+   "fe": 0.0,
+   "fn": 0.0
+  },
+  "ellipsoid": "bessel",
+  "datum_gost_form": [
+   273.808,
+   65.713,
+   620.584,
+   2.280009915294154,
+   null,
+   -1.8099943012988953,
+   8.123
+  ],
+  "datum_basis": "fieldworker export",
+  "sources": [
+   "fieldworker"
+  ],
+  "source_urls": [],
+  "flags": [
+   "false northing is truncated to integer in source, fraction unknown (error < 1 m)",
+   "omega_y not in source and no matching GOST set: assumed 0",
+   "same projection as Moscow_MSK_77_Metro, Московская СК but different datum"
+  ],
+  "origin": "fieldworker",
+  "proj4": "+proj=tmerc +lat_0=55.666666667 +lon_0=37.5 +k=1 +x_0=0.000000 +y_0=0.000000 +ellps=bessel +towgs84=273.808,65.713,620.584,-2.280009915,-0,1.809994301,8.123 +units=m +no_defs",
+  "id": "S0307",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.6598,
+   "zone_series": "n/a",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "77",
+  "region": "Москва",
+  "names": [
+   "Moscow_MSK_77_Metro"
+  ],
+  "geometry": {
+   "lon0": 37.5,
+   "lat0": 55.666666666666664,
+   "fe": 0.0,
+   "fn": 0.0
+  },
+  "ellipsoid": "bessel",
+  "datum_gost_form": [
+   334.7039,
+   53.3455,
+   608.8388,
+   2.241417770045322,
+   null,
+   -3.167299232327288,
+   6.1741
+  ],
+  "datum_basis": "fieldworker export",
+  "sources": [
+   "fieldworker"
+  ],
+  "source_urls": [],
+  "flags": [
+   "false northing is truncated to integer in source, fraction unknown (error < 1 m)",
+   "omega_y not in source and no matching GOST set: assumed 0",
+   "same projection as Московская СК but different datum"
+  ],
+  "origin": "fieldworker",
+  "proj4": "+proj=tmerc +lat_0=55.666666667 +lon_0=37.5 +k=1 +x_0=0.000000 +y_0=0.000000 +ellps=bessel +towgs84=334.7039,53.3455,608.8388,-2.24141777,-0,3.167299232,6.1741 +units=m +no_defs",
+  "id": "S0308",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 1.1738,
+   "zone_series": "n/a",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "77",
+  "region": "Москва (МГГТ)",
+  "names": [
+   "Московская СК (МГГТ)"
+  ],
+  "geometry": {
+   "lon0": 37.5,
+   "lat0": 55.66666666667,
+   "fe": 16.098,
+   "fn": 14.512
+  },
+  "ellipsoid": "bessel",
+  "datum_gost_form": [
+   316.151,
+   78.924,
+   589.65,
+   1.57273,
+   -2.69209,
+   -2.34693,
+   8.4507
+  ],
+  "datum_basis": "scraped (GOST 51794-2008 line)",
+  "sources": [
+   "terraingis.ru"
+  ],
+  "source_urls": [
+   "https://terraingis.ru/msk-77.html"
+  ],
+  "flags": [],
+  "origin": "scraped",
+  "proj4": "+proj=tmerc +lat_0=55.666666667 +lon_0=37.5 +k=1 +x_0=16.098000 +y_0=14.512000 +ellps=bessel +towgs84=316.151,78.924,589.65,-1.57273,2.69209,2.34693,8.4507 +units=m +no_defs",
+  "id": "S0309",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.9638,
+   "zone_series": "n/a",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "78",
+  "region": "Санкт-Петербург",
+  "names": [
+   "SPb_MSK_64_Kalibrovka"
+  ],
+  "geometry": {
+   "lon0": 27.416666666666668,
+   "lat0": 59.333333333333336,
+   "fe": -48300.0,
+   "fn": 23000.0
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   23.57,
+   -140.95,
+   -79.8,
+   -0.0,
+   -0.35,
+   -0.789994207926379,
+   -0.22
+  ],
+  "datum_basis": "fieldworker export",
+  "sources": [
+   "fieldworker"
+  ],
+  "source_urls": [],
+  "flags": [
+   "false northing is truncated to integer in source, fraction unknown (error < 1 m)",
+   "omega_y restored from matching GOST parameter set"
+  ],
+  "origin": "fieldworker",
+  "proj4": "+proj=tmerc +lat_0=59.333333333 +lon_0=27.416666667 +k=1 +x_0=-48300.000000 +y_0=23000.000000 +ellps=krass +towgs84=23.57,-140.95,-79.8,0,0.35,0.7899942079,-0.22 +units=m +no_defs",
+  "id": "S0310",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.2615,
+   "zone_series": "n/a",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "78",
+  "region": "Санкт-Петербург",
+  "names": [
+   "SPb_MSK_78"
+  ],
+  "geometry": {
+   "lon0": 30.0,
+   "lat0": 0.0,
+   "fe": 95900.0,
+   "fn": -6552800.0
+  },
+  "ellipsoid": "WGS84",
+  "datum_gost_form": [
+   5.476,
+   2.074,
+   9.338,
+   -3.3808658127155318,
+   null,
+   0.4957987147761455,
+   -1.6761
+  ],
+  "datum_basis": "fieldworker export",
+  "sources": [
+   "fieldworker"
+  ],
+  "source_urls": [],
+  "flags": [
+   "false northing is truncated to integer in source, fraction unknown (error < 1 m)",
+   "omega_y not in source and no matching GOST set: assumed 0"
+  ],
+  "origin": "fieldworker",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=30 +k=1 +x_0=95900.000000 +y_0=-6552800.000000 +ellps=WGS84 +towgs84=5.476,2.074,9.338,3.380865813,-0,-0.4957987148,-1.6761 +units=m +no_defs",
+  "id": "S0311",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.5014,
+   "zone_series": "n/a",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "78",
+  "region": "Санкт-Петербург",
+  "names": [
+   "SPb_MSK_78_GP"
+  ],
+  "geometry": {
+   "lon0": 30.0,
+   "lat0": 0.0,
+   "fe": 95900.0,
+   "fn": -6552800.0
+  },
+  "ellipsoid": "WGS84",
+  "datum_gost_form": [
+   2.18807,
+   10.11343,
+   8.68413,
+   -3.6121711664410254,
+   null,
+   0.6345530499385672,
+   -1.6667
+  ],
+  "datum_basis": "fieldworker export",
+  "sources": [
+   "fieldworker"
+  ],
+  "source_urls": [],
+  "flags": [
+   "false northing is truncated to integer in source, fraction unknown (error < 1 m)",
+   "omega_y not in source and no matching GOST set: assumed 0",
+   "same projection as SPb_MSK_78 but different datum"
+  ],
+  "origin": "fieldworker",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=30 +k=1 +x_0=95900.000000 +y_0=-6552800.000000 +ellps=WGS84 +towgs84=2.18807,10.11343,8.68413,3.612171166,-0,-0.6345530499,-1.6667 +units=m +no_defs",
+  "id": "S0312",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.5319,
+   "zone_series": "n/a",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "78",
+  "region": "Санкт-Петербург",
+  "names": [
+   "SPb_MSK_78_GP_EGM2008"
+  ],
+  "geometry": {
+   "lon0": 30.0,
+   "lat0": 0.0,
+   "fe": 95900.0,
+   "fn": -6552800.0
+  },
+  "ellipsoid": "WGS84",
+  "datum_gost_form": [
+   2.42857,
+   10.23479,
+   8.49568,
+   -3.616956509945958,
+   null,
+   0.6346149293804414,
+   -1.6623999999999999
+  ],
+  "datum_basis": "fieldworker export",
+  "sources": [
+   "fieldworker"
+  ],
+  "source_urls": [],
+  "flags": [
+   "false northing is truncated to integer in source, fraction unknown (error < 1 m)",
+   "omega_y not in source and no matching GOST set: assumed 0",
+   "same projection as SPb_MSK_78, SPb_MSK_78_GP but different datum"
+  ],
+  "origin": "fieldworker",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=30 +k=1 +x_0=95900.000000 +y_0=-6552800.000000 +ellps=WGS84 +towgs84=2.42857,10.23479,8.49568,3.61695651,-0,-0.6346149294,-1.6624 +units=m +no_defs",
+  "id": "S0313",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.5336,
+   "zone_series": "n/a",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "78",
+  "region": "Санкт-Петербург",
+  "names": [
+   "SPb_MSK_78_GP_EGM96"
+  ],
+  "geometry": {
+   "lon0": 30.0,
+   "lat0": 0.0,
+   "fe": 95900.0,
+   "fn": -6552800.0
+  },
+  "ellipsoid": "WGS84",
+  "datum_gost_form": [
+   -1.88182,
+   -2.16761,
+   14.30508,
+   -3.2216087558121487,
+   null,
+   0.4955305705280243,
+   -1.6801
+  ],
+  "datum_basis": "fieldworker export",
+  "sources": [
+   "fieldworker"
+  ],
+  "source_urls": [],
+  "flags": [
+   "false northing is truncated to integer in source, fraction unknown (error < 1 m)",
+   "omega_y not in source and no matching GOST set: assumed 0",
+   "same projection as SPb_MSK_78, SPb_MSK_78_GP but different datum"
+  ],
+  "origin": "fieldworker",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=30 +k=1 +x_0=95900.000000 +y_0=-6552800.000000 +ellps=WGS84 +towgs84=-1.88182,-2.16761,14.30508,3.221608756,-0,-0.4955305705,-1.6801 +units=m +no_defs",
+  "id": "S0314",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.4469,
+   "zone_series": "n/a",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "87",
+  "region": "Чукотский автономный округ",
+  "names": [
+   "ChAO_MSK_87"
+  ],
+  "geometry": {
+   "lon0": 174.0,
+   "lat0": 0.0,
+   "fe": -170000.0,
+   "fn": -7300000.0
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   23.57,
+   -140.95,
+   -79.8,
+   -0.0,
+   -0.35,
+   -0.789994207926379,
+   -0.22
+  ],
+  "datum_basis": "fieldworker export",
+  "sources": [
+   "fieldworker"
+  ],
+  "source_urls": [],
+  "flags": [
+   "false northing is truncated to integer in source, fraction unknown (error < 1 m)",
+   "omega_y restored from matching GOST parameter set"
+  ],
+  "origin": "fieldworker",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=174 +k=1 +x_0=-170000.000000 +y_0=-7300000.000000 +ellps=krass +towgs84=23.57,-140.95,-79.8,0,0.35,0.7899942079,-0.22 +units=m +no_defs",
+  "id": "S0329",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.4862,
+   "zone_series": "n/a",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "90",
+  "region": "Республики Крым и города Севастополь",
+  "names": [
+   "МСК-90 зона 1"
+  ],
+  "geometry": {
+   "lon0": 32.5,
+   "lat0": 0.0,
+   "fe": 4300000.0,
+   "fn": -9214.692
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   23.57,
+   -140.95,
+   -79.8,
+   0.0,
+   -0.35,
+   -0.79,
+   -0.22
+  ],
+  "datum_basis": "scraped (GOST 51794-2008 line)",
+  "sources": [
+   "terraingis.ru"
+  ],
+  "source_urls": [
+   "https://terraingis.ru/msk-90.html"
+  ],
+  "flags": [],
+  "origin": "scraped",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=32.5 +k=1 +x_0=4300000.000000 +y_0=-9214.692000 +ellps=krass +towgs84=23.57,-140.95,-79.8,-0,0.35,0.79,-0.22 +units=m +no_defs",
+  "id": "S0333",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.1839,
+   "zone_series": "no zone 1 in group (unchecked)",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": "90",
+  "region": "Республики Крым и города Севастополь",
+  "names": [
+   "МСК-90 зона 2"
+  ],
+  "geometry": {
+   "lon0": 35.5,
+   "lat0": 0.0,
+   "fe": 5300000.0,
+   "fn": -9214.692
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   23.57,
+   -140.95,
+   -79.8,
+   0.0,
+   -0.35,
+   -0.79,
+   -0.22
+  ],
+  "datum_basis": "scraped (GOST 51794-2008 line)",
+  "sources": [
+   "terraingis.ru"
+  ],
+  "source_urls": [
+   "https://terraingis.ru/msk-90.html"
+  ],
+  "flags": [],
+  "origin": "scraped",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=35.5 +k=1 +x_0=5300000.000000 +y_0=-9214.692000 +ellps=krass +towgs84=23.57,-140.95,-79.8,-0,0.35,0.79,-0.22 +units=m +no_defs",
+  "id": "S0334",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": 0.1839,
+   "zone_series": "no zone 1 in group (unchecked)",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only"
+  ]
+ },
+ {
+  "region_code": null,
+  "region": null,
+  "names": [
+   "Oktyabrskaya_railway_MGSK_Okt_Zone5"
+  ],
+  "geometry": {
+   "lon0": 27.0,
+   "lat0": 0.0,
+   "fe": 5500000.0,
+   "fn": 0.0
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   3.144,
+   -7.531,
+   9.278,
+   -0.0,
+   null,
+   -0.0,
+   -0.0
+  ],
+  "datum_basis": "fieldworker export",
+  "sources": [
+   "fieldworker"
+  ],
+  "source_urls": [],
+  "flags": [
+   "false northing is truncated to integer in source, fraction unknown (error < 1 m)",
+   "omega_y not in source and no matching GOST set: assumed 0"
+  ],
+  "origin": "fieldworker",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=27 +k=1 +x_0=5500000.000000 +y_0=0.000000 +ellps=krass +towgs84=3.144,-7.531,9.278,0,-0,0,-0 +units=m +no_defs",
+  "id": "S0335",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": null,
+   "zone_series": "no zone 1 in group (unchecked)"
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only",
+   "no test point for this system"
+  ]
+ },
+ {
+  "region_code": null,
+  "region": null,
+  "names": [
+   "Oktyabrskaya_railway_MGSK_Okt_Zone6"
+  ],
+  "geometry": {
+   "lon0": 33.0,
+   "lat0": 0.0,
+   "fe": 6500000.0,
+   "fn": 0.0
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   3.144,
+   -7.531,
+   9.278,
+   -0.0,
+   null,
+   -0.0,
+   -0.0
+  ],
+  "datum_basis": "fieldworker export",
+  "sources": [
+   "fieldworker"
+  ],
+  "source_urls": [],
+  "flags": [
+   "false northing is truncated to integer in source, fraction unknown (error < 1 m)",
+   "omega_y not in source and no matching GOST set: assumed 0"
+  ],
+  "origin": "fieldworker",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=33 +k=1 +x_0=6500000.000000 +y_0=0.000000 +ellps=krass +towgs84=3.144,-7.531,9.278,0,-0,0,-0 +units=m +no_defs",
+  "id": "S0336",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": null,
+   "zone_series": "no zone 1 in group (unchecked)"
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only",
+   "no test point for this system"
+  ]
+ },
+ {
+  "region_code": null,
+  "region": null,
+  "names": [
+   "Road_M11_Moscow_SPb_MSK_M11",
+   "Road_M11_Moscow_SPb_MSK_M11_Calculated"
+  ],
+  "geometry": {
+   "lon0": 33.0,
+   "lat0": 0.0,
+   "fe": 7700200.0,
+   "fn": 2200200.0
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   24.82,
+   -131.21,
+   -82.66,
+   -0.0,
+   0.0,
+   -0.15999961020587267,
+   -0.12
+  ],
+  "datum_basis": "fieldworker export",
+  "sources": [
+   "fieldworker"
+  ],
+  "source_urls": [],
+  "flags": [
+   "false northing is truncated to integer in source, fraction unknown (error < 1 m)"
+  ],
+  "origin": "fieldworker",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=33 +k=1 +x_0=7700200.000000 +y_0=2200200.000000 +ellps=krass +towgs84=24.82,-131.21,-82.66,0,-0,0.1599996102,-0.12 +units=m +no_defs",
+  "id": "S0337",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": null,
+   "zone_series": "no zone 1 in group (unchecked)"
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only",
+   "no test point for this system"
+  ]
+ },
+ {
+  "region_code": null,
+  "region": null,
+  "names": [
+   "Oktyabrskaya_railway_MGSK_Okt_Zone7"
+  ],
+  "geometry": {
+   "lon0": 39.0,
+   "lat0": 0.0,
+   "fe": 7500000.0,
+   "fn": 0.0
+  },
+  "ellipsoid": "krass",
+  "datum_gost_form": [
+   3.144,
+   -7.531,
+   9.278,
+   -0.0,
+   null,
+   -0.0,
+   -0.0
+  ],
+  "datum_basis": "fieldworker export",
+  "sources": [
+   "fieldworker"
+  ],
+  "source_urls": [],
+  "flags": [
+   "false northing is truncated to integer in source, fraction unknown (error < 1 m)",
+   "omega_y not in source and no matching GOST set: assumed 0"
+  ],
+  "origin": "fieldworker",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=39 +k=1 +x_0=7500000.000000 +y_0=0.000000 +ellps=krass +towgs84=3.144,-7.531,9.278,0,-0,0,-0 +units=m +no_defs",
+  "id": "S0338",
+  "checks": {
+   "sources": 1,
+   "roundtrip_mm": null,
+   "zone_series": "no zone 1 in group (unchecked)"
+  },
+  "status": "unverified",
+  "unverified_reasons": [
+   "one source only",
+   "no test point for this system"
+  ]
+ }
+]

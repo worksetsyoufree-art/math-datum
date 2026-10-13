@@ -1,0 +1,401 @@
+[
+ {
+  "code": "Astrakhan_Calculation",
+  "ellipsoid": "Krassowsky_1940",
+  "ellipsoid_a": 6378245.0,
+  "ellipsoid_1f": 298.3,
+  "to_wgs84_gost_form": [
+   -188.39,
+   258.619,
+   161.377,
+   -0.3840031897902193,
+   null,
+   5.4229905269649095,
+   -4.882
+  ],
+  "omega_y": "unknown (not in source)",
+  "source": "fieldworker",
+  "epsg_match": null,
+  "status": "unverified: no published counterpart found"
+ },
+ {
+  "code": "GSK_2011",
+  "ellipsoid": "GSK_2011",
+  "ellipsoid_a": 6378136.5,
+  "ellipsoid_1f": 298.2564151,
+  "to_wgs84_gost_form": [
+   0.013,
+   -0.092,
+   -0.03,
+   0.0017326243724756097,
+   null,
+   0.004269681489314895,
+   0.0074
+  ],
+  "omega_y": "unknown (not in source)",
+  "source": "fieldworker",
+  "epsg_match": null,
+  "status": "unverified: no published counterpart found"
+ },
+ {
+  "code": "PZ_90_11",
+  "ellipsoid": "PZ_9002",
+  "ellipsoid_a": 6378136.0,
+  "ellipsoid_1f": 298.25784,
+  "to_wgs84_gost_form": [
+   0.013,
+   -0.106,
+   -0.022,
+   0.002310165829967479,
+   null,
+   0.004207802047440766,
+   0.008
+  ],
+  "omega_y": "unknown (not in source)",
+  "source": "fieldworker",
+  "epsg_match": null,
+  "status": "unverified: no published counterpart found"
+ },
+ {
+  "code": "SK_42_2008",
+  "ellipsoid": "Krassowsky_1940",
+  "ellipsoid_a": 6378245.0,
+  "ellipsoid_1f": 298.3,
+  "to_wgs84_gost_form": [
+   23.57,
+   -140.95,
+   -79.8,
+   -0.0,
+   -0.35,
+   -0.789994207926379,
+   -0.22
+  ],
+  "omega_y": "restored from matching GOST parameter set",
+  "source": "fieldworker",
+  "epsg_match": "EPSG:5044 Pulkovo 1942 to WGS 84 (20)",
+  "status": "verified: equals published EPSG parameters"
+ },
+ {
+  "code": "SK_42_CREDO",
+  "ellipsoid": "Krassowsky_1940",
+  "ellipsoid_a": 6378245.0,
+  "ellipsoid_1f": 298.3,
+  "to_wgs84_gost_form": [
+   23.57,
+   -140.95,
+   -79.8,
+   -0.0,
+   -0.35,
+   -0.789994207926379,
+   -0.22
+  ],
+  "omega_y": "restored from matching GOST parameter set",
+  "source": "fieldworker",
+  "epsg_match": "EPSG:5044 Pulkovo 1942 to WGS 84 (20)",
+  "status": "verified: equals published EPSG parameters"
+ },
+ {
+  "code": "SK_95_2001",
+  "ellipsoid": "Krassowsky_1940",
+  "ellipsoid_a": 6378245.0,
+  "ellipsoid_1f": 298.3,
+  "to_wgs84_gost_form": [
+   24.82,
+   -131.21,
+   -82.66,
+   -0.0,
+   0.0,
+   -0.15999961020587267,
+   -0.12
+  ],
+  "omega_y": "restored from matching GOST parameter set",
+  "source": "fieldworker",
+  "epsg_match": "GOST R 51794-2001 Pulkovo 1995 set (as in the EPSG:2754 definition)",
+  "status": "verified: equals published EPSG parameters"
+ },
+ {
+  "code": "SK_95_2008",
+  "ellipsoid": "Krassowsky_1940",
+  "ellipsoid_a": 6378245.0,
+  "ellipsoid_1f": 298.3,
+  "to_wgs84_gost_form": [
+   24.47,
+   -130.89,
+   -81.56,
+   -0.0,
+   0.0,
+   -0.13000870737754483,
+   -0.22
+  ],
+  "omega_y": "restored from matching GOST parameter set",
+  "source": "fieldworker",
+  "epsg_match": "EPSG:5043 Pulkovo 1995 to WGS 84 (2)",
+  "status": "verified: equals published EPSG parameters"
+ },
+ {
+  "code": "SK_42_Trimble",
+  "ellipsoid": "Krassowsky_1940",
+  "ellipsoid_a": 6378245.0,
+  "ellipsoid_1f": 298.3,
+  "to_wgs84_gost_form": [
+   25.0,
+   -141.0,
+   -78.5,
+   -0.0,
+   -0.35,
+   -0.7359940816508892,
+   -0.0
+  ],
+  "omega_y": "restored from matching GOST parameter set",
+  "source": "fieldworker",
+  "epsg_match": "EPSG:15865 Pulkovo 1942 to WGS 84 (16)",
+  "status": "verified: equals published EPSG parameters"
+ },
+ {
+  "code": "SK_95_TULA_71_1",
+  "ellipsoid": "Krassowsky_1940",
+  "ellipsoid_a": 6378245.0,
+  "ellipsoid_1f": 298.3,
+  "to_wgs84_gost_form": [
+   24.83,
+   -130.97,
+   -81.74,
+   -0.0,
+   0.0,
+   -0.13000870737754483,
+   -0.22
+  ],
+  "omega_y": "restored from matching GOST parameter set",
+  "source": "fieldworker",
+  "epsg_match": null,
+  "status": "corroborated: equals parameters published on the scraped sites"
+ },
+ {
+  "code": "SK_95_SAMARA_63_1",
+  "ellipsoid": "Krassowsky_1940",
+  "ellipsoid_a": 6378245.0,
+  "ellipsoid_1f": 298.3,
+  "to_wgs84_gost_form": [
+   26.3,
+   -132.6,
+   -76.3,
+   -0.220002042343153,
+   null,
+   -0.8999952290979556,
+   -0.12
+  ],
+  "omega_y": "unknown (not in source)",
+  "source": "fieldworker",
+  "epsg_match": null,
+  "status": "unverified: no published counterpart found"
+ },
+ {
+  "code": "MGGT",
+  "ellipsoid": "Bessel_1841",
+  "ellipsoid_a": 6377397.155,
+  "ellipsoid_1f": 299.1528128,
+  "to_wgs84_gost_form": [
+   316.151,
+   78.924,
+   589.659,
+   1.5727278946728604,
+   -2.69209,
+   -2.346922218440712,
+   8.4507
+  ],
+  "omega_y": "restored from matching GOST parameter set",
+  "source": "fieldworker",
+  "epsg_match": null,
+  "status": "corroborated: equals parameters published on the scraped sites"
+ },
+ {
+  "code": "MOSCOW",
+  "ellipsoid": "Bessel_1841",
+  "ellipsoid_a": 6377397.155,
+  "ellipsoid_1f": 299.1528128,
+  "to_wgs84_gost_form": [
+   332.37,
+   33.28,
+   627.08,
+   2.9999978479802683,
+   null,
+   -3.4000071867352624,
+   5.06
+  ],
+  "omega_y": "unknown (not in source)",
+  "source": "fieldworker",
+  "epsg_match": null,
+  "status": "unverified: no published counterpart found"
+ },
+ {
+  "code": "MICKEY",
+  "ellipsoid": "Bessel_1841",
+  "ellipsoid_a": 6377397.155,
+  "ellipsoid_1f": 299.1528128,
+  "to_wgs84_gost_form": [
+   273.808,
+   65.713,
+   620.584,
+   2.280009915294154,
+   null,
+   -1.8099943012988953,
+   8.123
+  ],
+  "omega_y": "unknown (not in source)",
+  "source": "fieldworker",
+  "epsg_match": null,
+  "status": "unverified: no published counterpart found"
+ },
+ {
+  "code": "METRO",
+  "ellipsoid": "Bessel_1841",
+  "ellipsoid_a": 6377397.155,
+  "ellipsoid_1f": 299.1528128,
+  "to_wgs84_gost_form": [
+   334.7039,
+   53.3455,
+   608.8388,
+   2.241417770045322,
+   null,
+   -3.167299232327288,
+   6.1741
+  ],
+  "omega_y": "unknown (not in source)",
+  "source": "fieldworker",
+  "epsg_match": null,
+  "status": "unverified: no published counterpart found"
+ },
+ {
+  "code": "MGGT_MSK_50",
+  "ellipsoid": "Krassowsky_1940",
+  "ellipsoid_a": 6378245.0,
+  "ellipsoid_1f": 298.3,
+  "to_wgs84_gost_form": [
+   -118.754,
+   -61.782,
+   -93.237,
+   -2.4089666721598384,
+   -3.47502,
+   1.2968899692786184,
+   6.5177000000000005
+  ],
+  "omega_y": "restored from matching GOST parameter set",
+  "source": "fieldworker",
+  "epsg_match": null,
+  "status": "corroborated: equals parameters published on the scraped sites"
+ },
+ {
+  "code": "MSK_78",
+  "ellipsoid": "WGS_84",
+  "ellipsoid_a": 6378137.0,
+  "ellipsoid_1f": 298.257223563,
+  "to_wgs84_gost_form": [
+   5.476,
+   2.074,
+   9.338,
+   -3.3808658127155318,
+   null,
+   0.4957987147761455,
+   -1.6761
+  ],
+  "omega_y": "unknown (not in source)",
+  "source": "fieldworker",
+  "epsg_match": null,
+  "status": "unverified: no published counterpart found"
+ },
+ {
+  "code": "MSK_78_GP",
+  "ellipsoid": "WGS_84",
+  "ellipsoid_a": 6378137.0,
+  "ellipsoid_1f": 298.257223563,
+  "to_wgs84_gost_form": [
+   2.18807,
+   10.11343,
+   8.68413,
+   -3.6121711664410254,
+   null,
+   0.6345530499385672,
+   -1.6667
+  ],
+  "omega_y": "unknown (not in source)",
+  "source": "fieldworker",
+  "epsg_match": null,
+  "status": "unverified: no published counterpart found"
+ },
+ {
+  "code": "MSK_78_GP_EGM96",
+  "ellipsoid": "WGS_84",
+  "ellipsoid_a": 6378137.0,
+  "ellipsoid_1f": 298.257223563,
+  "to_wgs84_gost_form": [
+   -1.88182,
+   -2.16761,
+   14.30508,
+   -3.2216087558121487,
+   null,
+   0.4955305705280243,
+   -1.6801
+  ],
+  "omega_y": "unknown (not in source)",
+  "source": "fieldworker",
+  "epsg_match": null,
+  "status": "unverified: no published counterpart found"
+ },
+ {
+  "code": "MSK_78_GP_EGM2008",
+  "ellipsoid": "WGS_84",
+  "ellipsoid_a": 6378137.0,
+  "ellipsoid_1f": 298.257223563,
+  "to_wgs84_gost_form": [
+   2.42857,
+   10.23479,
+   8.49568,
+   -3.616956509945958,
+   null,
+   0.6346149293804414,
+   -1.6623999999999999
+  ],
+  "omega_y": "unknown (not in source)",
+  "source": "fieldworker",
+  "epsg_match": null,
+  "status": "unverified: no published counterpart found"
+ },
+ {
+  "code": "PMSK_Okt",
+  "ellipsoid": "Krassowsky_1940",
+  "ellipsoid_a": 6378245.0,
+  "ellipsoid_1f": 298.3,
+  "to_wgs84_gost_form": [
+   3.144,
+   -7.531,
+   9.278,
+   -0.0,
+   null,
+   -0.0,
+   -0.0
+  ],
+  "omega_y": "unknown (not in source)",
+  "source": "fieldworker",
+  "epsg_match": null,
+  "status": "unverified: no published counterpart found"
+ },
+ {
+  "code": "WGS_84",
+  "ellipsoid": "WGS_84",
+  "ellipsoid_a": 6378137,
+  "ellipsoid_1f": 298.257223563,
+  "to_wgs84_gost_form": [
+   -0.0,
+   -0.0,
+   -0.0,
+   -0.0,
+   null,
+   -0.0,
+   -0.0
+  ],
+  "omega_y": "unknown (not in source)",
+  "source": "fieldworker",
+  "epsg_match": null,
+  "status": "unverified: no published counterpart found"
+ }
+]
