@@ -15,12 +15,14 @@ with sync_playwright() as p:
     assert "Подбор датума" in pg.inner_text("h1")
     assert pg.locator(".tabs button").count() == 2, "exactly two screens"
 
-    # --- local coordinates: six points, box hint -> МСК-50 зона 2 ---
+    # --- pick the datum centre by typing: capital of the region -> МСК-50 зона 2 ---
     pg.click("#ex-points")
     pg.wait_for_selector("#results .dcard", timeout=40000)
     res = pg.inner_text("#results")
     print("local points:", res.split("\n")[0:6])
-    assert "МСК-50 зона 2" in res, res[:600]
+    assert "МСК-50 зона 2" in res and "от центра" in res, res[:600]
+    assert "Удмурт" not in res
+    assert "Красногорск" in pg.input_value("#ctrl")
     pg.locator("#results .sysrow >> nth=0").get_by_text("Подробнее").click()
     pg.wait_for_selector("#results table.mini", timeout=10000)
     first = pg.inner_text("#results table.mini tbody tr >> nth=0")
@@ -28,20 +30,38 @@ with sync_playwright() as p:
     assert "55.62" in first and "38.30" in first, first
     assert pg.locator("#results canvas.rectcv").count() == 1
 
-    # --- ambiguity without a place hint, then narrowing it down by MSK region ---
-    pg.fill("#box", ""); pg.click("#go")
+    # --- type-ahead suggestions ---
+    pg.click("#place-x"); pg.fill("#ctrl", "Красног"); pg.wait_for_selector("#ctrl-list li", timeout=20000)
+    sug = pg.inner_text("#ctrl-list"); print("suggestions:", sug.replace("\n", " | ")[:120])
+    assert "Красногорск" in sug
+
+    # --- nothing chosen: no list, a question instead; "show anyway" lists the ambiguous variants ---
+    pg.fill("#ctrl", ""); pg.click("#go")
     pg.wait_for_selector("#results .notice", timeout=40000)
-    amb = pg.inner_text("#results .notice"); print("ambiguity notice:", amb[:90])
-    assert "Эти числа подходят" in amb
+    amb = pg.inner_text("#results .notice"); print("no-place notice:", amb[:100])
+    assert "Укажите, где это" in amb and pg.locator("#results .dcard").count() == 0
+    pg.click("#show-all"); pg.wait_for_selector("#results .dcard", timeout=40000)
     assert "Удмурт" in pg.inner_text("#results") or pg.locator("#results .dcard").count() >= 5
-    pg.fill("#area", "Московская"); pg.wait_for_selector("#area-res button")
-    assert "(МСК)" in pg.inner_text("#area-res button >> nth=0"), pg.inner_text("#area-res")
-    pg.click("#area-res button >> nth=0"); pg.click("#go")
+
+    # --- MSK region by name narrows it down ---
+    pg.fill("#ctrl", "Московская"); pg.wait_for_selector("#ctrl-list li")
+    assert "область МСК" in pg.inner_text("#ctrl-list li >> nth=0"), pg.inner_text("#ctrl-list")
+    pg.click("#ctrl-list li >> nth=0"); pg.click("#go")
     pg.wait_for_function("!document.querySelector('#results .notice') && document.querySelector('#results .dcard')", timeout=40000)
     narrowed = pg.inner_text("#results")
-    print("narrowed:", narrowed.split("\n")[0:4])
     assert "МСК-50 зона 2" in narrowed and "Удмурт" not in narrowed and "Ленинградск" not in narrowed, narrowed[:500]
-    pg.click("#area-x")
+
+    # --- a point instead of a name: residual in metres; too tight -> offer to build the datum ---
+    pg.click("#place-x"); pg.fill("#ctrl", "55.622298, 38.307340"); pg.fill("#ctrl-tol", "0.5"); pg.click("#go")
+    pg.wait_for_selector("#results .dcard", timeout=40000)
+    print("by point:", pg.inner_text("#results .sysrow >> nth=0").split("\n")[0:2])
+    assert "МСК-50 зона 2" in pg.inner_text("#results") and " м от центра" in pg.inner_text("#results")
+    pg.fill("#ctrl-tol", "0.05"); pg.click("#go")
+    pg.wait_for_selector("#to-calib", timeout=40000)
+    print("no match:", pg.inner_text("#results .notice")[:90])
+    pg.click("#to-calib")
+    assert pg.is_visible("#tab-calib") and "55.622298" in pg.input_value("#cal-pairs"), pg.input_value("#cal-pairs")
+    pg.click("[data-tab=finder]")
 
     # --- surface file (SURFACE_V1) ---
     pg.click("#ex-surface")

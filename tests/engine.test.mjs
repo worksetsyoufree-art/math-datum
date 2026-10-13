@@ -77,5 +77,12 @@ check("identifyLocal: Russia only -> MSK zone-2 systems, every centre inside Rus
 const surf = [[78498.614, 122401.552], [78355.583, 122222.961], [78738.125, 122569.593], [78505.812, 122398.192]];
 const sl = Engine.identifyLocal(PROJ.concat(MSK), mk(surf, "xy"), proj4, { area: RU_AREA });
 check("identifyLocal: SPb surface -> МСК_78(5) found", sl.some((x) => /78/.test(x.p.n) && x.frac === 1), sl.slice(0, 3).map((x) => x.p.n).join(" | "));
+// control point: the known WGS 84 place of the points
+const cp = Engine.identifyLocal(PROJ.concat(MSK), mk(six, "xy"), proj4, { lat: 55.622298, lon: 38.30734, radiusKm: 0.5 });
+check("Control point (55.622298, 38.307340) ±500 m: MSK-50 zone 2 only, residual ~120 m", cp.length >= 1 && /МСК-50 зона 2/.test(cp[0].p.n) && cp[0].dist * 1000 > 50 && cp[0].dist * 1000 < 300 && cp.every((x) => x.dist <= 0.5), cp.slice(0, 3).map((x) => x.p.n + " " + Math.round(x.dist * 1000) + " m").join(" | "));
+const cp2 = Engine.identifyLocal(PROJ.concat(MSK), mk(six, "xy"), proj4, { lat: 55.622298, lon: 38.30734, radiusKm: 0.05 });
+check("Control point with a 50 m tolerance: nothing matches (the datum residual is ~120 m) -> localisation is the way", !cp2.some((x) => /МСК-50/.test(x.p.n)), `${cp2.length} results`);
+const cs = Engine.identifyLocal(PROJ.concat(MSK), mk(surf, "xy"), proj4, { lat: 59.79377437, lon: 30.46895936, radiusKm: 0.3 });
+check("Surface + control point (ENU origin, ±300 m): МСК_78(5) found with residual < 300 m", cs.some((x) => /78\(5\)/.test(x.p.n) && x.dist < 0.3), cs.slice(0, 3).map((x) => x.p.n + " " + Math.round(x.dist * 1000) + " m").join(" | "));
 check("search by EPSG code", Engine.search(GEO, "4326", 5).some((g) => g.c === 4326));
 process.exit(fails ? 1 : 0);

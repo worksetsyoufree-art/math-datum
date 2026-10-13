@@ -86,7 +86,7 @@
   if (TABS.indexOf((location.hash || "").slice(1)) >= 0) showTab(location.hash.slice(1));
 
   /* ================================================================ FINDER ================================================================ */
-  var MODE = "local", AREA = null, AREAS = null;
+  var MODE = "local", AREAS = null;
   var EXAMPLES = [
     ["Москва / Moscow", 55.7558, 37.6173], ["Санкт-Петербург / Saint Petersburg", 59.9343, 30.3351], ["Калининград / Kaliningrad", 54.7104, 20.4522],
     ["Владивосток / Vladivostok", 43.1155, 131.8855], ["Berlin", 52.52, 13.405], ["Paris", 48.8566, 2.3522], ["London", 51.5074, -0.1278],
@@ -130,17 +130,43 @@
     });
     return out;
   }
-  function setArea(a) {
-    AREA = a || null;
-    $("area-res").innerHTML = AREA ? esc(t("areaSet")) + " <b>" + esc(short(AREA.name, 80)) + '</b> <button class="ghost" id="area-x">' + esc(t("areaClear")) + "</button>" : "";
-    if ($("area-x")) $("area-x").onclick = function () { setArea(null); };
-  }
-  $("area").addEventListener("input", function () {
-    ensureData().then(function () {
-      var out = findRegions($("area").value).concat(findAreas($("area").value)).slice(0, 8);
-      $("area-res").innerHTML = out.map(function (a, i) { return '<button data-i="' + i + '">' + esc(short(a.name, 90)) + "</button>"; }).join("");
-      $("area-res").querySelectorAll("button").forEach(function (b) { b.onclick = function () { setArea(out[b.dataset.i]); $("area").value = ""; }; });
+  /* ---- "Where is this?": type a region centre / capital / city / country, or a point "lat, lon" ---- */
+  var PLACE = null;
+  function fmtKm(km) { return km < 1 ? nf(km * 1000, 0) + " " + t("m") : nf(km, km < 10 ? 1 : 0) + " " + t("km"); }
+  function gazetteer(q0) {
+    var toks = String(q0 || "").toLowerCase().trim().split(/\s+/).filter(Boolean), out = [];
+    if (!toks.length) return out;
+    var match = function (hay) { hay = hay.toLowerCase(); return toks.every(function (w) { return hay.indexOf(w) >= 0; }); };
+    findRegions(q0).slice(0, 3).forEach(function (r) { out.push({ k: "region", label: r.name, sub: t("gz_region"), rc: r.rc, b: r.b }); });
+    ((window.__RU__ && window.__RU__.places) || []).forEach(function (p) {
+      if (out.length < 12 && match(p.n + " " + p.r + " " + p.re)) out.push({ k: "center", label: p.n + (p.r ? " — " + (LANG === "ru" ? p.r : p.re) : ""), sub: p.k === "capital" ? t("gz_capital") : t("gz_city"), lat: p.lat, lon: p.lon, tolKm: p.k === "capital" ? 150 : 40, rc: p.rc });
     });
+    EXAMPLES.forEach(function (x) { if (out.length < 12 && match(x[0])) out.push({ k: "city", label: x[0], sub: t("gz_city"), lat: x[1], lon: x[2], tolKm: 40 }); });
+    findAreas(q0).forEach(function (a) { if (out.length < 14) out.push({ k: "area", label: short(a.name, 70), sub: t("gz_area"), name: a.name, b: a.b }); });
+    return out;
+  }
+  function setPlace(p) {
+    PLACE = p || null;
+    $("ctrl-chip").innerHTML = PLACE ? esc(t("areaSet")) + " <b>" + esc(PLACE.label) + "</b> <span class=\"muted\">(" + esc(PLACE.sub) + ")</span> <button class=\"ghost\" id=\"place-x\">" + esc(t("areaClear")) + "</button>" : "";
+    if (PLACE) { $("ctrl").value = PLACE.label; if (PLACE.tolKm != null) $("ctrl-tol").value = PLACE.tolKm; }
+    if ($("place-x")) $("place-x").onclick = function () { setPlace(null); $("ctrl").value = ""; };
+  }
+  function showSuggest() {
+    var list = $("ctrl-list"), q = $("ctrl").value;
+    if (!q.trim() || /^[\s\d.,;°'"-]+$/.test(q)) { list.hidden = true; return; } // numbers = a point, no suggestions
+    ensureData().then(function () {
+      var out = gazetteer(q);
+      list.innerHTML = out.map(function (x, i) { return '<li data-i="' + i + '">' + esc(x.label) + "<small>" + esc(x.sub) + "</small></li>"; }).join("");
+      list.hidden = !out.length;
+      list.querySelectorAll("li").forEach(function (li) { li.onmousedown = function (ev) { ev.preventDefault(); setPlace(out[li.dataset.i]); list.hidden = true; }; });
+      list._first = out[0];
+    });
+  }
+  $("ctrl").addEventListener("input", function () { PLACE = null; $("ctrl-chip").innerHTML = ""; showSuggest(); });
+  $("ctrl").addEventListener("focus", showSuggest);
+  $("ctrl").addEventListener("blur", function () { setTimeout(function () { $("ctrl-list").hidden = true; }, 150); });
+  $("ctrl").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") { var f = $("ctrl-list")._first; if (!$("ctrl-list").hidden && f) { e.preventDefault(); setPlace(f); $("ctrl-list").hidden = true; } else run(); }
   });
 
   function setMode(m) {
@@ -183,12 +209,14 @@
   $("ex-points").onclick = function () {
     $("pts").value = ['<P id="1" name="П_1">453594.207 2238973.376 144.153</P>', '<P id="2" name="П_2">453592.333 2238975.140 144.082</P>', '<P id="3" name="П_3">453585.483 2238974.514 144.043</P>',
       '<P id="4" name="П_4">453585.403 2238972.128 143.971</P>', '<P id="5" name="П_5">453571.586 2238973.450 143.936</P>', '<P id="6" name="П_6">453571.156 2238971.407 143.872</P>'].join("\n");
-    $("box").value = "55.619783, 38.310216, 55.623095, 38.304913"; $("order").value = "auto"; document.querySelector("details.more").open = true;
-    updateSummary(); run();
+    $("box").value = ""; $("order").value = "auto";
+    ensureData().then(function () { var c = gazetteer("Красногорск")[0]; if (c) setPlace(c); else { $("ctrl").value = "55.622298, 38.307340"; $("ctrl-tol").value = 0.5; } run(); });
+    updateSummary();
   };
   $("ex-surface").onclick = function () {
     $("pts").value = "SURFACE_V1\nexample surface\n6\n6\n78498.614 122401.552 13.029\n78355.583 122222.961 12.770\n78738.125 122569.593 13.200\n78505.812 122398.192 13.050\n78738.006 122303.616 12.904\n78649.269 122230.923 13.150\n";
-    $("box").value = ""; setArea(null); updateSummary(); run();
+    $("box").value = ""; updateSummary();
+    ensureData().then(function () { var c = gazetteer("Санкт-Петербург").filter(function (x) { return x.k === "center"; })[0]; if (c) setPlace(c); run(); });
   };
   function fillExamples() {
     $("example").innerHTML = '<option value="">' + esc(t("examplePh")) + "</option>" + EXAMPLES.map(function (x, i) { return '<option value="' + i + '">' + esc(x[0]) + "</option>"; }).join("");
@@ -204,16 +232,25 @@
   };
   $("go").onclick = function () { run(); };
 
+  var HERR = "", FORCE = false;
   function getHint() {
-    var hint = {};
-    if (AREA && AREA.region) hint.region = { rc: AREA.rc, b: AREA.b };
-    else if (AREA) hint.area = { ar: AREA.name, b: AREA.b };
-    var ap = String($("approx").value || "").match(/-?\d+(?:\.\d+)?/g);
-    if (ap && ap.length >= 2) { hint.lat = parseFloat(ap[0]); hint.lon = parseFloat(ap[1]); hint.radiusKm = ap[2] ? parseFloat(ap[2]) : 100; }
+    var hint = {}; HERR = "";
+    var tol = parseFloat(String($("ctrl-tol").value).replace(",", "."));
+    if (PLACE && PLACE.k === "region") hint.region = { rc: PLACE.rc, b: PLACE.b };
+    else if (PLACE && PLACE.k === "area") hint.area = { ar: PLACE.name, b: PLACE.b };
+    else if (PLACE) { hint.lat = PLACE.lat; hint.lon = PLACE.lon; hint.radiusKm = isFinite(tol) && tol > 0 ? tol : (PLACE.tolKm || 150); hint.ctrl = true; }
+    else {
+      var cv = String($("ctrl").value || "");
+      if (cv.trim()) {
+        var cn = cv.match(/-?\d+(?:\.\d+)?/g);
+        if (!cn || cn.length < 2 || /[A-Za-zА-Яа-я]/.test(cv)) { HERR = t("ctrlBad"); return null; }
+        hint.lat = parseFloat(cn[0]); hint.lon = parseFloat(cn[1]); hint.radiusKm = isFinite(tol) && tol > 0 ? tol : 0.5; hint.ctrl = true;
+      }
+    }
     var bx = String($("box").value || "").replace(/,/g, " ").match(/-?\d+(?:\.\d+)?/g);
     if (bx && bx.length) {
       bx = bx.map(Number);
-      if (bx.length !== 4) return null;
+      if (bx.length !== 4) { HERR = t("boxBad"); return null; }
       hint.box = [Math.min(bx[0], bx[2]), Math.min(bx[1], bx[3]), Math.max(bx[0], bx[2]), Math.max(bx[1], bx[3])];
     }
     return hint;
@@ -242,7 +279,8 @@
     var rect = it.r ? t("rectLabel", { e: nf(it.r[0], 0) + "…" + nf(it.r[2], 0), n: nf(it.r[1], 0) + "…" + nf(it.r[3], 0) }) : "";
     var pos = it.u != null ? t("fromCenter", { u: Math.round(Math.min(it.u, 1 - it.u) * 200), v: Math.round(Math.min(it.v, 1 - it.v) * 200) }) : "";
     var head = '<div><b>' + esc(sysName(p)) + "</b>" + (it.hy ? ' <span class="tag">' + esc(t("hyp_" + it.hy)) + "</span>" : "") +
-      (it.frac != null ? ' <span class="tag ' + (it.frac >= 0.99 ? "good" : "bad") + '">' + esc(t("fits", { p: Math.round(it.frac * 100) })) + "</span>" : "") + "</div>";
+      (it.frac != null ? ' <span class="tag ' + (it.frac >= 0.99 ? "good" : "bad") + '">' + esc(t("fits", { p: Math.round(it.frac * 100) })) + "</span>" : "") +
+      (ctx.ctrl && it.dist != null ? ' <span class="tag good">' + esc(t("residual", { m: fmtKm(it.dist) })) + "</span>" : "") + "</div>";
     var mapUrl = "https://www.openstreetmap.org/?mlat=" + it.lat.toFixed(6) + "&mlon=" + it.lon.toFixed(6) + "#map=12/" + it.lat.toFixed(5) + "/" + it.lon.toFixed(5);
     var meta = ctx.mode === "local"
       ? t("center") + ": " + it.lat.toFixed(6) + ", " + it.lon.toFixed(6) + " · " + pos
@@ -295,7 +333,7 @@
   function runLocal() {
     var pts = parsePoints($("pts").value), hint = getHint();
     if (!pts.length) { $("msg").textContent = t("noPoints"); return; }
-    if (hint == null) { $("msg").textContent = t("boxBad"); return; }
+    if (hint == null) { $("msg").textContent = HERR; return; }
     $("msg").textContent = t("loading");
     ensureData().then(function () {
       setTimeout(function () {
@@ -304,7 +342,15 @@
           var P = pts.map(function (p) { return { e: hy === "xy" ? p.b : p.a, n: hy === "xy" ? p.a : p.b }; });
           E.identifyLocal(list, P, window.proj4, hint).forEach(function (x) { x.hy = hy; x.pts = P; res.push(x); });
         });
-        res.sort(function (a, b) { return b.score - a.score; });
+        res.sort(function (a, b) { return hint.ctrl ? a.dist - b.dist : b.score - a.score; });
+        var hasHint = !!(hint.area || hint.region || hint.box || hint.ctrl);
+        if (!hasHint && !FORCE) { // numbers alone cannot choose: ask for the place instead of printing dozens of equal matches
+          var regions = {}; res.forEach(function (x) { regions[x.p.tp === "msk" ? "m" + x.p.rc : "g" + x.p.b0] = 1; });
+          $("msg").textContent = "";
+          $("results").innerHTML = '<p class="notice">' + esc(t("needHint", { n: res.length, r: Object.keys(regions).length })) + '</p><div class="row"><button class="ghost" id="show-all">' + esc(t("showAll")) + "</button></div>";
+          $("show-all").onclick = function () { FORCE = true; run(true); };
+          return;
+        }
         var map = {}, groups = [];
         res.forEach(function (x) {
           var p = x.p, key = p.tp === "msk" ? "msk" + p.rc : "g" + p.b0;
@@ -317,7 +363,15 @@
           map[key].items.push(x);
         });
         $("msg").textContent = groups.length ? t("shown", { n: Math.min(groups.length, 12), m: groups.length }) : "";
-        renderGroups(groups, { mode: "local", pts: pts });
+        if (!groups.length && hint.ctrl) {
+          $("results").innerHTML = '<p class="notice">' + esc(t("noMatch", { tol: fmtKm(hint.radiusKm) })) + '</p><div class="row"><button class="primary" id="to-calib">' + esc(t("toCalib")) + "</button></div>";
+          $("to-calib").onclick = function () {
+            var p0 = pts[0], z = p0.z != null ? " " + p0.z : "";
+            $("cal-pairs").value = p0.a + " " + p0.b + z + " " + hint.lat + " " + hint.lon; $("cal-order").value = order === "en" ? "en" : "xy"; calSummary(); showTab("calib");
+          };
+          return;
+        }
+        renderGroups(groups, { mode: "local", pts: pts, ctrl: !!hint.ctrl });
         var nMsk = groups.filter(function (g) { return /^msk/.test(g.key); }).length, hinted = hint.area || hint.region || hint.box || hint.lat != null;
         if (nMsk >= 3 && !hinted && groups.length) $("results").insertAdjacentHTML("afterbegin", '<p class="notice">' + esc(t("ambig", { n: nMsk })) + "</p>");
       }, 20);
@@ -350,7 +404,7 @@
       }, 20);
     });
   }
-  function run() { MODE === "local" ? runLocal() : runLL(); }
+  function run(keepForce) { if (keepForce !== true && MODE === "local" && arguments.length === 0) FORCE = false; MODE === "local" ? runLocal() : runLL(); }
 
   /* ================================================================ LOCALISATION ================================================================ */
   var CAL = { datum: null, order: "xy" };
@@ -478,7 +532,7 @@
     document.querySelectorAll("[data-i18n-ph]").forEach(function (el) { el.placeholder = t(el.getAttribute("data-i18n-ph")); });
     $("built").textContent = "EPSG " + (META.epsg || "") + (META.epsg_date ? " (" + META.epsg_date + ")" : "");
     fillExamples(); renderAbout(); setApplyLabels(); updateSummary(); calSummary();
-    if (AREA) setArea(AREA);
+    if (PLACE) setPlace(PLACE);
   }
   $("lang").innerHTML = Object.keys(window.I18N.LANGS).map(function (k) { return '<option value="' + k + '">' + esc(window.I18N.LANGS[k]) + "</option>"; }).join("");
   $("lang").value = LANG;

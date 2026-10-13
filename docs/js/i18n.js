@@ -8,6 +8,15 @@
     title: "Подбор датума", subtitle: "Локальные координаты или широта-долгота → подходящие датумы; локализация по парам точек",
     language: "Язык", tabFinder: "Подбор датума", tabCalib: "Локализация", aboutTitle: "О проекте и методике",
 
+    ctrlTitle: "Где это? Центр датума: столица региона, город, область МСК, страна — или точка",
+    ctrlPoint: "Начните набирать название — или введите «широта, долгота»", ctrlPh: "Красногорск, Московская область, Germany или 55.62, 38.31", ctrlTol: "Допуск, км",
+    gz_region: "область МСК", gz_capital: "центр региона", gz_city: "город", gz_area: "страна / область применения", m: "м", km: "км",
+    ctrlNote: "Выберите центр — показываются только системы, где ваши точки попадают в допуск от него (по умолчанию 150 км для столицы региона, 40 км для города). Если знаете точку точнее, введите её координаты и допуск в километрах, например 0,5.",
+    needHint: "Укажите, где это: столицу региона, город, область МСК, страну — или точку. Без этого числа подходят {n} системам в {r} регионах/странах, и выбрать по ним нельзя.",
+    showAll: "Показать все варианты всё равно", residual: "в {m} от центра",
+    noMatch: "Ни одна стандартная система не дала точку в пределах {tol} от выбранного места. Возможно, датум нестандартный — постройте его по этим точкам (нужны ещё пары), либо увеличьте допуск.",
+    toCalib: "Построить датум по этим точкам", ctrlBad: "Место: введите название из подсказок или «широта, долгота».",
+    toCalib: "Построить датум по этим точкам", ctrlBad: "Контрольная точка: нужны широта и долгота.",
     modeLocal: "Локальные координаты", modeLL: "Широта, долгота",
     ptsLabel: "Точка или поверхность в локальных координатах: «X Y [Z]» или «E N [Z]» по строке; принимается разметка <P …>X Y Z</P> и файл SURFACE_V1",
     chooseFile: "Выбрать файл…", exPoints: "Пример: 6 точек", exSurface: "Пример: поверхность",
@@ -17,7 +26,6 @@
     refine: "Уточнить (необязательно): порядок осей, страна, рамка",
     order: "Порядок чисел", orderAuto: "определить автоматически", orderXY: "X Y — север, восток (российская запись)", orderEN: "E N — восток, север",
     area: "Страна / регион", areaPh: "например: Россия, Germany", areaSet: "Область:", areaClear: "сбросить",
-    approx: "Примерное место: широта, долгота [радиус, км]", approxPh: "55.62, 38.31, 100",
     ambig: "Эти числа подходят {n} разным местным системам: у каждой МСК свои ложные координаты, и одни и те же числа дают разные точки на карте (у каждого варианта указано, где именно). Уточните место — область МСК, примерную точку или рамку в блоке «Уточнить».",
     mapLink: "карта ↗", area_msk: "МСК",
     box: "Рамка, в которую точка должна попасть: широта, долгота двух углов", boxPh: "55.619783, 38.310216, 55.623095, 38.304913", boxBad: "В рамке нужны 4 числа.",
@@ -64,6 +72,15 @@
     title: "Datum Finder", subtitle: "Local coordinates or lat/lon → matching datums; localisation from point pairs",
     language: "Language", tabFinder: "Find datum", tabCalib: "Localisation", aboutTitle: "About and method",
 
+    ctrlTitle: "Where is this? The datum's centre: a regional capital, city, MSK region, country — or a point",
+    ctrlPoint: "Start typing a name — or enter “latitude, longitude”", ctrlPh: "Krasnogorsk, Moscow Oblast, Germany or 55.62, 38.31", ctrlTol: "Tolerance, km",
+    gz_region: "MSK region", gz_capital: "regional centre", gz_city: "city", gz_area: "country / area of use", m: "m", km: "km",
+    ctrlNote: "Pick a centre — only systems that put your points within the tolerance of it are shown (150 km by default for a regional capital, 40 km for a city). If you know the point more precisely, enter its coordinates and a tolerance in km, e.g. 0.5.",
+    needHint: "Say where this is: a regional capital, city, MSK region, country — or a point. Without it the numbers fit {n} systems in {r} regions/countries and you cannot choose by the numbers alone.",
+    showAll: "Show all variants anyway", residual: "{m} from the centre",
+    noMatch: "No standard system put the point within {tol} of the chosen place. The datum may be non-standard — build it from these points (more pairs are needed), or increase the tolerance.",
+    toCalib: "Build a datum from these points", ctrlBad: "Place: enter a name from the suggestions or “latitude, longitude”.",
+    toCalib: "Build a datum from these points", ctrlBad: "Control point: latitude and longitude are needed.",
     modeLocal: "Local coordinates", modeLL: "Latitude, longitude",
     ptsLabel: "A point or a surface in local coordinates: “X Y [Z]” or “E N [Z]” per line; <P …>X Y Z</P> markup and SURFACE_V1 files are accepted",
     chooseFile: "Choose file…", exPoints: "Example: 6 points", exSurface: "Example: surface",
@@ -73,7 +90,6 @@
     refine: "Refine (optional): axis order, country, box",
     order: "Order of numbers", orderAuto: "detect automatically", orderXY: "X Y — north, east (Russian notation)", orderEN: "E N — east, north",
     area: "Country / region", areaPh: "e.g. Russia, Germany", areaSet: "Area:", areaClear: "clear",
-    approx: "Approximate place: latitude, longitude [radius, km]", approxPh: "55.62, 38.31, 100",
     ambig: "These numbers fit {n} different local systems: every MSK has its own false origin, so the same numbers give different places on the map (each variant shows where). Narrow it down — MSK region, an approximate point or a box under “Refine”.",
     mapLink: "map ↗", area_msk: "MSK",
     box: "Box the point must fall into: latitude, longitude of two corners", boxPh: "55.619783, 38.310216, 55.623095, 38.304913", boxBad: "The box needs 4 numbers.",
@@ -118,13 +134,13 @@
 
   /* long texts: HTML, {tokens} are filled from data at runtime */
   D.ru.about = [
-    "<h2>Как работает подбор</h2><p>У каждой системы координат есть область применения (в EPSG — прямоугольник в градусах плюс список стран). Приложение переводит эту область в <b>прямоугольник в собственных (локальных) координатах системы</b> и смотрит, куда попадают ваши числа: доля точек внутри прямоугольника, близость к центру и к осевому меридиану, специфичность области. Затем проверяется центр точек по реальным границам стран и подсказкам (страна, рамка). Для широты-долготы то же делается в обратную сторону: все датумы, чья область содержит точку, оцениваются по специфичности, точности перехода к WGS 84 и современности.</p><p>Это эвристика: области применения — прямоугольники и списки стран, а признак «современный» определяется по названию. Результат — подсказка, а не нормативная рекомендация.</p>",
+    "<h2>Как работает подбор</h2><p>У каждой системы координат есть область применения (в EPSG — прямоугольник в градусах плюс список стран). Приложение переводит эту область в <b>прямоугольник в собственных (локальных) координатах системы</b> и смотрит, куда попадают ваши числа: доля точек внутри прямоугольника, близость к центру и к осевому меридиану, специфичность области. Одних чисел для выбора мало, поэтому спрашивается центр датума (столица региона, город, область МСК, страна) или точка: показываются системы, у которых ваши точки попали в допуск от него, с расстоянием в километрах. Для широты-долготы то же делается в обратную сторону: все датумы, чья область содержит точку, оцениваются по специфичности, точности перехода к WGS 84 и современности.</p><p>Это эвристика: области применения — прямоугольники и списки стран, а признак «современный» определяется по названию. Результат — подсказка, а не нормативная рекомендация.</p>",
     "<h2>Данные</h2><p>Датумов: <b>{geo}</b>, проекций EPSG: <b>{proj}</b> (реестр EPSG {epsg} от {epsg_date}, PROJ {proj_ver}); российские МСК: {ru_total} систем, из них подтверждены {ru_ver} (минимум два источника + геометрические проверки). Параметры переходов приведены к форме PROJ <code>+towgs84</code>. Проекции, на которых proj4js расходится с PROJ больше чем на {tol} м, исключены ({dropped}). У {approx1} проекций цепочка EPSG на сетках заменена лучшим набором Гельмерта.</p>",
     "<h2>Локализация</h2><p>Датум задаётся так же, как в геодезическом ПО: проекция (поперечный Меркатор на локальном эллипсоиде) + 3D-преобразование Гельмерта от ECEF WGS 84 к локальному ECEF + вертикальная плоскость. Параметры подбираются по методу наименьших квадратов; экспорт — JSON в формате Fieldworker (повороты «coordinate frame», секунды; масштаб в ppm) и строка PROJ. Проверка на реальной съёмке МСК-78(5): точка начала ENU попадает в облако точек в 4,5 м от его центра, а синтетическая локализация восстанавливает исходный датум до долей миллиметра.</p>",
     "<h2>Ограничения</h2><ul><li>Области применения МСК — круг вокруг столицы региона (границ в открытых данных нет); нет данных: {missing}.</li><li>Преобразования по сеткам (NTv2 и др.) заменены 7-параметрической моделью.</li><li>Для малых участков (&lt; 2 км) 7 параметров определяются плохо — используйте сдвиг.</li></ul>",
   ].join("");
   D.en.about = [
-    "<h2>How the selection works</h2><p>Every coordinate system has an area of use (in EPSG a rectangle in degrees plus a list of countries). The app converts that area into a <b>rectangle in the system's own (local) coordinates</b> and sees where your numbers fall: the share of points inside the rectangle, closeness to its centre and to the central meridian, specificity of the area. Then the centre of the points is checked against real country borders and your hints (country, box). For latitude/longitude the same is done the other way round: every datum whose area of use contains the point is scored on specificity, accuracy of the transformation to WGS 84, and modernity.</p><p>This is a heuristic: areas of use are rectangles and country lists, and “modern” is detected from names. The result is a hint, not a regulation.</p>",
+    "<h2>How the selection works</h2><p>Every coordinate system has an area of use (in EPSG a rectangle in degrees plus a list of countries). The app converts that area into a <b>rectangle in the system's own (local) coordinates</b> and sees where your numbers fall: the share of points inside the rectangle, closeness to its centre and to the central meridian, specificity of the area. Numbers alone are not enough to choose, so the datum's centre is asked for (regional capital, city, MSK region, country) or a point: only systems that put your points within the tolerance of it are shown, with the distance. For latitude/longitude the same is done the other way round: every datum whose area of use contains the point is scored on specificity, accuracy of the transformation to WGS 84, and modernity.</p><p>This is a heuristic: areas of use are rectangles and country lists, and “modern” is detected from names. The result is a hint, not a regulation.</p>",
     "<h2>Data</h2><p>Datums: <b>{geo}</b>, EPSG projections: <b>{proj}</b> (EPSG registry {epsg} of {epsg_date}, PROJ {proj_ver}); Russian MSK: {ru_total} systems, {ru_ver} of them verified (at least two sources + geometric checks). Transformation parameters are converted to the PROJ <code>+towgs84</code> form. Projections where proj4js differs from PROJ by more than {tol} m are excluded ({dropped}). For {approx1} projections the EPSG chain on grids is replaced by the best Helmert set.</p>",
     "<h2>Localisation</h2><p>A datum is defined as in survey software: a projection (Transverse Mercator on a local ellipsoid) + a 3D Helmert from WGS 84 ECEF to local ECEF + a vertical plane. Parameters are fitted by least squares; export is Fieldworker JSON (coordinate-frame rotations in arcsec, scale in ppm) and a PROJ string. Checked on a real survey in MSK-78(5): the ENU origin lands 4.5 m from the centre of the point cloud, and a synthetic localisation recovers the original datum to fractions of a millimetre.</p>",
     "<h2>Limitations</h2><ul><li>MSK areas are circles around the regional capital (no boundaries in open data); no data for: {missing}.</li><li>Grid-based transformations (NTv2 etc.) are replaced by a 7-parameter model.</li><li>On small sites (&lt; 2 km) seven parameters are poorly determined — use translation.</li></ul>",

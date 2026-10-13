@@ -45,6 +45,13 @@
           <button id="ex-surface" class="ghost" data-i18n="exSurface"></button>
           <span id="pts-sum" class="muted"></span>
         </div>
+        <h3 data-i18n="ctrlTitle"></h3>
+        <div class="grid2">
+          <div class="picker"><label><span data-i18n="ctrlPoint"></span><input id="ctrl" data-i18n-ph="ctrlPh" autocomplete="off"></label><ul class="pk-list" id="ctrl-list" hidden></ul></div>
+          <label><span data-i18n="ctrlTol"></span><input id="ctrl-tol" inputmode="decimal" value="150"></label>
+        </div>
+        <div id="ctrl-chip" class="zones"></div>
+        <p class="note" data-i18n="ctrlNote"></p>
       </div>
 
       <div id="in-ll" hidden>
@@ -65,10 +72,8 @@
         <div class="grid2">
           <label id="order-wrap"><span data-i18n="order"></span>
             <select id="order"><option value="auto" data-i18n="orderAuto"></option><option value="xy" data-i18n="orderXY"></option><option value="en" data-i18n="orderEN"></option></select></label>
-          <label><span data-i18n="area"></span><input id="area" data-i18n-ph="areaPh" autocomplete="off"></label>
+          <span></span>
         </div>
-        <div id="area-res" class="zones"></div>
-        <label><span data-i18n="approx"></span><input id="approx" data-i18n-ph="approxPh" autocomplete="off"></label>
         <label><span data-i18n="box"></span><input id="box" data-i18n-ph="boxPh" autocomplete="off"></label>
         <p class="note" data-i18n="refineNote"></p>
       </details>

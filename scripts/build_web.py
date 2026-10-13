@@ -109,10 +109,15 @@ def main():
                         b=area_box(o, g, pts, radius, pts_city, by_region), m="tmerc", p=o["proj4"],
                         st=o["status"], fe=g["fe"], fn=g["fn"], lon0=g["lon0"], lat0=g["lat0"], e=o["ellipsoid"], d=o["datum_gost_form"],
                         db=o["datum_basis"], s=o["sources"], u=o["source_urls"], fl=o["flags"], ur=o["unverified_reasons"], ck=o["checks"]))
+    places = []
+    for r in csv.DictReader(open(DATA / "region_capitals.csv", encoding="utf-8")):
+        places.append(dict(n=r["city"], r=r["region"], re=REGION_EN.get(r["region_code"], r["region"]), rc=r["region_code"], lat=float(r["lat"]), lon=float(r["lon"]), k="capital"))
+    for r in csv.DictReader(open(DATA / "extra_points.csv", encoding="utf-8")):
+        places.append(dict(n=r["city"], r="", re="", rc=None, lat=float(r["lat"]), lon=float(r["lon"]), k="city"))
     dts = json.load(open(DATA / "datum_transforms.json"))
     summ = json.load(open(DATA / "validation_summary.json"))
     payload = dict(
-        built=datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d"), systems=out, transforms=dts,
+        built=datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d"), systems=out, places=places, transforms=dts,
         checks=dict(rotation_sign=summ["rotation_sign"], missing_regions=MISSING_REGIONS,
                     total=len(systems), verified=sum(1 for o in systems if o["status"] == "verified")),
     )

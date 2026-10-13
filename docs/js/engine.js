@@ -256,6 +256,17 @@
     return p.r;
   }
 
+  /* smallest distance (km) from the control point to any of the points converted with the system */
+  function nearestKm(p, pts, lat, lon, proj4) {
+    var best = 1e9, step = Math.max(1, Math.floor(pts.length / 60));
+    for (var i = 0; i < pts.length; i += step) {
+      var ll;
+      try { ll = proj4(p.p, "EPSG:4326", [pts[i].e, pts[i].n]); } catch (err) { continue; }
+      if (ll && isFinite(ll[0]) && isFinite(ll[1])) best = Math.min(best, distKm(ll[1], ll[0], lat, lon));
+    }
+    return best;
+  }
+
   /* Which systems could these LOCAL points (pts = [{e, n}], east/north already assigned) belong to?
      Prefilter: share of points inside the projected area rectangle; then borders (areaCheck) at the centroid.
      hint: {lat, lon, radiusKm}, {box}, {area}. Returns [{p, r, frac, u, v, lat, lon, dist, score}] best first. */
@@ -264,6 +275,8 @@
     for (i = 0; i < pts.length; i += step) sample.push(pts[i]);
     for (i = 0; i < sample.length; i++) { ce += sample[i].e; cn += sample[i].n; }
     ce /= sample.length; cn /= sample.length;
+    var spread = 0;
+    for (i = 0; i < sample.length; i++) spread = Math.max(spread, Math.hypot(sample[i].e - ce, sample[i].n - cn) / 1000);
     for (i = 0; i < list.length; i++) {
       var p = list[i], r = localRect(p, proj4), memo = {}; // per-candidate cache (the point differs per candidate)
       if (!r) continue;
@@ -280,7 +293,12 @@
       if (hint && hint.region && (p.src === "msk" ? p.rc !== hint.region.rc : !inBox(hint.region.b, lon, lat))) continue;
       if (hint && hint.box && (lat < hint.box[0] || lat > hint.box[2] || lon < hint.box[1] || lon > hint.box[3])) continue;
       var d = null;
-      if (hint && hint.lat != null && hint.lon != null) { d = distKm(lat, lon, hint.lat, hint.lon); if (hint.radiusKm && d > hint.radiusKm) continue; }
+      if (hint && hint.lat != null && hint.lon != null) {
+        d = distKm(lat, lon, hint.lat, hint.lon);
+        if (hint.radiusKm && d > hint.radiusKm + spread * 1.2) continue; // cheap prefilter by the centroid
+        d = nearestKm(p, sample, hint.lat, hint.lon, proj4); // the control point is one of the points (or next to one)
+        if (hint.radiusKm && d > hint.radiusKm) continue;
+      }
       var u = (ce - r[0]) / Math.max(1, r[2] - r[0]), v = (cn - r[1]) / Math.max(1, r[3] - r[1]);
       var cen = 1 - Math.max(Math.abs(u - 0.5), Math.abs(v - 0.5)) * 2;
       var score = 50 * frac + 30 * specificity(p.b) + 20 * Math.max(0, cen) + (d == null ? 0 : 100 / (1 + d / 25));
