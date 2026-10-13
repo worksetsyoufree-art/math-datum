@@ -35,6 +35,8 @@
   /* ---- real country borders (optional, set via setAreas): EPSG gives only bounding boxes ---- */
   var GEOM = null;
   function setAreas(countries, areas) { GEOM = { polys: countries.polys, a: areas }; }
+  var REG = null; // Russian region polygons (for MSK areas of use)
+  function setRegions(r) { REG = r; }
   function pointInRings(rings, lon, lat) {
     var inside = false;
     for (var r = 0; r < rings.length; r++) {
@@ -65,6 +67,11 @@
   function areaCheck(it, lat, lon, memo) {
     var A = GEOM && it.ar ? GEOM.a[it.ar] : null;
     if (!inBox(A && A.bb ? A.bb : it.b, lon, lat)) return 0;
+    if (it.src === "msk" && REG && REG[it.rc]) { // MSK: real region border (+25 km tolerance), the zone strip is already in it.b
+      var rr = REG[it.rc], mm = memo && memo["r" + it.rc];
+      if (mm == null) { mm = pointInRings(rr, lon, lat) ? 0 : distRingsKm(rr, lon, lat); if (memo) memo["r" + it.rc] = mm; }
+      return mm <= 25 ? 2 : 0;
+    }
     if (!A) return 1;
     if (A.bbonly) return 1;
     var tol = A.o ? 250 : 60;
@@ -211,6 +218,7 @@
       var lon = ((ll[0] + 540) % 360) - 180, lat = ll[1];
       if (!inBox(p.b, lon, lat, 0.5)) continue;
       if (hint && hint.area && !areaCheck({ ar: hint.area.ar, b: hint.area.b }, lat, lon, memo)) continue;
+      if (hint && hint.region && (p.src === "msk" ? p.rc !== hint.region.rc : !inBox(hint.region.b, lon, lat))) continue;
       if (hint && hint.box && (lat < hint.box[0] || lat > hint.box[2] || lon < hint.box[1] || lon > hint.box[3])) continue; // [south, west, north, east]
       var d = null;
       if (hint && hint.lat != null && hint.lon != null) {
@@ -269,6 +277,7 @@
       var lon = ((ll[0] + 540) % 360) - 180, lat = ll[1];
       if (!areaCheck(p, lat, lon, memo)) continue;
       if (hint && hint.area && !areaCheck({ ar: hint.area.ar, b: hint.area.b }, lat, lon, memo)) continue;
+      if (hint && hint.region && (p.src === "msk" ? p.rc !== hint.region.rc : !inBox(hint.region.b, lon, lat))) continue;
       if (hint && hint.box && (lat < hint.box[0] || lat > hint.box[2] || lon < hint.box[1] || lon > hint.box[3])) continue;
       var d = null;
       if (hint && hint.lat != null && hint.lon != null) { d = distKm(lat, lon, hint.lat, hint.lon); if (hint.radiusKm && d > hint.radiusKm) continue; }
@@ -305,7 +314,7 @@
     return "+proj=longlat +a=" + g.a + " +rf=" + g.f + tw + " +no_defs";
   }
 
-  return { setAreas: setAreas, areaCheck: areaCheck, inBox: inBox, areaDeg2: areaDeg2, specificity: specificity, distKm: distKm, centre: centre, isModern: isModern,
+  return { setAreas: setAreas, setRegions: setRegions, areaCheck: areaCheck, inBox: inBox, areaDeg2: areaDeg2, specificity: specificity, distKm: distKm, centre: centre, isModern: isModern,
     recommendDatums: recommendDatums, recommendProjections: recommendProjections, identify: identify, localRect: localRect, identifyLocal: identifyLocal, search: search,
     shiftMeters: shiftMeters, geoDef: geoDef, PURPOSES: PURPOSES };
 });

@@ -65,6 +65,7 @@
     if (!dataP) dataP = Promise.all([
       load("data/areas.js").then(function () { E.setAreas(window.__COUNTRIES__, window.__AREAS__); AREAS = null; }),
       load("data/world-proj.js").then(function () { PROJ = window.__PROJ__ || []; PROJ.forEach(function (p) { p.tp = "proj"; }); }),
+      load("data/regions.js").then(function () { E.setRegions(window.__REGIONS__); }),
       load("data/ru.js").then(function () {
         MSK = window.__RU__.systems.filter(function (s) { return s.st === "verified"; }).map(function (s) {
           return { tp: "msk", src: "msk", id: s.id, c: null, n: s.t, ar: s.ar + " / " + s.are, rn: s.ar, are: s.are, b: s.b, m: s.m, p: s.p, st: s.st, fe: s.fe, fn: s.fn, rc: s.rc, b0: "msk" + s.rc };
@@ -118,6 +119,17 @@
       return sa - sb || a.lc.length - b.lc.length || E.areaDeg2(b.b) - E.areaDeg2(a.b);
     }).slice(0, 6);
   }
+  function findRegions(q0) { // Russian MSK regions by name (ru/en)
+    var toks = String(q0 || "").toLowerCase().trim().split(/\s+/).filter(Boolean), seen = {}, out = [];
+    if (!toks.length) return out;
+    MSK.forEach(function (m) {
+      if (seen[m.rc]) { var r = seen[m.rc]; r.b = [Math.min(r.b[0], m.b[0]), Math.min(r.b[1], m.b[1]), Math.max(r.b[2], m.b[2]), Math.max(r.b[3], m.b[3])]; return; }
+      var hay = (m.rn + " " + m.are).toLowerCase();
+      if (!toks.every(function (w) { return hay.indexOf(w) >= 0; })) return;
+      seen[m.rc] = { name: (LANG === "ru" ? m.rn : m.are) + " (" + t("area_msk") + ")", b: m.b.slice(), rc: m.rc, region: true }; out.push(seen[m.rc]);
+    });
+    return out;
+  }
   function setArea(a) {
     AREA = a || null;
     $("area-res").innerHTML = AREA ? esc(t("areaSet")) + " <b>" + esc(short(AREA.name, 80)) + '</b> <button class="ghost" id="area-x">' + esc(t("areaClear")) + "</button>" : "";
@@ -125,7 +137,7 @@
   }
   $("area").addEventListener("input", function () {
     ensureData().then(function () {
-      var out = findAreas($("area").value);
+      var out = findRegions($("area").value).concat(findAreas($("area").value)).slice(0, 8);
       $("area-res").innerHTML = out.map(function (a, i) { return '<button data-i="' + i + '">' + esc(short(a.name, 90)) + "</button>"; }).join("");
       $("area-res").querySelectorAll("button").forEach(function (b) { b.onclick = function () { setArea(out[b.dataset.i]); $("area").value = ""; }; });
     });
@@ -194,7 +206,10 @@
 
   function getHint() {
     var hint = {};
-    if (AREA) hint.area = { ar: AREA.name, b: AREA.b };
+    if (AREA && AREA.region) hint.region = { rc: AREA.rc, b: AREA.b };
+    else if (AREA) hint.area = { ar: AREA.name, b: AREA.b };
+    var ap = String($("approx").value || "").match(/-?\d+(?:\.\d+)?/g);
+    if (ap && ap.length >= 2) { hint.lat = parseFloat(ap[0]); hint.lon = parseFloat(ap[1]); hint.radiusKm = ap[2] ? parseFloat(ap[2]) : 100; }
     var bx = String($("box").value || "").replace(/,/g, " ").match(/-?\d+(?:\.\d+)?/g);
     if (bx && bx.length) {
       bx = bx.map(Number);
@@ -228,10 +243,11 @@
     var pos = it.u != null ? t("fromCenter", { u: Math.round(Math.min(it.u, 1 - it.u) * 200), v: Math.round(Math.min(it.v, 1 - it.v) * 200) }) : "";
     var head = '<div><b>' + esc(sysName(p)) + "</b>" + (it.hy ? ' <span class="tag">' + esc(t("hyp_" + it.hy)) + "</span>" : "") +
       (it.frac != null ? ' <span class="tag ' + (it.frac >= 0.99 ? "good" : "bad") + '">' + esc(t("fits", { p: Math.round(it.frac * 100) })) + "</span>" : "") + "</div>";
+    var mapUrl = "https://www.openstreetmap.org/?mlat=" + it.lat.toFixed(6) + "&mlon=" + it.lon.toFixed(6) + "#map=12/" + it.lat.toFixed(5) + "/" + it.lon.toFixed(5);
     var meta = ctx.mode === "local"
       ? t("center") + ": " + it.lat.toFixed(6) + ", " + it.lon.toFixed(6) + " · " + pos
       : t("east") + ": " + nf(it.xy[0], 3) + " · " + t("north") + ": " + nf(it.xy[1], 3) + " · " + pos;
-    return '<div class="sysrow" data-g="' + gi + '" data-i="' + ii + '">' + head + '<div class="meta">' + esc(meta) + "</div><div class=\"meta\">" + esc(rect) + "</div>" +
+    return '<div class="sysrow" data-g="' + gi + '" data-i="' + ii + '">' + head + '<div class="meta">' + esc(meta) + (ctx.mode === "local" ? ' · <a href="' + mapUrl + '" target="_blank" rel="noopener">' + esc(t("mapLink")) + "</a>" : "") + "</div><div class=\"meta\">" + esc(rect) + "</div>" +
       (tags ? '<div class="tags">' + tags + "</div>" : "") + '<div class="row"><button class="ghost" data-act="det">' + esc(t("details")) + '</button><button class="ghost" data-act="proj">' + esc(t("copyProj")) +
       '</button></div><div class="slot"></div></div>';
   }
@@ -302,6 +318,8 @@
         });
         $("msg").textContent = groups.length ? t("shown", { n: Math.min(groups.length, 12), m: groups.length }) : "";
         renderGroups(groups, { mode: "local", pts: pts });
+        var nMsk = groups.filter(function (g) { return /^msk/.test(g.key); }).length, hinted = hint.area || hint.region || hint.box || hint.lat != null;
+        if (nMsk >= 3 && !hinted && groups.length) $("results").insertAdjacentHTML("afterbegin", '<p class="notice">' + esc(t("ambig", { n: nMsk })) + "</p>");
       }, 20);
     });
   }

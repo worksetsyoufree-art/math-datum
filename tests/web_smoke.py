@@ -28,6 +28,21 @@ with sync_playwright() as p:
     assert "55.62" in first and "38.30" in first, first
     assert pg.locator("#results canvas.rectcv").count() == 1
 
+    # --- ambiguity without a place hint, then narrowing it down by MSK region ---
+    pg.fill("#box", ""); pg.click("#go")
+    pg.wait_for_selector("#results .notice", timeout=40000)
+    amb = pg.inner_text("#results .notice"); print("ambiguity notice:", amb[:90])
+    assert "Эти числа подходят" in amb
+    assert "Удмурт" in pg.inner_text("#results") or pg.locator("#results .dcard").count() >= 5
+    pg.fill("#area", "Московская"); pg.wait_for_selector("#area-res button")
+    assert "(МСК)" in pg.inner_text("#area-res button >> nth=0"), pg.inner_text("#area-res")
+    pg.click("#area-res button >> nth=0"); pg.click("#go")
+    pg.wait_for_function("!document.querySelector('#results .notice') && document.querySelector('#results .dcard')", timeout=40000)
+    narrowed = pg.inner_text("#results")
+    print("narrowed:", narrowed.split("\n")[0:4])
+    assert "МСК-50 зона 2" in narrowed and "Удмурт" not in narrowed and "Ленинградск" not in narrowed, narrowed[:500]
+    pg.click("#area-x")
+
     # --- surface file (SURFACE_V1) ---
     pg.click("#ex-surface")
     pg.wait_for_selector("#results .dcard", timeout=40000)

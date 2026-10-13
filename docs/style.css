@@ -128,3 +128,5 @@ details.more summary, .foot summary { cursor: pointer; color: var(--muted); font
 table.mini { font-size: 12px; margin-top: 6px; }
 table.mini th, table.mini td { padding: 3px 8px; }
 .warn { color: var(--warn); }
+
+.notice { background: var(--warn-bg); color: var(--warn); border-radius: 8px; padding: 10px 12px; margin: 12px 0 0; font-size: 14px; }

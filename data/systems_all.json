@@ -7120,7 +7120,7 @@
   "source_urls": [],
   "flags": [
    "false northing fraction restored from sibling zone Moskovskaya_oblast_MSK_50_Zone1_MGGT",
-   "same projection as МСК-50 зона 1 but different datum"
+   "same projection as Moskovskaya_oblast_MSK_50_Zone1_MGGT but different datum"
   ],
   "origin": "fieldworker",
   "proj4": "+proj=tmerc +lat_0=0 +lon_0=35.483333333 +k=1 +x_0=1250000.000000 +y_0=-5712900.566000 +ellps=krass +towgs84=24.47,-130.89,-81.56,0,-0,0.1300087074,-0.22 +units=m +no_defs",
@@ -11300,7 +11300,7 @@
   "flags": [
    "false northing is truncated to integer in source, fraction unknown (error < 1 m)",
    "omega_y not in source and no matching GOST set: assumed 0",
-   "same projection as Moscow_MSK_77_MGGT, Moscow_MSK_77_MLAT_2 but different datum"
+   "same projection as Moscow_MSK_77_MLAT_2, Moscow_MSK_77_Metro but different datum"
   ],
   "origin": "fieldworker",
   "proj4": "+proj=tmerc +lat_0=55.666666667 +lon_0=37.5 +k=1 +x_0=0.000000 +y_0=0.000000 +ellps=bessel +towgs84=332.37,33.28,627.08,-2.999997848,-0,3.400007187,5.06 +units=m +no_defs",
@@ -11336,7 +11336,7 @@
   "flags": [
    "false northing is truncated to integer in source, fraction unknown (error < 1 m)",
    "omega_y not in source and no matching GOST set: assumed 0",
-   "same projection as Moscow_MSK_77_MGGT, Moscow_MSK_77_Metro but different datum"
+   "same projection as Moscow_MSK_77_Metro, Московская СК but different datum"
   ],
   "origin": "fieldworker",
   "proj4": "+proj=tmerc +lat_0=55.666666667 +lon_0=37.5 +k=1 +x_0=0.000000 +y_0=0.000000 +ellps=bessel +towgs84=273.808,65.713,620.584,-2.280009915,-0,1.809994301,8.123 +units=m +no_defs",

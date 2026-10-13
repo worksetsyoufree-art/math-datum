@@ -39,6 +39,42 @@ def pick_title(names):
     return (cyr or names)[0].replace("_", " ")
 
 
+def zone_halfwidth(o, peers):
+    """Half-width (deg) of the zone strip: from the name ("6 градусная"), else from the spacing of the region's zones, else 3 deg."""
+    m = re.search(r"(1\.5|\d)\s*градусная", " ".join(o["names"]))
+    if m:
+        w = float(m.group(1))
+    else:
+        lons = sorted({round(x["geometry"]["lon0"], 4) for x in peers if abs(x["geometry"]["fn"] - o["geometry"]["fn"]) < 1 and x["ellipsoid"] == o["ellipsoid"]})
+        diffs = [b - a for a, b in zip(lons, lons[1:]) if b - a > 0.9]
+        w = min(diffs) if diffs else 3.0
+    return w / 2 + 0.25  # margin: neighbouring zones overlap slightly in practice
+
+
+def clip_lon(b, lon0, hw):
+    """Intersect the lat/lon box with the zone strip lon0 +- hw (keep the strip itself if the circle misses it)."""
+    lo, hi = lon0 - hw, lon0 + hw
+    w, e = max(b[0], lo), min(b[2], hi)
+    if w > e:
+        w, e = lo, hi
+    return [round(w, 2), b[1], round(e, 2), b[3]]
+
+
+REGION_BOX = json.load(open(DATA / "regions_bbox.json")) if (DATA / "regions_bbox.json").exists() else {}
+
+
+def area_box(o, g, pts, radius, is_city, by_region):
+    """Area of use of an MSK: city circle | real region box clipped to the zone strip | (no borders) circle around the capital."""
+    if is_city:
+        return box(pts, radius)
+    rb = REGION_BOX.get(o["region_code"])
+    zoned = g["fe"] >= 1e6  # zone number is encoded in the false easting
+    if rb and rb[0] <= rb[2]:
+        return clip_lon(rb, g["lon0"], zone_halfwidth(o, by_region.get(o["region_code"], []))) if zoned else rb
+    base = box(pts, radius)
+    return clip_lon(base, g["lon0"], zone_halfwidth(o, by_region.get(o["region_code"], []))) if zoned and base[0] <= base[2] else (rb or base)
+
+
 def box(points, radius_km):
     w = s = 1e9; e = n = -1e9
     for lat, lon in points:
@@ -57,15 +93,20 @@ def main():
     extras = [(r["name_key"], (float(r["lat"]), float(r["lon"]))) for r in csv.DictReader(open(DATA / "extra_points.csv", encoding="utf-8"))]
     systems = json.load(open(DATA / "systems.json")) + json.load(open(DATA / "systems_unverified.json"))
     out = []
+    by_region = {}
+    for o in systems:
+        by_region.setdefault(o["region_code"], []).append(o)
     for o in systems:
         pts = [p for k, p in extras if any(k in nm for nm in o["names"])]
+        pts_city = bool(pts)
         radius = R_CITY if pts else (R_BIG if o["region_code"] in BIG else R_REGION)
         pts = pts or caps.get(o["region_code"], [])
         if not pts:
             continue  # no location hint (railway, highway): cannot be recommended by place
         g = o["geometry"]
         out.append(dict(id=o["id"], src="msk", t=pick_title(o["names"]), n=pick_title(o["names"]), rc=o["region_code"],
-                        ar=o["region"], are=REGION_EN.get(o["region_code"], o["region"]), b=box(pts, radius), m="tmerc", p=o["proj4"],
+                        ar=o["region"], are=REGION_EN.get(o["region_code"], o["region"]),
+                        b=area_box(o, g, pts, radius, pts_city, by_region), m="tmerc", p=o["proj4"],
                         st=o["status"], fe=g["fe"], fn=g["fn"], lon0=g["lon0"], lat0=g["lat0"], e=o["ellipsoid"], d=o["datum_gost_form"],
                         db=o["datum_basis"], s=o["sources"], u=o["source_urls"], fl=o["flags"], ur=o["unverified_reasons"], ck=o["checks"]))
     dts = json.load(open(DATA / "datum_transforms.json"))
