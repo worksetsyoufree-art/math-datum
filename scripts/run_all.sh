@@ -11,3 +11,5 @@ python3 -I scripts/finalize.py
 python3 -I scripts/make_reference.py
 python3 -I scripts/build_web.py
 node tests/proj4_parity.mjs
+python3 -I tests/test_survey_cloud.py
+node tests/survey_cloud.mjs

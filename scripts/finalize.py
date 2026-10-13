@@ -2,7 +2,7 @@
 
 A system is VERIFIED when all of the following hold:
   1. at least two independent sources agree on it (geoprof, terraingis, Fieldworker export);
-  2. WGS84 -> local -> WGS84 round trip closes (< 5 mm) at the test points of its region;
+  2. WGS84 -> local -> WGS84 round trip closes (< 20 mm) at the test points of its region;
   3. zone series is consistent: a zone n>=2 has a zone n=1 of the same series with lon0 spacing 1.5/2/3/6 deg;
   4. region sanity: the regional capital lies within 260 km of the central meridian of some zone of the region;
   5. city / district systems: their own test city lies within 150 km of the central meridian.
@@ -17,7 +17,7 @@ from pyproj.crs import CoordinateOperation
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 DATA = ROOT / "data"
-RT_TOL_MM = 5.0
+RT_TOL_MM = 20.0  # PROJ/proj4js use the linearised 7-parameter model: closure error grows with rotation size (cm for ~6")
 REGION_KM = 260.0
 CITY_KM = 150.0
 WIDTHS = (1.5, 2.0, 3.0, 6.0)

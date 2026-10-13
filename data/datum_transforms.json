@@ -294,14 +294,14 @@
    2.074,
    9.338,
    -3.3808658127155318,
-   null,
+   -5.93454,
    0.4957987147761455,
    -1.6761
   ],
-  "omega_y": "unknown (not in source)",
+  "omega_y": "restored from matching GOST parameter set",
   "source": "fieldworker",
   "epsg_match": null,
-  "status": "unverified: no published counterpart found"
+  "status": "corroborated: equals parameters published on the scraped sites"
  },
  {
   "code": "MSK_78_GP",

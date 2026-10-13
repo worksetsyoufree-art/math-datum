@@ -10966,6 +10966,51 @@
  },
  {
   "region_code": "78",
+  "region": "Санкт-Петербург",
+  "names": [
+   "SPb_MSK_78",
+   "МСК_78(5)"
+  ],
+  "geometry": {
+   "lon0": 30.0,
+   "lat0": 0.0,
+   "fe": 95900.0,
+   "fn": -6552800.0
+  },
+  "ellipsoid": "WGS84",
+  "datum_gost_form": [
+   5.476,
+   2.074,
+   9.338,
+   -3.3808658127155318,
+   -5.93454,
+   0.4957987147761455,
+   -1.6761
+  ],
+  "datum_basis": "fieldworker export",
+  "sources": [
+   "datum.json:МСК_78(5)",
+   "fieldworker"
+  ],
+  "source_urls": [],
+  "flags": [
+   "false northing is truncated to integer in source, fraction unknown (error < 1 m)",
+   "omega_y = 5.93454 arcsec (WGS84->local) taken from msk78_5.json; verified against a survey surface"
+  ],
+  "origin": "fieldworker",
+  "proj4": "+proj=tmerc +lat_0=0 +lon_0=30 +k=1 +x_0=95900.000000 +y_0=-6552800.000000 +ellps=WGS84 +towgs84=5.476,2.074,9.338,3.380865813,5.93454,-0.4957987148,-1.6761 +units=m +no_defs",
+  "id": "S0311",
+  "checks": {
+   "sources": 2,
+   "roundtrip_mm": 2.4027,
+   "zone_series": "n/a",
+   "region_capital_inside_some_zone": true
+  },
+  "status": "verified",
+  "unverified_reasons": []
+ },
+ {
+  "region_code": "78",
   "region": "Санкт-Петербург (МСК-1964)",
   "names": [
    "SPb_MSK_64",

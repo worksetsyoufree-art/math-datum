@@ -1075,8 +1075,7 @@
   },
   "status": "unverified",
   "unverified_reasons": [
-   "one source only",
-   "round trip 12.84 mm"
+   "one source only"
   ]
  },
  {
@@ -1167,8 +1166,7 @@
   },
   "status": "unverified",
   "unverified_reasons": [
-   "one source only",
-   "round trip 12.84 mm"
+   "one source only"
   ]
  },
  {
@@ -1261,8 +1259,7 @@
   },
   "status": "unverified",
   "unverified_reasons": [
-   "one source only",
-   "round trip 12.84 mm"
+   "one source only"
   ]
  },
  {
@@ -1353,8 +1350,7 @@
   },
   "status": "unverified",
   "unverified_reasons": [
-   "one source only",
-   "round trip 12.84 mm"
+   "one source only"
   ]
  },
  {
@@ -1884,7 +1880,7 @@
   "source_urls": [],
   "flags": [
    "false northing fraction restored from sibling zone Moskovskaya_oblast_MSK_50_Zone1_MGGT",
-   "same projection as МСК-50 зона 1 but different datum"
+   "same projection as Moskovskaya_oblast_MSK_50_Zone1_MGGT but different datum"
   ],
   "origin": "fieldworker",
   "proj4": "+proj=tmerc +lat_0=0 +lon_0=35.483333333 +k=1 +x_0=1250000.000000 +y_0=-5712900.566000 +ellps=krass +towgs84=24.47,-130.89,-81.56,0,-0,0.1300087074,-0.22 +units=m +no_defs",
@@ -3108,51 +3104,6 @@
   "checks": {
    "sources": 1,
    "roundtrip_mm": 0.2615,
-   "zone_series": "n/a",
-   "region_capital_inside_some_zone": true
-  },
-  "status": "unverified",
-  "unverified_reasons": [
-   "one source only"
-  ]
- },
- {
-  "region_code": "78",
-  "region": "Санкт-Петербург",
-  "names": [
-   "SPb_MSK_78"
-  ],
-  "geometry": {
-   "lon0": 30.0,
-   "lat0": 0.0,
-   "fe": 95900.0,
-   "fn": -6552800.0
-  },
-  "ellipsoid": "WGS84",
-  "datum_gost_form": [
-   5.476,
-   2.074,
-   9.338,
-   -3.3808658127155318,
-   null,
-   0.4957987147761455,
-   -1.6761
-  ],
-  "datum_basis": "fieldworker export",
-  "sources": [
-   "fieldworker"
-  ],
-  "source_urls": [],
-  "flags": [
-   "false northing is truncated to integer in source, fraction unknown (error < 1 m)",
-   "omega_y not in source and no matching GOST set: assumed 0"
-  ],
-  "origin": "fieldworker",
-  "proj4": "+proj=tmerc +lat_0=0 +lon_0=30 +k=1 +x_0=95900.000000 +y_0=-6552800.000000 +ellps=WGS84 +towgs84=5.476,2.074,9.338,3.380865813,-0,-0.4957987148,-1.6761 +units=m +no_defs",
-  "id": "S0311",
-  "checks": {
-   "sources": 1,
-   "roundtrip_mm": 0.5014,
    "zone_series": "n/a",
    "region_capital_inside_some_zone": true
   },

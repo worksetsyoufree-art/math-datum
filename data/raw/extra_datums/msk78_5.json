@@ -1,0 +1,34 @@
+{
+  "azimuth": "North",
+  "orientation": "NE",
+  "country": "Россия",
+  "csCode": "МСК_78(5)",
+  "ellipsoidOriginal": {
+    "paramA": 6378137.0,
+    "param1f": 298.257223563
+  },
+  "ellipsoid": {
+    "paramA": 6378137.0,
+    "param1f": 298.257223563
+  },
+  "projection": {
+    "type": "ru.gsisoft.common.model.cs.Projection.ProjectionTM",
+    "longitudeCenter": 30.0,
+    "eastShift": 95900.0,
+    "northShift": -6552800.0
+  },
+  "parameters7": {
+    "d_x": -5.476,
+    "d_y": -2.074,
+    "d_z": -9.338,
+    "r_x": 3.38086,
+    "r_y": 5.93454,
+    "r_z": -0.49579,
+    "k": 1.676094
+  },
+  "paramVSKO": {
+    "type": "ru.gsisoft.common.model.cs.ParamVSKO.Plane",
+    "a0": -16.36
+  },
+  "isPredefined": true
+}

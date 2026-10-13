@@ -1,14 +1,37 @@
-"""Pack the datasets into docs/data/data.js (works on GitHub Pages and from file://)."""
-import json, pathlib, re
+"""Pack the Russian MSK dataset for the web app: docs/data/ru.js
+
+MSK area of use is not published as geometry, so it is approximated by a circle around the regional capital
+(region) or around the city (city / district systems) and converted to a bounding box (heuristic, documented in the UI).
+"""
+import csv, datetime, json, math, pathlib, re
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 DATA = ROOT / "data"
 OUT = ROOT / "docs/data"
 OUT.mkdir(parents=True, exist_ok=True)
 
-MISSING_REGIONS = {  # no open source found
-    "17": "Республика Тыва", "79": "Еврейская автономная область", "89": "Ямало-Ненецкий автономный округ",
+MISSING_REGIONS = {"17": ["Республика Тыва", "Tuva Republic"], "79": ["Еврейская автономная область", "Jewish Autonomous Oblast"],
+                   "89": ["Ямало-Ненецкий автономный округ", "Yamalo-Nenets Autonomous Okrug"]}
+REGION_EN = {
+    "01": "Adygea", "02": "Bashkortostan", "03": "Buryatia", "04": "Altai Republic", "05": "Dagestan", "06": "Ingushetia",
+    "07": "Kabardino-Balkaria", "08": "Kalmykia", "09": "Karachay-Cherkessia", "10": "Karelia", "11": "Komi", "12": "Mari El",
+    "13": "Mordovia", "14": "Sakha (Yakutia)", "15": "North Ossetia-Alania", "16": "Tatarstan", "18": "Udmurtia",
+    "19": "Khakassia", "20": "Chechnya", "21": "Chuvashia", "22": "Altai Krai", "23": "Krasnodar Krai", "24": "Krasnoyarsk Krai",
+    "25": "Primorsky Krai", "26": "Stavropol Krai", "27": "Khabarovsk Krai", "28": "Amur Oblast", "29": "Arkhangelsk Oblast",
+    "30": "Astrakhan Oblast", "31": "Belgorod Oblast", "32": "Bryansk Oblast", "33": "Vladimir Oblast", "34": "Volgograd Oblast",
+    "35": "Vologda Oblast", "36": "Voronezh Oblast", "37": "Ivanovo Oblast", "38": "Irkutsk Oblast", "39": "Kaliningrad Oblast",
+    "40": "Kaluga Oblast", "41": "Kamchatka Krai", "42": "Kemerovo Oblast", "43": "Kirov Oblast", "44": "Kostroma Oblast",
+    "45": "Kurgan Oblast", "46": "Kursk Oblast", "47": "Leningrad Oblast", "48": "Lipetsk Oblast", "49": "Magadan Oblast",
+    "50": "Moscow Oblast", "51": "Murmansk Oblast", "52": "Nizhny Novgorod Oblast", "53": "Novgorod Oblast",
+    "54": "Novosibirsk Oblast", "55": "Omsk Oblast", "56": "Orenburg Oblast", "57": "Oryol Oblast", "58": "Penza Oblast",
+    "59": "Perm Krai", "60": "Pskov Oblast", "61": "Rostov Oblast", "62": "Ryazan Oblast", "63": "Samara Oblast",
+    "64": "Saratov Oblast", "65": "Sakhalin Oblast", "66": "Sverdlovsk Oblast", "67": "Smolensk Oblast", "68": "Tambov Oblast",
+    "69": "Tver Oblast", "70": "Tomsk Oblast", "71": "Tula Oblast", "72": "Tyumen Oblast", "73": "Ulyanovsk Oblast",
+    "74": "Chelyabinsk Oblast", "75": "Zabaykalsky Krai", "76": "Yaroslavl Oblast", "77": "Moscow", "78": "Saint Petersburg",
+    "83": "Nenets Autonomous Okrug", "86": "Khanty-Mansi Autonomous Okrug", "87": "Chukotka Autonomous Okrug", "90": "Crimea",
 }
+BIG = {"14", "24", "27", "38", "49", "87", "83", "29", "86", "72", "11", "41", "59", "75", "25", "65"}  # large regions: wider circle
+R_REGION, R_BIG, R_CITY = 450, 900, 60
 
 
 def pick_title(names):
@@ -16,30 +39,44 @@ def pick_title(names):
     return (cyr or names)[0].replace("_", " ")
 
 
-def slim(o):
-    return dict(id=o["id"], t=pick_title(o["names"]), rc=o["region_code"], r=o["region"], n=o["names"], g=o["geometry"], e=o["ellipsoid"],
-                d=o["datum_gost_form"], db=o["datum_basis"], s=o["sources"], u=o["source_urls"], st=o["status"],
-                fl=o["flags"], ur=o["unverified_reasons"], ck=o["checks"], p4=o["proj4"])
+def box(points, radius_km):
+    w = s = 1e9; e = n = -1e9
+    for lat, lon in points:
+        dlat = radius_km / 111.0
+        dlon = min(60.0, radius_km / (111.32 * max(0.2, math.cos(math.radians(lat)))))
+        w, s, e, n = min(w, lon - dlon), min(s, lat - dlat), max(e, lon + dlon), max(n, lat + dlat)
+    w = ((w + 180) % 360) - 180
+    e = ((e + 180) % 360) - 180
+    return [round(w, 2), round(max(-90, s), 2), round(e, 2), round(min(90, n), 2)]
 
 
 def main():
-    ver = json.load(open(DATA / "systems.json"))
-    unv = json.load(open(DATA / "systems_unverified.json"))
-    fed = json.load(open(DATA / "federal_datums.json"))
+    caps = {}
+    for r in csv.DictReader(open(DATA / "region_capitals.csv", encoding="utf-8")):
+        caps.setdefault(r["region_code"], []).append((float(r["lat"]), float(r["lon"])))
+    extras = [(r["name_key"], (float(r["lat"]), float(r["lon"]))) for r in csv.DictReader(open(DATA / "extra_points.csv", encoding="utf-8"))]
+    systems = json.load(open(DATA / "systems.json")) + json.load(open(DATA / "systems_unverified.json"))
+    out = []
+    for o in systems:
+        pts = [p for k, p in extras if any(k in nm for nm in o["names"])]
+        radius = R_CITY if pts else (R_BIG if o["region_code"] in BIG else R_REGION)
+        pts = pts or caps.get(o["region_code"], [])
+        if not pts:
+            continue  # no location hint (railway, highway): cannot be recommended by place
+        g = o["geometry"]
+        out.append(dict(id=o["id"], src="msk", t=pick_title(o["names"]), n=pick_title(o["names"]), rc=o["region_code"],
+                        ar=o["region"], are=REGION_EN.get(o["region_code"], o["region"]), b=box(pts, radius), m="tmerc", p=o["proj4"],
+                        st=o["status"], fe=g["fe"], fn=g["fn"], lon0=g["lon0"], lat0=g["lat0"], e=o["ellipsoid"], d=o["datum_gost_form"],
+                        db=o["datum_basis"], s=o["sources"], u=o["source_urls"], fl=o["flags"], ur=o["unverified_reasons"], ck=o["checks"]))
     dts = json.load(open(DATA / "datum_transforms.json"))
     summ = json.load(open(DATA / "validation_summary.json"))
     payload = dict(
-        built=__import__("datetime").datetime.now(__import__("datetime").timezone.utc).strftime("%Y-%m-%d"),
-        systems=[slim(o) for o in ver + unv],
-        federal=[dict(epsg=f["epsg"], name=f["name"], datum=f["datum"], ellipsoid=f["ellipsoid"], a=f["a"], inv_f=f["inv_f"],
-                      type=f["type"], ops=[dict(name=x.get("name", "").replace(" (with axis order normalized for visualization)", ""),
-                                                accuracy=x.get("accuracy")) for x in f["to_wgs84"]]) for f in fed],
-        transforms=dts,
-        checks=dict(rotation_sign=summ["rotation_sign"], federal_shifts=summ["federal_shifts"],
-                    missing_regions=MISSING_REGIONS),
+        built=datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d"), systems=out, transforms=dts,
+        checks=dict(rotation_sign=summ["rotation_sign"], missing_regions=MISSING_REGIONS,
+                    total=len(systems), verified=sum(1 for o in systems if o["status"] == "verified")),
     )
-    (OUT / "data.js").write_text("window.__DATA__=" + json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + ";\n", encoding="utf-8")
-    print("docs/data/data.js", round((OUT / "data.js").stat().st_size / 1024), "KB;", len(ver), "verified,", len(unv), "unverified")
+    (OUT / "ru.js").write_text("window.__RU__=" + json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + ";\n", encoding="utf-8")
+    print("docs/data/ru.js", round((OUT / "ru.js").stat().st_size / 1024), "KB;", len(out), "systems with area of", len(systems))
 
 
 if __name__ == "__main__":

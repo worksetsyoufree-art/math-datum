@@ -116,15 +116,15 @@ S0114,29,Arhangelskaya_oblast_MSK_29_Zone5,fieldworker+terraingis.ru,verified,,0
 S0115,29,"МСК-29 зона 6, 6 градусная",terraingis.ru,unverified,one source only,0.0775,width 6.0 deg
 S0116,29,"МСК-29 зона 2, 6 градусная",terraingis.ru,unverified,one source only; zone 2 lon0 68.0333 does not fit any series starting from zone 1,0.0775,zone 2 lon0 68.0333 does not fit any series starting from zone 1
 S0117,30,Astrakhanskaya_oblast_SK_63_Zone1,fieldworker,unverified,one source only,0.223,n/a
-S0118,30,Astrakhanskaya_oblast_SK_63_Zone1_alt_IGD,fieldworker,unverified,one source only; round trip 12.84 mm,12.8385,n/a
+S0118,30,Astrakhanskaya_oblast_SK_63_Zone1_alt_IGD,fieldworker,unverified,one source only,12.8385,n/a
 S0119,30,Astrakhanskaya_oblast_MSK_30_Zone1,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.223,n/a
 S0120,30,Astrakhanskaya_oblast_SK_63_Zone2,fieldworker,unverified,one source only,0.223,width 3.0 deg
-S0121,30,Astrakhanskaya_oblast_SK_63_Zone2_alt_IGD,fieldworker,unverified,one source only; round trip 12.84 mm,12.8385,width 3.0 deg
+S0121,30,Astrakhanskaya_oblast_SK_63_Zone2_alt_IGD,fieldworker,unverified,one source only,12.8385,width 3.0 deg
 S0122,30,Astrakhanskaya_oblast_MSK_Gorod_Astrakhan,fieldworker,unverified,one source only,0.223,n/a
-S0123,30,Astrakhanskaya_oblast_SK_Gorod_Astrakhan_alt_IGD,fieldworker,unverified,one source only; round trip 12.84 mm,12.8385,n/a
+S0123,30,Astrakhanskaya_oblast_SK_Gorod_Astrakhan_alt_IGD,fieldworker,unverified,one source only,12.8385,n/a
 S0124,30,Astrakhanskaya_oblast_MSK_30_Zone2,fieldworker+geoprof.nethouse.ru+terraingis.ru,verified,,0.223,width 3.0 deg
 S0125,30,Astrakhanskaya_oblast_SK_63_Zone3,fieldworker,unverified,one source only,0.223,width 3.0 deg
-S0126,30,Astrakhanskaya_oblast_SK_63_Zone3_alt_IGD,fieldworker,unverified,one source only; round trip 12.84 mm,12.8385,width 3.0 deg
+S0126,30,Astrakhanskaya_oblast_SK_63_Zone3_alt_IGD,fieldworker,unverified,one source only,12.8385,width 3.0 deg
 S0127,31,Belgorodskaya_oblast_MSK_31_Zone1,fieldworker+geoprof.nethouse.ru,verified,,0.0826,n/a
 S0128,31,Belgorodskaya_oblast_MSK_31_Zone2,fieldworker+geoprof.nethouse.ru,verified,,0.0826,width 3.0 deg
 S0129,32,Bryanskaya_oblast_MSK_32_Zone1,fieldworker+geoprof.nethouse.ru,verified,,0.1432,n/a
@@ -309,7 +309,7 @@ S0307,77,Moscow_MSK_77_MLAT_2,fieldworker,unverified,one source only,0.6598,n/a
 S0308,77,Moscow_MSK_77_Metro,fieldworker,unverified,one source only,1.1738,n/a
 S0309,77,Московская СК (МГГТ),terraingis.ru,unverified,one source only,0.9638,n/a
 S0310,78,SPb_MSK_64_Kalibrovka,fieldworker,unverified,one source only,0.2615,n/a
-S0311,78,SPb_MSK_78,fieldworker,unverified,one source only,0.5014,n/a
+S0311,78,SPb_MSK_78,datum.json:МСК_78(5)+fieldworker,verified,,2.4027,n/a
 S0312,78,SPb_MSK_78_GP,fieldworker,unverified,one source only,0.5319,n/a
 S0313,78,SPb_MSK_78_GP_EGM2008,fieldworker,unverified,one source only,0.5336,n/a
 S0314,78,SPb_MSK_78_GP_EGM96,fieldworker,unverified,one source only,0.4469,n/a

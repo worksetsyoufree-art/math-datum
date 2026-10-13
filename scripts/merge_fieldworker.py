@@ -146,6 +146,15 @@ def main():
         known.setdefault(tuple(round(v, 3) for v in (tw[0], tw[1], tw[2], tw[3], tw[5], tw[6])), tw[4])
     known[(24.82, -131.21, -82.66, 0.0, -0.16, -0.12)] = 0.0
 
+    # complete datum files (three rotations, arcsec, WGS84 -> local, coordinate frame): GOST form = negated
+    extras = []
+    for fp in sorted((DATA / "raw/extra_datums").glob("*.json")):
+        x = json.load(open(fp))
+        p = x["parameters7"]
+        full = [-p["d_x"], -p["d_y"], -p["d_z"], -p["r_x"], -p["r_y"], -p["r_z"], -p["k"]]
+        extras.append((fp.name, x, full))
+        known[tuple(round(v, 3) for v in (full[0], full[1], full[2], full[3], full[5], full[6]))] = full[4]
+
     def restore_ry(d):
         k = tuple(round(v, 3) for v in (d[0], d[1], d[2], d[3], d[5], d[6]))
         for kk, ry in known.items():
@@ -210,6 +219,19 @@ def main():
         ents.append(dict(region_code=reg, region=None, names={code}, zone=None, geom=g, ellipsoid=ELLPS.get(x["ellipsoid"]["type"], "krass"),
                          datum=dd, datum_basis="fieldworker export", sources={"fieldworker"}, source_urls=set(), flags=flags, origin="fieldworker"))
         stats["new from export"] += 1
+
+    for fname, x, full in extras:
+        pr = x["projection"]
+        g = dict(lon0=float(pr["longitudeCenter"]), lat0=0.0, fe=float(pr["eastShift"]), fn=float(pr["northShift"]))
+        hit = [e for e in ents if geom_eq(e["geom"], g) and datum_eq(e["datum"], full)]
+        for e in hit:
+            e["datum"][4] = full[4]
+            e["sources"].add("datum.json:" + x.get("csCode", fname))
+            e["names"].add(x.get("csCode", fname))
+            e["flags"] = [f for f in e["flags"] if "omega_y" not in f] + [f"omega_y = {-full[4]:.5f} arcsec (WGS84->local) taken from {fname}; verified against a survey surface"]
+            stats["extra datum file matched"] += 1
+        if not hit:
+            stats["extra datum file NOT matched"] += 1
 
     # ---- 3. fill region names, ids, proj4
     names = {}
