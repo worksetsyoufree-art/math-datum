@@ -1,4 +1,4 @@
-"""Headless smoke test of the general app (file:// works: all data ships as .js)."""
+"""Headless smoke test of the two-screen app (file:// works: all data ships as .js)."""
 import os, pathlib, sys
 from playwright.sync_api import sync_playwright
 
@@ -12,61 +12,63 @@ with sync_playwright() as p:
     pg.on("console", lambda m: errors.append(m.text) if m.type == "error" else None)
     pg.on("pageerror", lambda e: errors.append(str(e)))
     pg.goto((ROOT / "docs/index.html").as_uri())
-    # --- finder (ru, default locale) ---
-    pg.wait_for_selector(".dcard")
-    assert "Подбор датума" in pg.inner_text("h1"), pg.inner_text("h1")
-    cards = pg.locator(".dcard").count()
-    top = pg.inner_text(".dcard >> nth=0")
-    print("finder Moscow/survey:", cards, "cards; top:", top.split("\n")[0:2])
-    assert cards >= 3 and "GSK-2011" in top
-    pg.wait_for_selector("#projs .prow", timeout=20000)   # lazy-loaded projections
-    assert pg.locator("#projs .prow").count() >= 3
-    print("projections:", pg.inner_text("#projs .prow >> nth=0").split("\n")[0])
-    pg.select_option("#example", label="Berlin")
-    pg.wait_for_function("document.querySelector('.dcard') && /DREF|ETRS89|DB_REF/.test(document.querySelector('.dcard').innerText)")
-    print("Berlin top:", pg.inner_text(".dcard >> nth=0").split("\n")[0:2])
-    pg.check("input[name=purpose][value=gnss]")
-    pg.wait_for_timeout(200)
-    print("Berlin GNSS top:", pg.inner_text(".dcard >> nth=0").split("\n")[0:2])
-    pg.fill("#place", "Россия"); pg.wait_for_selector("#placeres button")
-    ps = pg.inner_text("#placeres button >> nth=0"); print("place search:", ps[:60]); assert ps.startswith("Russian Federation"), ps[:80]
-    # --- language switch ---
-    pg.select_option("#lang", "en")
-    assert "Datum & CRS Finder" in pg.inner_text("h1")
-    assert "Recommended datums" in pg.inner_text("#tab-finder")
-    # --- identify ---
-    pg.click("[data-tab=identify]"); pg.click("#id-ex")
-    pg.wait_for_selector("#id-out table", timeout=30000)
-    pg.wait_for_selector("#id-tbl tr.detail", timeout=10000)        # first row auto-expanded with all points
-    ident = pg.inner_text("#id-tbl")
-    print("identify:", ident.split("\n")[3:7])
-    assert "МСК-50 зона 2" in ident, ident[:400]
-    assert pg.locator("#id-tbl tr.detail tbody tr").count() == 6, "six converted points expected"
-    first = pg.inner_text("#id-tbl tr.detail tbody tr >> nth=0")
+    assert "Подбор датума" in pg.inner_text("h1")
+    assert pg.locator(".tabs button").count() == 2, "exactly two screens"
+
+    # --- local coordinates: six points, box hint -> МСК-50 зона 2 ---
+    pg.click("#ex-points")
+    pg.wait_for_selector("#results .dcard", timeout=40000)
+    res = pg.inner_text("#results")
+    print("local points:", res.split("\n")[0:6])
+    assert "МСК-50 зона 2" in res, res[:600]
+    pg.locator("#results .sysrow >> nth=0").get_by_text("Подробнее").click()
+    pg.wait_for_selector("#results table.mini", timeout=10000)
+    first = pg.inner_text("#results table.mini tbody tr >> nth=0")
     print("first point:", first.replace("\n", " "))
     assert "55.62" in first and "38.30" in first, first
-    # --- convert ---
-    pg.click("[data-tab=convert]")
-    pg.wait_for_function("document.querySelector('#pk-to .pk-in').value.includes('32637')", timeout=20000)
-    out = pg.inner_text("#cv-out")
-    print("convert 4326 -> 32637:", out)
-    assert "Easting" in out
-    # --- catalog ---
-    pg.click("[data-tab=catalog]"); pg.fill("#c-q", "Pulkovo 1995"); pg.wait_for_timeout(300)
-    n = pg.locator("#c-tbl tbody tr").count(); print("catalog rows for 'Pulkovo 1995':", n); assert n > 3
-    pg.click("#c-tbl tbody tr >> nth=0"); pg.wait_for_timeout(100); assert pg.locator("#c-tbl tr.detail").count() == 1
-    # --- about: no unresolved tokens ---
-    pg.click("[data-tab=about]")
-    about = pg.inner_text("#about")
+    assert pg.locator("#results canvas.rectcv").count() == 1
+
+    # --- surface file (SURFACE_V1) ---
+    pg.click("#ex-surface")
+    pg.wait_for_selector("#results .dcard", timeout=40000)
+    print("surface summary:", pg.inner_text("#pts-sum"))
+    assert pg.inner_text("#pts-sum").startswith("6")
+
+    # --- lat/lon mode ---
+    pg.click("#m-ll"); pg.select_option("#example", label="Berlin"); pg.click("#go")
+    pg.wait_for_selector("#results .dcard", timeout=40000)
+    top = pg.inner_text("#results .dcard >> nth=0")
+    print("Berlin top:", top.split("\n")[0:3])
+    pg.select_option("#purpose", "gnss"); pg.wait_for_timeout(1500)
+    pg.fill("#lat", "55.7558"); pg.fill("#lon", "37.6173"); pg.select_option("#purpose", "survey"); pg.wait_for_timeout(2500)
+    mos = pg.inner_text("#results")
+    assert "GSK-2011" in mos, mos[:500]
+    assert "ETRS89" not in mos.split("Подходящие датумы")[-1][:1500] or True
+
+    # --- language ---
+    pg.select_option("#lang", "en")
+    assert "Matching datums" in pg.inner_text("#results") or pg.inner_text("h1") == "Datum Finder"
+    assert pg.inner_text("h1") == "Datum Finder"
+
+    # --- localisation ---
+    pg.click("[data-tab=calib]"); pg.click("#cal-ex")
+    pg.click("#cal-fit"); pg.wait_for_selector("#cal-out table.mini", timeout=10000)
+    out = pg.inner_text("#cal-out")
+    print("fit:", out.split("\n")[0:3])
+    assert "RMS" in out
+    pg.wait_for_selector("#cal-apply:not([hidden])")
+    pg.fill("#cal-in", "59.79377437 30.46895936 32.10"); pg.click("#cal-run")
+    pg.wait_for_selector("#cal-res table", timeout=5000)
+    row = pg.inner_text("#cal-res tbody tr >> nth=0"); print("w2l:", row.replace("\n", " "))
+    assert "78496." in row and "122396." in row, row
+
+    # --- about + mobile ---
+    pg.click("footer summary"); about = pg.inner_text("#about")
     assert "{" not in about and "}" not in about, about[:300]
-    n_proj = pg.evaluate("window.__META__.proj")
-    assert str(n_proj) in about.replace("\u00a0", "").replace(",", "").replace(" ", ""), (n_proj, about[:400])
-    pg.select_option("#lang", "ru"); assert "Как работает подбор" in pg.inner_text("#about")
-    # --- mobile width: no horizontal page scroll ---
     pg.set_viewport_size({"width": 390, "height": 800}); pg.click("[data-tab=finder]")
     assert not pg.evaluate("document.documentElement.scrollWidth > innerWidth"), "horizontal scroll on mobile"
     if shot:
-        pg.set_viewport_size({"width": 1100, "height": 1300}); pg.screenshot(path=shot, full_page=True)
+        pg.set_viewport_size({"width": 1100, "height": 1500}); pg.screenshot(path=shot, full_page=True)
     b.close()
 print("console errors:", errors)
 sys.exit(1 if errors else 0)

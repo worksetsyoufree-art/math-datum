@@ -3,6 +3,7 @@ import fs from "node:fs";
 import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 const proj4 = require("../docs/vendor/proj4-2.12.1.js");
+const Engine = require("../docs/js/engine.js");
 const src = JSON.parse(fs.readFileSync(new URL("../build/world_candidates.json", import.meta.url), "utf8"));
 const TOL = Number(process.env.TOL_M || 0.05);
 const geoByCode = Object.fromEntries(src.geo.map((g) => [g.code, g]));
@@ -24,7 +25,9 @@ for (const p of src.proj) {
   } catch (e) { d = String(e.message || e).slice(0, 60); }
   if (!ok) { bad.push({ code: p.code, name: p.name, d }); continue; }
   const base = geoByCode[p.base];
-  proj.push({ c: p.code, n: p.name, b0: p.base, dn: base ? base.datum : undefined, m: p.method, ar: p.area, b: p.bbox, p: p.p4, ap: p.approx });
+  const item = { c: p.code, n: p.name, b0: p.base, dn: base ? base.datum : undefined, m: p.method, ar: p.area, b: p.bbox, p: p.p4, ap: p.approx };
+  Engine.localRect(item, proj4); // area of use as a rectangle in the CRS's own coordinates
+  proj.push(item);
 }
 const write = (name, key, data) => fs.writeFileSync(new URL(`../docs/data/${name}`, import.meta.url), `window.__${key}__=${JSON.stringify(data)};\n`);
 fs.mkdirSync(new URL("../docs/data/", import.meta.url), { recursive: true });

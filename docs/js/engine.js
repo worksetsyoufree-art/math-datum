@@ -203,9 +203,9 @@
   /* Which CRS could these projected coordinates be in?
      hint = {lat, lon, radiusKm}, {box: [south, west, north, east]} and/or {area: {ar, b}} (country/region the data is in); both optional. */
   function identify(list, e, n, proj4, hint) {
-    var out = [], memo = {};
+    var out = [];
     for (var i = 0; i < list.length; i++) {
-      var p = list[i], ll;
+      var p = list[i], ll, memo = {}; // the point differs per candidate: the country-distance cache must too
       try { ll = proj4(p.p, "EPSG:4326", [e, n]); } catch (err) { continue; }
       if (!ll || !isFinite(ll[0]) || !isFinite(ll[1]) || Math.abs(ll[1]) > 90) continue;
       var lon = ((ll[0] + 540) % 360) - 180, lat = ll[1];
@@ -222,6 +222,66 @@
       var fe = falseEasting(p);
       if (fe != null && (p.m === "tmerc" || p.m === "utm")) score += 25 * Math.max(0, 1 - Math.abs(e - fe) / 300000); // real data lies near the central meridian
       out.push({ p: p, lat: lat, lon: lon, dist: d, score: score });
+    }
+    out.sort(function (a, b) { return b.score - a.score; });
+    return out;
+  }
+
+
+  /* ---- areas of use as rectangles in LOCAL (projected) coordinates ---- */
+  /* [minE, minN, maxE, maxN] of the area-of-use box projected into the CRS (outline + interior samples) */
+  function localRect(p, proj4) {
+    if (p.r) return p.r;
+    var b = p.b, w = b[0], e = b[2] < b[0] ? b[2] + 360 : b[2], s = Math.max(-89.9, b[1]), n = Math.min(89.9, b[3]), pts = [], i, j, N = 12;
+    for (i = 0; i <= N; i++) { var lo = w + (e - w) * i / N, la = s + (n - s) * i / N; pts.push([lo, s], [lo, n], [w, la], [e, la]); }
+    for (i = 1; i < 4; i++) for (j = 1; j < 4; j++) pts.push([w + (e - w) * i / 4, s + (n - s) * j / 4]);
+    var conv, minE = 1e18, minN = 1e18, maxE = -1e18, maxN = -1e18, ok = 0;
+    try { conv = proj4("EPSG:4326", p.p); } catch (err) { return null; }
+    for (i = 0; i < pts.length; i++) {
+      var q;
+      try { q = conv.forward([((pts[i][0] + 540) % 360) - 180, pts[i][1]]); } catch (err2) { continue; }
+      if (!q || !isFinite(q[0]) || !isFinite(q[1])) continue;
+      ok++; minE = Math.min(minE, q[0]); maxE = Math.max(maxE, q[0]); minN = Math.min(minN, q[1]); maxN = Math.max(maxN, q[1]);
+    }
+    if (ok < 8) return null;
+    p.r = [Math.round(minE), Math.round(minN), Math.round(maxE), Math.round(maxN)];
+    return p.r;
+  }
+
+  /* Which systems could these LOCAL points (pts = [{e, n}], east/north already assigned) belong to?
+     Prefilter: share of points inside the projected area rectangle; then borders (areaCheck) at the centroid.
+     hint: {lat, lon, radiusKm}, {box}, {area}. Returns [{p, r, frac, u, v, lat, lon, dist, score}] best first. */
+  function identifyLocal(list, pts, proj4, hint) {
+    var out = [], step = Math.max(1, Math.floor(pts.length / 200)), sample = [], i, ce = 0, cn = 0;
+    for (i = 0; i < pts.length; i += step) sample.push(pts[i]);
+    for (i = 0; i < sample.length; i++) { ce += sample[i].e; cn += sample[i].n; }
+    ce /= sample.length; cn /= sample.length;
+    for (i = 0; i < list.length; i++) {
+      var p = list[i], r = localRect(p, proj4), memo = {}; // per-candidate cache (the point differs per candidate)
+      if (!r) continue;
+      var tw = (r[2] - r[0]) * 0.01, th = (r[3] - r[1]) * 0.01, inside = 0, k;
+      for (k = 0; k < sample.length; k++) if (sample[k].e >= r[0] - tw && sample[k].e <= r[2] + tw && sample[k].n >= r[1] - th && sample[k].n <= r[3] + th) inside++;
+      var frac = inside / sample.length;
+      if (frac < 0.5) continue;
+      var ll;
+      try { ll = proj4(p.p, "EPSG:4326", [ce, cn]); } catch (err) { continue; }
+      if (!ll || !isFinite(ll[0]) || !isFinite(ll[1]) || Math.abs(ll[1]) > 90) continue;
+      var lon = ((ll[0] + 540) % 360) - 180, lat = ll[1];
+      if (!areaCheck(p, lat, lon, memo)) continue;
+      if (hint && hint.area && !areaCheck({ ar: hint.area.ar, b: hint.area.b }, lat, lon, memo)) continue;
+      if (hint && hint.box && (lat < hint.box[0] || lat > hint.box[2] || lon < hint.box[1] || lon > hint.box[3])) continue;
+      var d = null;
+      if (hint && hint.lat != null && hint.lon != null) { d = distKm(lat, lon, hint.lat, hint.lon); if (hint.radiusKm && d > hint.radiusKm) continue; }
+      var u = (ce - r[0]) / Math.max(1, r[2] - r[0]), v = (cn - r[1]) / Math.max(1, r[3] - r[1]);
+      var cen = 1 - Math.max(Math.abs(u - 0.5), Math.abs(v - 0.5)) * 2;
+      var score = 50 * frac + 30 * specificity(p.b) + 20 * Math.max(0, cen) + (d == null ? 0 : 100 / (1 + d / 25));
+      if (p.src === "msk") {
+        score += (p.st === "verified" ? 6 : -4);
+        var cc = centre(p.b); score += 20 * Math.max(0, 1 - distKm(lat, lon, cc[0], cc[1]) / 450);
+      }
+      var fe = falseEasting(p);
+      if (fe != null && (p.m === "tmerc" || p.m === "utm")) score += 25 * Math.max(0, 1 - Math.abs(ce - fe) / 300000);
+      out.push({ p: p, r: r, frac: frac, u: u, v: v, lat: lat, lon: lon, dist: d, score: score });
     }
     out.sort(function (a, b) { return b.score - a.score; });
     return out;
@@ -246,6 +306,6 @@
   }
 
   return { setAreas: setAreas, areaCheck: areaCheck, inBox: inBox, areaDeg2: areaDeg2, specificity: specificity, distKm: distKm, centre: centre, isModern: isModern,
-    recommendDatums: recommendDatums, recommendProjections: recommendProjections, identify: identify, search: search,
+    recommendDatums: recommendDatums, recommendProjections: recommendProjections, identify: identify, localRect: localRect, identifyLocal: identifyLocal, search: search,
     shiftMeters: shiftMeters, geoDef: geoDef, PURPOSES: PURPOSES };
 });

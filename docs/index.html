@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Datum & CRS Finder</title>
-<meta name="description" content="Datum and coordinate system finder: pick the right datum and projection for a place and a task, convert coordinates, identify an unknown CRS. / Подбор датума и системы координат.">
+<title>Datum Finder</title>
+<meta name="description" content="Find the datum and coordinate system for local coordinates or lat/lon; build a local datum from point pairs. / Подбор датума по локальным координатам или широте-долготе, локализация по парам точек.">
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="style.css">
 </head>
@@ -13,7 +13,7 @@
   <div class="wrap">
     <div class="titlebar">
       <div>
-        <h1 data-i18n="title">Datum & CRS Finder</h1>
+        <h1 data-i18n="title">Datum Finder</h1>
         <p class="sub" data-i18n="subtitle"></p>
       </div>
       <label class="lang"><span data-i18n="language">Language</span>
@@ -22,128 +22,123 @@
     </div>
     <nav class="tabs" role="tablist">
       <button role="tab" data-tab="finder" aria-selected="true" data-i18n="tabFinder"></button>
-      <button role="tab" data-tab="identify" aria-selected="false" data-i18n="tabIdentify"></button>
-      <button role="tab" data-tab="convert" aria-selected="false" data-i18n="tabConvert"></button>
-      <button role="tab" data-tab="catalog" aria-selected="false" data-i18n="tabCatalog"></button>
-      <button role="tab" data-tab="about" aria-selected="false" data-i18n="tabAbout"></button>
+      <button role="tab" data-tab="calib" aria-selected="false" data-i18n="tabCalib"></button>
     </nav>
   </div>
 </header>
 
 <main class="wrap">
-  <!-- ============ FINDER ============ -->
+  <!-- ================= FINDER ================= -->
   <section id="tab-finder" class="panel">
     <div class="card">
-      <h2 data-i18n="whereTitle"></h2>
-      <div class="grid2">
-        <label><span data-i18n="lat"></span><input id="lat" inputmode="text" data-i18n-ph="latPh" value="55.7558" autocomplete="off"></label>
-        <label><span data-i18n="lon"></span><input id="lon" inputmode="text" data-i18n-ph="lonPh" value="37.6173" autocomplete="off"></label>
+      <div class="seg" role="group">
+        <button id="m-local" aria-pressed="true" data-i18n="modeLocal"></button>
+        <button id="m-ll" aria-pressed="false" data-i18n="modeLL"></button>
       </div>
-      <div class="grid2">
-        <label><span data-i18n="example"></span><select id="example"></select></label>
-        <label><span data-i18n="placeSearch"></span><input id="place" data-i18n-ph="placeSearchPh" autocomplete="off"></label>
+
+      <div id="in-local">
+        <label><span data-i18n="ptsLabel"></span>
+          <textarea id="pts" rows="6" spellcheck="false" placeholder="453594.207 2238973.376 144.153"></textarea></label>
+        <div class="row">
+          <label class="filebtn"><input type="file" id="pts-file" accept=".txt,.xml,.csv,.pts,.dat,text/*"><span data-i18n="chooseFile"></span></label>
+          <button id="ex-points" class="ghost" data-i18n="exPoints"></button>
+          <button id="ex-surface" class="ghost" data-i18n="exSurface"></button>
+          <span id="pts-sum" class="muted"></span>
+        </div>
       </div>
-      <div class="row">
-        <button id="myloc" class="ghost" data-i18n="myLoc"></button>
-        <span id="locmsg" class="muted"></span>
+
+      <div id="in-ll" hidden>
+        <div class="grid2">
+          <label><span data-i18n="lat"></span><input id="lat" inputmode="text" data-i18n-ph="latPh" value="55.7558" autocomplete="off"></label>
+          <label><span data-i18n="lon"></span><input id="lon" inputmode="text" data-i18n-ph="lonPh" value="37.6173" autocomplete="off"></label>
+        </div>
+        <div class="grid2">
+          <label><span data-i18n="example"></span><select id="example"></select></label>
+          <label><span data-i18n="purpose"></span>
+            <select id="purpose"><option value="survey" data-i18n="p_survey"></option><option value="gnss" data-i18n="p_gnss"></option><option value="legacy" data-i18n="p_legacy"></option></select></label>
+        </div>
+        <div class="row"><button id="myloc" class="ghost" data-i18n="myLoc"></button><span id="locmsg" class="muted"></span></div>
       </div>
-      <div id="placeres" class="zones"></div>
-      <p class="note" data-i18n="placeHint"></p>
+
+      <details class="more">
+        <summary data-i18n="refine"></summary>
+        <div class="grid2">
+          <label id="order-wrap"><span data-i18n="order"></span>
+            <select id="order"><option value="auto" data-i18n="orderAuto"></option><option value="xy" data-i18n="orderXY"></option><option value="en" data-i18n="orderEN"></option></select></label>
+          <label><span data-i18n="area"></span><input id="area" data-i18n-ph="areaPh" autocomplete="off"></label>
+        </div>
+        <div id="area-res" class="zones"></div>
+        <label><span data-i18n="box"></span><input id="box" data-i18n-ph="boxPh" autocomplete="off"></label>
+        <p class="note" data-i18n="refineNote"></p>
+      </details>
+      <div class="row"><button id="go" class="primary" data-i18n="go"></button><span id="msg" class="muted"></span></div>
     </div>
 
-    <div class="card">
-      <h2 data-i18n="purposeTitle"></h2>
-      <div class="purposes" role="radiogroup">
-        <label class="pcard"><input type="radio" name="purpose" value="gnss"><b data-i18n="p_gnss"></b><span data-i18n="p_gnss_d"></span></label>
-        <label class="pcard"><input type="radio" name="purpose" value="survey" checked><b data-i18n="p_survey"></b><span data-i18n="p_survey_d"></span></label>
-        <label class="pcard"><input type="radio" name="purpose" value="legacy"><b data-i18n="p_legacy"></b><span data-i18n="p_legacy_d"></span></label>
-      </div>
-      <label class="check"><input type="checkbox" id="showUnv"> <span data-i18n="showUnverified"></span></label>
-    </div>
-
-    <h2 class="sect" data-i18n="resultsTitle"></h2>
-    <div id="datums" class="dlist"></div>
-    <div id="detail"></div>
-    <h2 class="sect" id="projh" data-i18n="projTitle" hidden></h2>
-    <div id="projs"></div>
+    <div id="results"></div>
   </section>
 
-  <!-- ============ IDENTIFY ============ -->
-  <section id="tab-identify" class="panel" hidden>
+  <!-- ================= LOCALISATION ================= -->
+  <section id="tab-calib" class="panel" hidden>
     <div class="card">
-      <h2 data-i18n="idTitle"></h2>
-      <p class="muted" data-i18n="idDesc"></p>
-      <label><span data-i18n="idPoints"></span><textarea id="id-pts" rows="6" spellcheck="false" placeholder="453594.207 2238973.376 144.153"></textarea></label>
-      <div class="grid2">
-        <label><span data-i18n="idOrder"></span>
-          <select id="id-order"><option value="auto" data-i18n="idOrderAuto"></option><option value="xy" data-i18n="idOrderXY"></option><option value="en" data-i18n="idOrderEN"></option></select>
-        </label>
-        <label><span data-i18n="idArea"></span><input id="id-area" data-i18n-ph="idAreaPh" autocomplete="off"></label>
-      </div>
-      <div id="id-areares" class="zones"></div>
-      <label><span data-i18n="idBox"></span><input id="id-box" data-i18n-ph="idBoxPh" autocomplete="off"></label>
-      <h3 data-i18n="idHint"></h3>
+      <h2 data-i18n="calTitle"></h2>
+      <p class="muted" data-i18n="calDesc"></p>
+      <label><span data-i18n="calPairs"></span>
+        <textarea id="cal-pairs" rows="7" spellcheck="false" placeholder="78496.563 122396.077 15.74 59.79377437 30.46895936 32.10"></textarea></label>
+      <div class="row"><button id="cal-ex" class="ghost" data-i18n="calExample"></button><span id="cal-sum" class="muted"></span></div>
+
+      <h3 data-i18n="calProj"></h3>
       <div class="grid3b">
-        <label><span data-i18n="lat"></span><input id="id-lat" inputmode="text" placeholder="55.83"></label>
-        <label><span data-i18n="lon"></span><input id="id-lon" inputmode="text" placeholder="37.33"></label>
-        <label><span data-i18n="idRadius"></span><input id="id-r" inputmode="decimal" value="300"></label>
+        <label><span data-i18n="calEll"></span>
+          <select id="cal-ell"><option value="WGS84">WGS 84</option><option value="krass">Krassowsky 1940</option><option value="bessel">Bessel 1841</option></select></label>
+        <label><span data-i18n="calLon0"></span><input id="cal-lon0" inputmode="decimal" value="30"></label>
+        <label><span data-i18n="calK"></span><input id="cal-k" inputmode="decimal" value="1"></label>
+        <label><span data-i18n="calFE"></span><input id="cal-fe" inputmode="decimal" value="95900"></label>
+        <label><span data-i18n="calFN"></span><input id="cal-fn" inputmode="decimal" value="-6552800"></label>
+        <label><span data-i18n="calLat0"></span><input id="cal-lat0" inputmode="decimal" value="0"></label>
+      </div>
+      <div class="grid2">
+        <label><span data-i18n="order"></span>
+          <select id="cal-order"><option value="xy" data-i18n="orderXY"></option><option value="en" data-i18n="orderEN"></option></select></label>
+        <label><span data-i18n="calModel"></span>
+          <select id="cal-model"><option value="auto" data-i18n="calModelAuto"></option><option value="t3" data-i18n="calModelT3"></option><option value="h7" data-i18n="calModelH7"></option></select></label>
       </div>
       <div class="row">
-        <button id="id-go" class="primary" data-i18n="idFind"></button>
-        <button id="id-ex" class="ghost" data-i18n="idPointsEx"></button>
-        <span id="id-msg" class="muted"></span>
+        <button id="cal-suggest" class="ghost" data-i18n="calSuggest"></button>
+        <button id="cal-fit" class="primary" data-i18n="calFit"></button>
+        <label class="filebtn"><input type="file" id="cal-import" accept=".json,application/json"><span data-i18n="calImport"></span></label>
+        <span id="cal-msg" class="muted"></span>
       </div>
+      <div id="cal-sug" class="zones"></div>
     </div>
-    <div id="id-out"></div>
-  </section>
 
-  <!-- ============ CONVERT ============ -->
-  <section id="tab-convert" class="panel" hidden>
-    <div class="card">
-      <h2 data-i18n="convTitle"></h2>
+    <div id="cal-out"></div>
+
+    <div class="card" id="cal-apply" hidden>
+      <h2 data-i18n="calApply"></h2>
       <div class="grid2">
-        <div><label><span data-i18n="from"></span></label><div class="picker" id="pk-from"><input class="pk-in" data-i18n-ph="pickCrs" autocomplete="off"><ul class="pk-list" hidden></ul></div></div>
-        <div><label><span data-i18n="to"></span></label><div class="picker" id="pk-to"><input class="pk-in" data-i18n-ph="pickCrs" autocomplete="off"><ul class="pk-list" hidden></ul></div></div>
+        <label><span data-i18n="calDir"></span>
+          <select id="cal-dir"><option value="w2l" data-i18n="calW2L"></option><option value="l2w" data-i18n="calL2W"></option></select></label>
+        <span></span>
       </div>
-      <div class="grid2">
-        <label><span id="cv-l1"></span><input id="cv-a" inputmode="text"></label>
-        <label><span id="cv-l2"></span><input id="cv-b" inputmode="text"></label>
-      </div>
-      <div class="row"><button id="cv-swap" class="ghost" data-i18n="swap"></button><span class="muted" data-i18n="geoOrder"></span></div>
-      <h3 data-i18n="result"></h3>
-      <div id="cv-out" class="out"></div>
+      <label><span id="cal-in-label"></span><textarea id="cal-in" rows="5" spellcheck="false"></textarea></label>
+      <div class="row"><button id="cal-run" class="primary" data-i18n="calRun"></button><span id="cal-run-msg" class="muted"></span></div>
+      <div id="cal-res"></div>
     </div>
-  </section>
-
-  <!-- ============ CATALOG ============ -->
-  <section id="tab-catalog" class="panel" hidden>
-    <div class="card">
-      <h2 data-i18n="catTitle"></h2>
-      <div class="grid3">
-        <label><span data-i18n="catSearch"></span><input id="c-q" data-i18n-ph="catSearchPh" autocomplete="off"></label>
-        <label><span data-i18n="catType"></span>
-          <select id="c-type"><option value="all" data-i18n="t_all"></option><option value="geo" data-i18n="t_geo"></option><option value="proj" data-i18n="t_proj"></option><option value="msk" data-i18n="t_msk"></option></select>
-        </label>
-        <label class="check bottom"><input type="checkbox" id="c-ver" checked> <span data-i18n="ruOnlyVerified"></span></label>
-      </div>
-      <div class="muted" id="c-count"></div>
-    </div>
-    <div class="tablewrap"><table id="c-tbl"><tbody></tbody></table></div>
-  </section>
-
-  <!-- ============ ABOUT ============ -->
-  <section id="tab-about" class="panel" hidden>
-    <div class="card prose" id="about"></div>
   </section>
 </main>
 
 <footer class="wrap foot">
-  <span id="built"></span> · EPSG, PROJ/pyproj · proj4js · <a href="https://github.com/worksetsyoufree-art/math-datum">GitHub</a>
+  <details>
+    <summary data-i18n="aboutTitle"></summary>
+    <div class="prose" id="about"></div>
+  </details>
+  <p><span id="built"></span> · EPSG, PROJ · proj4js · <a href="https://github.com/worksetsyoufree-art/math-datum">GitHub</a></p>
 </footer>
 
 <script src="vendor/proj4-2.12.1.js"></script>
 <script src="js/i18n.js"></script>
 <script src="js/engine.js"></script>
+<script src="js/calib.js"></script>
 <script src="data/world-geo.js"></script>
 <script src="data/world-meta.js"></script>
 <script src="js/app.js"></script>

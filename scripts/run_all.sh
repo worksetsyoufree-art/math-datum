@@ -19,3 +19,4 @@ node tests/proj4_parity.mjs
 python3 -I tests/test_survey_cloud.py
 python3 -I tests/test_user_points.py
 node tests/survey_cloud.mjs
+node tests/calib.test.mjs

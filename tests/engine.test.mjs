@@ -57,5 +57,15 @@ const ub = Engine.identify(PROJ.concat(MSK), 2238973.376, 453594.207, proj4, { b
 check("User box: MSK-50 zone 2 is first and every result is inside the box", /МСК-50 зона 2/.test(ub[0].p.n) && ub.every((x) => x.lat >= BOX[0] && x.lat <= BOX[2] && x.lon >= BOX[1] && x.lon <= BOX[3]), ub.slice(0, 3).map((x) => x.p.n + " " + x.lat.toFixed(6) + "," + x.lon.toFixed(6)).join(" | "));
 const u2 = Engine.identify(PROJ.concat(MSK), 453594.207, 2238973.376, proj4, { area: RU_AREA });
 check("Wrong axis order (E=453594, N=2238973) does not produce MSK-50", !u2.slice(0, 5).some((x) => /МСК-50/.test(x.p.n)), u2.slice(0, 3).map((x) => x.p.n).join(" | "));
+// local-coordinates mode: area rectangles in the system's own coordinates
+const mk = (arr, hy) => arr.map(([a, b]) => hy === "xy" ? { e: b, n: a } : { e: a, n: b });
+const six = [[453594.207, 2238973.376], [453592.333, 2238975.140], [453585.483, 2238974.514], [453585.403, 2238972.128], [453571.586, 2238973.450], [453571.156, 2238971.407]];
+const loc = Engine.identifyLocal(PROJ.concat(MSK), mk(six, "xy"), proj4, { box: BOX });
+check("identifyLocal: six points + box -> MSK-50 zone 2 first, all inside the rectangle", /МСК-50 зона 2/.test(loc[0].p.n) && loc[0].frac === 1 && loc[0].u > 0 && loc[0].u < 1, `${loc[0].p.n} rect ${JSON.stringify(loc[0].r)} u=${loc[0].u.toFixed(2)} v=${loc[0].v.toFixed(2)}`);
+const loc2 = Engine.identifyLocal(PROJ.concat(MSK), mk(six, "xy"), proj4, { area: RU_AREA });
+check("identifyLocal: Russia only -> MSK zone-2 systems, every centre inside Russia", loc2.length > 3 && loc2.slice(0, 5).every((x) => x.p.src === "msk" || x.lat > 39), loc2.slice(0, 3).map((x) => x.p.n).join(" | "));
+const surf = [[78498.614, 122401.552], [78355.583, 122222.961], [78738.125, 122569.593], [78505.812, 122398.192]];
+const sl = Engine.identifyLocal(PROJ.concat(MSK), mk(surf, "xy"), proj4, { area: RU_AREA });
+check("identifyLocal: SPb surface -> МСК_78(5) found", sl.some((x) => /78/.test(x.p.n) && x.frac === 1), sl.slice(0, 3).map((x) => x.p.n).join(" | "));
 check("search by EPSG code", Engine.search(GEO, "4326", 5).some((g) => g.c === 4326));
 process.exit(fails ? 1 : 0);
