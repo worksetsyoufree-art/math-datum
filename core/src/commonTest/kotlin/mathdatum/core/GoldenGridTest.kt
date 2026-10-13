@@ -1,0 +1,46 @@
+package mathdatum.core
+
+import kotlin.math.abs
+import kotlin.test.Test
+import kotlin.test.assertTrue
+
+/** Сверка с PROJ по сетке СК и точек (B2 плана). Допуск 0,1 мм по плану и высоте. */
+class GoldenGridTest {
+    private fun crsOf(c: GridCase): CrsDef {
+        val ell = Ellipsoid.byId(c.ellipsoid)!!
+        val h = c.helmert?.let { Helmert(it[0], it[1], it[2], it[3], it[4], it[5], it[6]) }
+        return CrsDef(c.id, c.id, ell, h, TransverseMercator(ell, c.lat0 * DEG, c.lon0 * DEG, c.k0, c.x0, c.y0))
+    }
+
+    @Test
+    fun forwardMatchesProjWithin0_1mm() {
+        var worst = 0.0
+        var worstAt = ""
+        for (c in GRID_CASES) {
+            val crs = crsOf(c)
+            for (p in c.points) {
+                val (n, e, h) = crs.fromWgs84(Geodetic.ofDegrees(p[0], p[1], p[2]))
+                val d = maxOf(abs(n - p[3]), abs(e - p[4]), abs(h - p[5]))
+                if (d > worst) { worst = d; worstAt = "${c.id} lat=${p[0]} lon=${p[1]}" }
+            }
+        }
+        assertTrue(worst <= 1e-4, "worst=$worst m at $worstAt")
+    }
+
+    @Test
+    fun inverseReturnsInputWithin0_1mm() {
+        var worst = 0.0
+        var worstAt = ""
+        for (c in GRID_CASES) {
+            val crs = crsOf(c)
+            for (p in c.points) {
+                val g = crs.toWgs84(p[3], p[4], p[5])
+                val dLat = abs(g.lat - p[0] * DEG) * 6.4e6
+                val dLon = abs(Geodesy.normLon(g.lon - p[1] * DEG)) * 6.4e6 * kotlin.math.cos(p[0] * DEG)
+                val d = maxOf(dLat, dLon, abs(g.h - p[2]))
+                if (d > worst) { worst = d; worstAt = "${c.id} lat=${p[0]} lon=${p[1]}" }
+            }
+        }
+        assertTrue(worst <= 1e-4, "worst=$worst m at $worstAt")
+    }
+}

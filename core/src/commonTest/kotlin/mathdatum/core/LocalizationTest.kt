@@ -129,4 +129,66 @@ class LocalizationTest {
         assertTrue(LocalizationWarning.NO_HEIGHTS in r.warnings)
         assertNull(r.heightRmsM)
     }
+
+    /**
+     * Участок в ~85 км от ЦМ базовой СК, истина = база + малая поправка (сдвиг 2,5/1,5 м и поворот ≈ 4″).
+     * Чистое подобие ограничено градиентом масштаба проекции; калибровка поверх базы держит миллиметры.
+     */
+    @Test
+    fun calibrationOverKnownCrsBeatsPureSimilarityFarFromCm() {
+        val crs = Catalog.sk42Gk(7)                          // ЦМ 39°
+        val base = CrsGeoref(crs, swapXY = true)             // x — восток, y — север (CAD), метры
+        val centre = Geodetic.ofDegrees(55.7, 37.6)
+        val (n0, e0, _) = crs.fromWgs84(centre)
+        val plane = LocalPlane(centre.lat, centre.lon)
+        val corr = Similarity2D(1.0 + 3e-6, 2e-5, 2.5, 1.5)
+        val truthOf = { x: Double, y: Double ->
+            val w = base.toWgs84(x, y, 0.0)   // h после Гельмерта ≠ 0; горизонталь зависит от h, держим согласованно
+            val (e, n) = plane.toPlane(w)
+            val (e2, n2) = corr.apply(e, n)
+            plane.fromPlane(e2, n2, w.h)
+        }
+        val pairs = grid.map { (dx, dy) -> ControlPair(SurfacePoint(e0 + dx, n0 + dy), truthOf(e0 + dx, n0 + dy)) }
+
+        val cal = Localization.calibrate(base, pairs)
+        assertIs<LocalizationResult.Ok>(cal)
+        assertTrue(cal.rmsM < 0.0005, "calibrated rms=${cal.rmsM}")
+        val check = truthOf(e0 + 1234.5, n0 - 2345.6)
+        val back = cal.georef.fromWgs84(check)
+        assertEquals(e0 + 1234.5, back.x, 0.001); assertEquals(n0 - 2345.6, back.y, 0.001)
+        assertTrue(Geodesy.haversine(cal.georef.toWgs84(e0 + 1234.5, n0 - 2345.6), check) < 0.002)
+
+        val pure = Localization.localize(pairs)
+        assertIs<LocalizationResult.Ok>(pure)
+        assertTrue(pure.rmsM > 10 * cal.rmsM, "pure=${pure.rmsM} cal=${cal.rmsM}")
+    }
+
+    @Test
+    fun calibratedGeorefSurvivesJsonAndHasHeightPlane() {
+        val crs = Catalog.sk42Gk(7)
+        val base = CrsGeoref(crs, swapXY = true)
+        val centre = Geodetic.ofDegrees(55.7, 37.6)
+        val (n0, e0, _) = crs.fromWgs84(centre)
+        val pairs = grid.map { (dx, dy) ->
+            val x = e0 + dx; val y = n0 + dy; val z = 120.0 + dx * 0.002
+            val w = base.toWgs84(x, y, z)
+            ControlPair(SurfacePoint(x, y, z), Geodetic(w.lat, w.lon, w.h + 0.3 + 5e-5 * dx - 1e-4 * dy))
+        }
+        val r = Localization.calibrate(base, pairs, LocalizationOptions(heightMode = HeightMode.PLANE))
+        assertIs<LocalizationResult.Ok>(r)
+        assertTrue(r.heightRmsM!! < 1e-6, "h rms=${r.heightRmsM}")
+        val again = GeorefJson.decode(GeorefJson.encode(r.georef))
+        assertIs<CalibratedGeoref>(again)
+        val w1 = r.georef.toWgs84(e0 + 50.0, n0 + 60.0, 130.0); val w2 = again.toWgs84(e0 + 50.0, n0 + 60.0, 130.0)
+        assertEquals(w1.h, w2.h, 1e-9); assertEquals(w1.lat, w2.lat, 1e-14)
+        val s = r.georef.fromWgs84(w1)
+        assertEquals(e0 + 50.0, s.x, 1e-4); assertEquals(130.0, s.z, 1e-4)
+    }
+
+    @Test
+    fun calibrationErrorsAreExplicit() {
+        val base = CrsGeoref(Catalog.utm(37))
+        assertIs<LocalizationResult.Failed>(Localization.calibrate(base, emptyList()))
+        assertIs<LocalizationResult.Failed>(Localization.calibrate(base, listOf(pair(0.0, 0.0))))
+    }
 }

@@ -24,12 +24,22 @@ object GeorefJson {
             "similarity" to linkedMapOf("aRe" to g.similarity.aRe, "aIm" to g.similarity.aIm, "tx" to g.similarity.tx, "ty" to g.similarity.ty),
             "height" to linkedMapOf("a" to g.height.a, "b" to g.height.b, "c" to g.height.c, "x0" to g.height.x0, "y0" to g.height.y0),
         )
+        is CalibratedGeoref -> linkedMapOf(
+            "format" to FORMAT.toDouble(), "type" to "calibrated",
+            "base" to toMap(g.base),
+            "lat0" to g.plane.lat0 / DEG, "lon0" to g.plane.lon0 / DEG,
+            "similarity" to linkedMapOf("aRe" to g.similarity.aRe, "aIm" to g.similarity.aIm, "tx" to g.similarity.tx, "ty" to g.similarity.ty),
+            "height" to linkedMapOf("a" to g.height.a, "b" to g.height.b, "c" to g.height.c, "x0" to g.height.x0, "y0" to g.height.y0),
+        )
         else -> throw IllegalArgumentException("Неизвестная реализация Georef: ${g::class}")
     }
 
     /** Бросает [Json.ParseException] при неверном формате или неподдерживаемой версии. */
     fun decode(text: String): Georef {
-        val m = Json.parse(text).asMap("привязка")
+        return decodeMap(Json.parse(text).asMap("привязка"))
+    }
+
+    private fun decodeMap(m: Map<String, Any?>): Georef {
         val fmt = m["format"].asInt("format")
         if (fmt != FORMAT) throw Json.ParseException("Версия формата привязки $fmt не поддерживается (ожидается $FORMAT)")
         return when (val t = m["type"].asString("type")) {
@@ -45,6 +55,16 @@ object GeorefJson {
                 val h = m["height"].asMap("height")
                 LocalizedGeoref(
                     LocalPlane(m["lat0"].asDouble("lat0") * DEG, m["lon0"].asDouble("lon0") * DEG),
+                    Similarity2D(s["aRe"].asDouble("aRe"), s["aIm"].asDouble("aIm"), s["tx"].asDouble("tx"), s["ty"].asDouble("ty")),
+                    HeightModel(h["a"].asDouble("a"), h["b"].asDouble("b"), h["c"].asDouble("c"), h["x0"].asDouble("x0"), h["y0"].asDouble("y0")),
+                )
+            }
+            "calibrated" -> {
+                val s = m["similarity"].asMap("similarity")
+                val h = m["height"].asMap("height")
+                val base = decodeMap(m["base"].asMap("base")) as? CrsGeoref ?: throw Json.ParseException("base должна быть типа crs")
+                CalibratedGeoref(
+                    base, LocalPlane(m["lat0"].asDouble("lat0") * DEG, m["lon0"].asDouble("lon0") * DEG),
                     Similarity2D(s["aRe"].asDouble("aRe"), s["aIm"].asDouble("aIm"), s["tx"].asDouble("tx"), s["ty"].asDouble("ty")),
                     HeightModel(h["a"].asDouble("a"), h["b"].asDouble("b"), h["c"].asDouble("c"), h["x0"].asDouble("x0"), h["y0"].asDouble("y0")),
                 )

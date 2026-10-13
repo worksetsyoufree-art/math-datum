@@ -84,3 +84,29 @@ class LocalizedGeoref(
         return SurfacePoint(x, y, p.h - height.correction(x, y))
     }
 }
+
+/**
+ * Известная СК + малая поправка (калибровка, слой ГСКО). Прямое: поверхность → [base] → локальная плоскость →
+ * поправка → WGS84; высота — [height] в координатах поверхности.
+ */
+class CalibratedGeoref(
+    val base: CrsGeoref,
+    val plane: LocalPlane,
+    val similarity: Similarity2D,
+    val height: HeightModel = HeightModel.ZERO,
+) : Georef {
+    override fun toWgs84(x: Double, y: Double, z: Double): Geodetic {
+        val w = base.toWgs84(x, y, z)
+        val (e, n) = plane.toPlane(w)
+        val (e2, n2) = similarity.apply(e, n)
+        return plane.fromPlane(e2, n2, w.h + height.correction(x, y))
+    }
+
+    override fun fromWgs84(p: Geodetic): SurfacePoint {
+        val (e, n) = plane.toPlane(p)
+        val (e2, n2) = similarity.applyInverse(e, n)
+        // поправка высоты зависит от x, y поверхности: берём их из первого прохода, затем уточняем
+        val b0 = base.fromWgs84(plane.fromPlane(e2, n2, p.h))
+        return base.fromWgs84(plane.fromPlane(e2, n2, p.h - height.correction(b0.x, b0.y)))
+    }
+}

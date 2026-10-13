@@ -50,19 +50,45 @@ object Localization {
     fun localize(pairs: List<ControlPair>, opts: LocalizationOptions = LocalizationOptions()): LocalizationResult {
         if (pairs.isEmpty()) return LocalizationResult.Failed("Нет пар точек")
         if (pairs.size == 1 && !opts.allowSinglePair) return LocalizationResult.Failed("Нужно минимум 2 пары точек")
-        val warnings = mutableSetOf<LocalizationWarning>()
-
         val p = pairs.map { it.surface.x to it.surface.y }
+        val dz = pairs.map { if (it.surface.z.isNaN()) Double.NaN else it.wgs84.h - it.surface.z }
+        return fit(pairs, p, dz, opts) { plane, sim, h -> LocalizedGeoref(plane, sim, h) }
+    }
+
+    /**
+     * Калибровка поверх известной СК (слой ГСКО): проекцию берёт [base], по парам подгоняется малая поправка
+     * (подобие в локальной плоскости + высота). Точность не деградирует вдали от ЦМ, как у [localize].
+     * Поверхность в парах задана в тех же осях и единицах, что у [base].
+     */
+    fun calibrate(base: CrsGeoref, pairs: List<ControlPair>, opts: LocalizationOptions = LocalizationOptions()): LocalizationResult {
+        if (pairs.isEmpty()) return LocalizationResult.Failed("Нет пар точек")
+        if (pairs.size == 1 && !opts.allowSinglePair) return LocalizationResult.Failed("Нужно минимум 2 пары точек")
+        val mapped = pairs.map { base.toWgs84(it.surface.x, it.surface.y, it.surface.z) }
+        val lat0 = mapped.map { it.lat }.average()
+        val lon0 = circularMeanLon(mapped.map { it.lon })
+        val plane = LocalPlane(lat0, lon0)
+        val p = mapped.map { plane.toPlane(it) }
+        val dz = pairs.indices.map { i -> if (pairs[i].surface.z.isNaN()) Double.NaN else pairs[i].wgs84.h - mapped[i].h }
+        return fit(pairs, p, dz, opts, plane) { pl, sim, h -> CalibratedGeoref(base, pl, sim, h) }
+    }
+
+    private fun circularMeanLon(lons: List<Double>) =
+        Geodesy.normLon(kotlin.math.atan2(lons.sumOf { kotlin.math.sin(it) }, lons.sumOf { kotlin.math.cos(it) }))
+
+    /** Общая часть: плоскость по WGS84-сторонам, подобие p → q, невязки, предупреждения, высота. */
+    private fun fit(
+        pairs: List<ControlPair>, p: List<Pair<Double, Double>>, dz: List<Double>, opts: LocalizationOptions,
+        fixedPlane: LocalPlane? = null, build: (LocalPlane, Similarity2D, HeightModel) -> Georef,
+    ): LocalizationResult {
+        val warnings = mutableSetOf<LocalizationWarning>()
         if (hasDuplicates(p) || hasDuplicates(pairs.map { it.wgs84.lat to it.wgs84.lon })) {
             warnings += LocalizationWarning.DUPLICATE_POINTS
         }
         if (pairs.size >= 2 && spread(p) < 1e-9) return LocalizationResult.Failed("Все точки чертежа совпадают")
 
-        val lat0 = pairs.map { it.wgs84.lat }.average()
-        val lon0 = Geodesy.normLon(
-            kotlin.math.atan2(pairs.sumOf { kotlin.math.sin(it.wgs84.lon) }, pairs.sumOf { kotlin.math.cos(it.wgs84.lon) }),
+        val plane = fixedPlane ?: LocalPlane(
+            pairs.map { it.wgs84.lat }.average(), circularMeanLon(pairs.map { it.wgs84.lon }),
         )
-        val plane = LocalPlane(lat0, lon0)
         val q = pairs.map { plane.toPlane(it.wgs84) }
 
         val sim = solve(p, q, opts, pairs.size) ?: return LocalizationResult.Failed("Вырожденная конфигурация точек")
@@ -84,38 +110,38 @@ object Localization {
         val outlier = if (pairs.size >= 4) suspectOutlier(p, q, opts, rms) else null
         if (outlier != null) warnings += LocalizationWarning.OUTLIER_SUSPECTED
 
-        val withZ = pairs.filter { !it.surface.z.isNaN() }
-        val height = fitHeight(withZ, opts.heightMode, warnings)
-        val heightRms = if (withZ.isEmpty()) null
-        else sqrt(withZ.sumOf { val d = it.wgs84.h - it.surface.z - height.correction(it.surface.x, it.surface.y); d * d } / withZ.size)
+        val idx = pairs.indices.filter { !dz[it].isNaN() }
+        val height = fitHeight(
+            idx.map { pairs[it].surface.x }, idx.map { pairs[it].surface.y }, idx.map { dz[it] }, opts.heightMode, warnings,
+        )
+        val heightRms = if (idx.isEmpty()) null
+        else sqrt(idx.sumOf { val d = dz[it] - height.correction(pairs[it].surface.x, pairs[it].surface.y); d * d } / idx.size)
 
-        return LocalizationResult.Ok(LocalizedGeoref(plane, sim, height), sim, residuals, rms, warnings, outlier, heightRms)
+        return LocalizationResult.Ok(build(plane, sim, height), sim, residuals, rms, warnings, outlier, heightRms)
     }
 
-    /** Сдвиг по высоте или плоскость (МНК, центрирование по центроиду). Вырождение — откат к сдвигу с предупреждением. */
-    private fun fitHeight(pts: List<ControlPair>, mode: HeightMode, warnings: MutableSet<LocalizationWarning>): HeightModel {
-        if (pts.isEmpty()) { warnings += LocalizationWarning.NO_HEIGHTS; return HeightModel.ZERO }
-        val dz = pts.map { it.wgs84.h - it.surface.z }
+    /** Сдвиг по высоте или плоскость (МНК, центрирование). [dz] = h_wgs84 − h_поверхности. Вырождение — откат к сдвигу. */
+    private fun fitHeight(
+        xs: List<Double>, ys: List<Double>, dz: List<Double>, mode: HeightMode, warnings: MutableSet<LocalizationWarning>,
+    ): HeightModel {
+        if (dz.isEmpty()) { warnings += LocalizationWarning.NO_HEIGHTS; return HeightModel.ZERO }
         val mean = dz.average()
         if (mode == HeightMode.OFFSET) return HeightModel(0.0, 0.0, mean)
-        val x0 = pts.map { it.surface.x }.average()
-        val y0 = pts.map { it.surface.y }.average()
-        if (pts.size < 3) { warnings += LocalizationWarning.HEIGHT_PLANE_FALLBACK; return HeightModel(0.0, 0.0, mean) }
-        // нормальные уравнения для [a, b] после вычитания среднего (c = mean − a·0 − b·0 в центрированных координатах)
+        val x0 = xs.average()
+        val y0 = ys.average()
+        if (dz.size < 3) { warnings += LocalizationWarning.HEIGHT_PLANE_FALLBACK; return HeightModel(0.0, 0.0, mean) }
         var sxx = 0.0; var sxy = 0.0; var syy = 0.0; var sxz = 0.0; var syz = 0.0
-        for (i in pts.indices) {
-            val x = pts[i].surface.x - x0; val y = pts[i].surface.y - y0; val z = dz[i] - mean
+        for (i in dz.indices) {
+            val x = xs[i] - x0; val y = ys[i] - y0; val z = dz[i] - mean
             sxx += x * x; sxy += x * y; syy += y * y; sxz += x * z; syz += y * z
         }
         val det = sxx * syy - sxy * sxy
-        // относительный критерий: det/(sxx·syy) → 0 при коллинеарных точках
+        // det/(sxx·syy) → 0 при коллинеарных точках
         if (sxx <= 0.0 || syy <= 0.0 || det <= 1e-9 * sxx * syy) {
             warnings += LocalizationWarning.HEIGHT_PLANE_FALLBACK
             return HeightModel(0.0, 0.0, mean)
         }
-        val a = (sxz * syy - syz * sxy) / det
-        val b = (syz * sxx - sxz * sxy) / det
-        return HeightModel(a, b, mean, x0, y0)
+        return HeightModel((sxz * syy - syz * sxy) / det, (syz * sxx - sxz * sxy) / det, mean, x0, y0)
     }
 
     /** Замкнутое решение (Умеяма в комплексной форме). Для n = 1 — сдвиг, scale = 1, θ = 0. */
