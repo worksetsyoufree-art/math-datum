@@ -1,0 +1,28 @@
+[
+ {
+  "key": [
+   "77",
+   "gost2008",
+   37.5,
+   null
+  ],
+  "variants": [
+   {
+    "sources": [
+     "geoprof.nethouse.ru"
+    ],
+    "lat0": 55.66666666667,
+    "fe": 0.0,
+    "fn": 0.0
+   },
+   {
+    "sources": [
+     "terraingis.ru"
+    ],
+    "lat0": 55.66666666667,
+    "fe": 16.098,
+    "fn": 14.512
+   }
+  ]
+ }
+]

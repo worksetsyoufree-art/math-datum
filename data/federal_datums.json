@@ -1,0 +1,435 @@
+[
+ {
+  "epsg": 4178,
+  "name": "Pulkovo 1942(83)",
+  "datum": "Pulkovo 1942(83)",
+  "type": "Geographic 2D CRS",
+  "deprecated": false,
+  "ellipsoid": "Krassowsky 1940",
+  "a": 6378245.0,
+  "inv_f": 298.3,
+  "area": "Onshore Bulgaria, Czechia, Germany (former DDR), Hungary and Slovakia.",
+  "to_wgs84": [
+   {
+    "name": "Pulkovo 1942(83) to WGS 84 (5) (with axis order normalized for visualization)",
+    "accuracy": 5.0,
+    "definition": "proj=pipeline step proj=unitconvert xy_in=deg xy_out=rad step proj=push v_3 step proj=cart ellps=krass step proj=helmert x=26 y=-121 z=-78 step inv proj=cart ellps=WGS84 step proj=pop v_3 step proj=unitconvert xy_in=rad xy_out=deg"
+   },
+   {
+    "name": "Pulkovo 1942(83) to WGS 84 (1) (with axis order normalized for visualization)",
+    "accuracy": 2.0,
+    "definition": "proj=pipeline step proj=unitconvert xy_in=deg xy_out=rad step proj=push v_3 step proj=cart ellps=krass step proj=helmert x=24 y=-123 z=-94 rx=-0.02 ry=0.25 rz=0.13 s=1.1 convention=coordinate_frame step inv proj=cart ellps=WGS84 step proj=pop v_3 step proj=unitconvert xy_in=rad xy_out=deg"
+   },
+   {
+    "name": "Pulkovo 1942(83) to WGS 84 (3) (with axis order normalized for visualization)",
+    "accuracy": 4.0,
+    "definition": "proj=pipeline step proj=unitconvert xy_in=deg xy_out=rad step proj=push v_3 step proj=cart ellps=krass step proj=helmert x=28 y=-121 z=-77 step inv proj=cart ellps=WGS84 step proj=pop v_3 step proj=unitconvert xy_in=rad xy_out=deg"
+   },
+   {
+    "name": "Ballpark geographic offset from Pulkovo 1942(83) to WGS 84 (with axis order normalized for visualization)",
+    "accuracy": -1.0,
+    "definition": "proj=noop ellps=GRS80"
+   }
+  ]
+ },
+ {
+  "epsg": 4179,
+  "name": "Pulkovo 1942(58)",
+  "datum": "Pulkovo 1942(58)",
+  "type": "Geographic 2D CRS",
+  "deprecated": false,
+  "ellipsoid": "Krassowsky 1940",
+  "a": 6378245.0,
+  "inv_f": 298.3,
+  "area": "Onshore: Bulgaria, Czechia, Germany (former DDR), Hungary, Poland and Slovakia. Onshore and offshore: Albania and Romani",
+  "to_wgs84": [
+   {
+    "name": "Pulkovo 1942(58) to WGS 84 (19) (with axis order normalized for visualization)",
+    "accuracy": 3.0,
+    "definition": "proj=pipeline step proj=unitconvert xy_in=deg xy_out=rad step proj=push v_3 step proj=cart ellps=krass step proj=helmert x=2.329 y=-147.042 z=-92.08 rx=0.309 ry=-0.325 rz=-0.497 s=5.69 convention=coordinate_frame step inv proj=cart ellps=WGS84 step proj=pop v_3 step proj=unitconvert xy_in=rad xy_out=deg"
+   },
+   {
+    "name": "Pulkovo 1942(58) to WGS 84 (9) (with axis order normalized for visualization)",
+    "accuracy": 7.0,
+    "definition": "proj=pipeline step proj=unitconvert xy_in=deg xy_out=rad step proj=push v_3 step proj=cart ellps=krass step proj=helmert x=28 y=-121 z=-77 step inv proj=cart ellps=WGS84 step proj=pop v_3 step proj=unitconvert xy_in=rad xy_out=deg"
+   },
+   {
+    "name": "Pulkovo 1942(58) to WGS 84 (18) (with axis order normalized for visualization)",
+    "accuracy": 10.0,
+    "definition": "proj=pipeline step proj=unitconvert xy_in=deg xy_out=rad step proj=push v_3 step proj=cart ellps=krass step proj=helmert x=44.107 y=-116.147 z=-54.648 step inv proj=cart ellps=WGS84 step proj=pop v_3 step proj=unitconvert xy_in=rad xy_out=deg"
+   },
+   {
+    "name": "Pulkovo 1942(58) to WGS 84 (1) (with axis order normalized for visualization)",
+    "accuracy": 1.0,
+    "definition": "proj=pipeline step proj=unitconvert xy_in=deg xy_out=rad step proj=push v_3 step proj=cart ellps=krass step proj=helmert x=33.4 y=-146.6 z=-76.3 rx=-0.359 ry=-0.053 rz=0.844 s=-0.84 convention=position_vector step inv proj=cart ellps=WGS84 step proj=pop v_3 step proj=unitconvert xy_in=rad xy_out=deg"
+   },
+   {
+    "name": "Pulkovo 1942(58) to WGS 84 (4) (with axis order normalized for visualization)",
+    "accuracy": 6.0,
+    "definition": "proj=pipeline step proj=unitconvert xy_in=deg xy_out=rad step proj=push v_3 step proj=cart ellps=krass step proj=helmert x=23 y=-124 z=-82 step inv proj=cart ellps=WGS84 step proj=pop v_3 step proj=unitconvert xy_in=rad xy_out=deg"
+   },
+   {
+    "name": "Pulkovo 1942(58) to WGS 84 (8) (with axis order normalized for visualization)",
+    "accuracy": 6.0,
+    "definition": "proj=pipeline step proj=unitconvert xy_in=deg xy_out=rad step proj=push v_3 step proj=cart ellps=krass step proj=helmert x=24 y=-130 z=-92 step inv proj=cart ellps=WGS84 step proj=pop v_3 step proj=unitconvert xy_in=rad xy_out=deg"
+   },
+   {
+    "name": "Pulkovo 1942(58) to WGS 84 (22) (with axis order normalized for visualization)",
+    "accuracy": 2.0,
+    "definition": "proj=pipeline step proj=unitconvert xy_in=deg xy_out=rad step proj=push v_3 step proj=cart ellps=krass step proj=helmert x=74.5 y=-112.5 z=-44.3 step inv proj=cart ellps=WGS84 step proj=pop v_3 step proj=unitconvert xy_in=rad xy_out=deg"
+   },
+   {
+    "name": "Ballpark geographic offset from Pulkovo 1942(58) to WGS 84 (with axis order normalized for visualization)",
+    "accuracy": -1.0,
+    "definition": "proj=noop ellps=GRS80"
+   }
+  ]
+ },
+ {
+  "epsg": 4200,
+  "name": "Pulkovo 1995",
+  "datum": "Pulkovo 1995",
+  "type": "Geographic 2D CRS",
+  "deprecated": false,
+  "ellipsoid": "Krassowsky 1940",
+  "a": 6378245.0,
+  "inv_f": 298.3,
+  "area": "Russian Federation - onshore and offshore.",
+  "to_wgs84": [
+   {
+    "name": "Pulkovo 1995 to WGS 84 (2) (with axis order normalized for visualization)",
+    "accuracy": 1.0,
+    "definition": "proj=pipeline step proj=unitconvert xy_in=deg xy_out=rad step proj=push v_3 step proj=cart ellps=krass step proj=helmert x=24.47 y=-130.89 z=-81.56 rx=0 ry=0 rz=-0.13 s=-0.22 convention=coordinate_frame step inv proj=cart ellps=WGS84 step proj=pop v_3 step proj=unitconvert xy_in=rad xy_out=deg"
+   }
+  ]
+ },
+ {
+  "epsg": 4284,
+  "name": "Pulkovo 1942",
+  "datum": "Pulkovo 1942",
+  "type": "Geographic 2D CRS",
+  "deprecated": false,
+  "ellipsoid": "Krassowsky 1940",
+  "a": 6378245.0,
+  "inv_f": 298.3,
+  "area": "Armenia; Azerbaijan; Belarus; Estonia - onshore; Georgia - onshore; Kazakhstan; Kyrgyzstan; Latvia - onshore; Lithuania ",
+  "to_wgs84": [
+   {
+    "name": "Pulkovo 1942 to WGS 84 (16) (with axis order normalized for visualization)",
+    "accuracy": 4.5,
+    "definition": "proj=pipeline step proj=unitconvert xy_in=deg xy_out=rad step proj=push v_3 step proj=cart ellps=krass step proj=helmert x=25 y=-141 z=-78.5 rx=0 ry=-0.35 rz=-0.736 s=0 convention=coordinate_frame step inv proj=cart ellps=WGS84 step proj=pop v_3 step proj=unitconvert xy_in=rad xy_out=deg"
+   },
+   {
+    "name": "Pulkovo 1942 to WGS 84 (20) (with axis order normalized for visualization)",
+    "accuracy": 3.0,
+    "definition": "proj=pipeline step proj=unitconvert xy_in=deg xy_out=rad step proj=push v_3 step proj=cart ellps=krass step proj=helmert x=23.57 y=-140.95 z=-79.8 rx=0 ry=-0.35 rz=-0.79 s=-0.22 convention=coordinate_frame step inv proj=cart ellps=WGS84 step proj=pop v_3 step proj=unitconvert xy_in=rad xy_out=deg"
+   },
+   {
+    "name": "Pulkovo 1942 to WGS 84 (7) (with axis order normalized for visualization)",
+    "accuracy": 44.0,
+    "definition": "proj=pipeline step proj=unitconvert xy_in=deg xy_out=rad step proj=push v_3 step proj=cart ellps=krass step proj=helmert x=15 y=-130 z=-84 step inv proj=cart ellps=WGS84 step proj=pop v_3 step proj=unitconvert xy_in=rad xy_out=deg"
+   },
+   {
+    "name": "Pulkovo 1942 to WGS 84 (14) (with axis order normalized for visualization)",
+    "accuracy": 5.0,
+    "definition": "proj=pipeline step proj=unitconvert xy_in=deg xy_out=rad step proj=push v_3 step proj=cart ellps=krass step proj=helmert x=686.1 y=-123.5 z=-574.4 rx=8.045 ry=-23.366 rz=10.791 s=-2.926 convention=position_vector step inv proj=cart ellps=WGS84 step proj=pop v_3 step proj=unitconvert xy_in=rad xy_out=deg"
+   },
+   {
+    "name": "Pulkovo 1942 to WGS 84 (10) (with axis order normalized for visualization)",
+    "accuracy": 2.0,
+    "definition": "proj=pipeline step proj=unitconvert xy_in=deg xy_out=rad step proj=push v_3 step proj=cart ellps=krass step proj=helmert x=43.822 y=-108.842 z=-119.585 rx=1.455 ry=-0.761 rz=0.737 s=0.549 convention=position_vector step inv proj=cart ellps=WGS84 step proj=pop v_3 step proj=unitconvert xy_in=rad xy_out=deg"
+   },
+   {
+    "name": "Pulkovo 1942 to WGS 84 (6) (with axis order normalized for visualization)",
+    "accuracy": 4.0,
+    "definition": "proj=pipeline step proj=unitconvert xy_in=deg xy_out=rad step proj=push v_3 step proj=cart ellps=krass step proj=helmert x=24 y=-124 z=-82 step inv proj=cart ellps=WGS84 step proj=pop v_3 step proj=unitconvert xy_in=rad xy_out=deg"
+   },
+   {
+    "name": "Pulkovo 1942 to WGS 84 (2) (with axis order normalized for visualization)",
+    "accuracy": 9.0,
+    "definition": "proj=pipeline step proj=unitconvert xy_in=deg xy_out=rad step proj=push v_3 step proj=cart ellps=krass step proj=helmert x=-40.595 y=-18.55 z=-69.339 rx=-2.508 ry=-1.832 rz=2.611 s=-4.299 convention=coordinate_frame step inv proj=cart ellps=WGS84 step proj=pop v_3 step proj=unitconvert xy_in=rad xy_out=deg"
+   },
+   {
+    "name": "Pulkovo 1942 to WGS 84 (21) (with axis order normalized for visualization)",
+    "accuracy": 5.0,
+    "definition": "proj=pipeline step proj=unitconvert xy_in=deg xy_out=rad step proj=push v_3 step proj=cart ellps=krass step proj=helmert x=22 y=-126 z=-85 step inv proj=cart ellps=WGS84 step proj=pop v_3 step proj=unitconvert xy_in=rad xy_out=deg"
+   },
+   {
+    "name": "Pulkovo 1942 to WGS 84 (12) (with axis order normalized for visualization)",
+    "accuracy": 9.0,
+    "definition": "proj=pipeline step proj=unitconvert xy_in=deg xy_out=rad step proj=push v_3 step proj=cart ellps=krass step proj=helmert x=21.58719 y=-97.54127 z=-60.92546 rx=-1.01378 ry=-0.58117 rz=-0.2348 s=-4.6121 convention=coordinate_frame step inv proj=cart ellps=WGS84 step proj=pop v_3 step proj=unitconvert xy_in=rad xy_out=deg"
+   },
+   {
+    "name": "Pulkovo 1942 to WGS 84 (15) (with axis order normalized for visualization)",
+    "accuracy": 2.0,
+    "definition": "proj=pipeline step proj=unitconvert xy_in=deg xy_out=rad step proj=push v_3 step proj=cart ellps=krass step proj=helmert x=926.4 y=-715.9 z=-186.4 rx=-10.364 ry=-20.78 rz=26.452 s=-7.224 convention=position_vector step inv proj=cart ellps=WGS84 step proj=pop v_3 step proj=unitconvert xy_in=rad xy_out=deg"
+   },
+   {
+    "name": "Pulkovo 1942 to WGS 84 (1) (with axis order normalized for visualization)",
+    "accuracy": -1.0,
+    "definition": "proj=pipeline step proj=unitconvert xy_in=deg xy_out=rad step proj=push v_3 step proj=cart ellps=krass step proj=helmert x=28 y=-130 z=-95 step inv proj=cart ellps=WGS84 step proj=pop v_3 step proj=unitconvert xy_in=rad xy_out=deg"
+   }
+  ]
+ },
+ {
+  "epsg": 4740,
+  "name": "PZ-90",
+  "datum": "Parametry Zemli 1990",
+  "type": "Geographic 2D CRS",
+  "deprecated": false,
+  "ellipsoid": "PZ-90",
+  "a": 6378136.0,
+  "inv_f": 298.257839303,
+  "area": "World.",
+  "to_wgs84": [
+   {
+    "name": "PZ-90 to WGS 84 (1) (with axis order normalized for visualization)",
+    "accuracy": 1.5,
+    "definition": "proj=pipeline step proj=unitconvert xy_in=deg xy_out=rad step inv proj=longlat a=6378136 rf=298.257839303 step proj=push v_3 step proj=cart a=6378136 rf=298.257839303 step proj=helmert x=0 y=0 z=1.5 rx=0 ry=0 rz=-0.076 s=0 convention=coordinate_frame step inv proj=cart ellps=WGS84 step proj=pop v_3 step proj=unitconvert xy_in=rad xy_out=deg"
+   },
+   {
+    "name": "PZ-90 to WGS 84 (2) (with axis order normalized for visualization)",
+    "accuracy": 0.5,
+    "definition": "proj=pipeline step proj=unitconvert xy_in=deg xy_out=rad step inv proj=longlat a=6378136 rf=298.257839303 step proj=push v_3 step proj=cart a=6378136 rf=298.257839303 step proj=helmert x=-1.08 y=-0.27 z=-0.9 rx=0 ry=0 rz=-0.16 s=-0.12 convention=coordinate_frame step inv proj=cart ellps=WGS84 step proj=pop v_3 step proj=unitconvert xy_in=rad xy_out=deg"
+   }
+  ]
+ },
+ {
+  "epsg": 4922,
+  "name": "PZ-90",
+  "datum": "Parametry Zemli 1990",
+  "type": "Geocentric CRS",
+  "deprecated": false,
+  "ellipsoid": "PZ-90",
+  "a": 6378136.0,
+  "inv_f": 298.257839303,
+  "area": "World.",
+  "to_wgs84": [
+   {
+    "name": "Conversion from PZ-90 (geocentric) to PZ-90 (geog2D) + PZ-90 to WGS 84 (1) (with axis order normalized for visualization)",
+    "accuracy": 1.5,
+    "definition": "proj=pipeline step inv proj=cart a=6378136 rf=298.257839303 step proj=push v_3 step proj=cart a=6378136 rf=298.257839303 step proj=helmert x=0 y=0 z=1.5 rx=0 ry=0 rz=-0.076 s=0 convention=coordinate_frame step inv proj=cart ellps=WGS84 step proj=pop v_3 step proj=unitconvert xy_in=rad xy_out=deg"
+   },
+   {
+    "name": "Conversion from PZ-90 (geocentric) to PZ-90 (geog2D) + PZ-90 to WGS 84 (2) (with axis order normalized for visualization)",
+    "accuracy": 0.5,
+    "definition": "proj=pipeline step inv proj=cart a=6378136 rf=298.257839303 step proj=push v_3 step proj=cart a=6378136 rf=298.257839303 step proj=helmert x=-1.08 y=-0.27 z=-0.9 rx=0 ry=0 rz=-0.16 s=-0.12 convention=coordinate_frame step inv proj=cart ellps=WGS84 step proj=pop v_3 step proj=unitconvert xy_in=rad xy_out=deg"
+   }
+  ]
+ },
+ {
+  "epsg": 4923,
+  "name": "PZ-90",
+  "datum": "Parametry Zemli 1990",
+  "type": "Geographic 3D CRS",
+  "deprecated": false,
+  "ellipsoid": "PZ-90",
+  "a": 6378136.0,
+  "inv_f": 298.257839303,
+  "area": "World.",
+  "to_wgs84": [
+   {
+    "name": "PZ-90 to WGS 84 (1) (with axis order normalized for visualization)",
+    "accuracy": 1.5,
+    "definition": "proj=pipeline step proj=unitconvert xy_in=deg z_in=m xy_out=rad z_out=m step inv proj=longlat a=6378136 rf=298.257839303 step proj=push v_3 step proj=cart a=6378136 rf=298.257839303 step proj=helmert x=0 y=0 z=1.5 rx=0 ry=0 rz=-0.076 s=0 convention=coordinate_frame step inv proj=cart ellps=WGS84 step proj=pop v_3 step proj=unitconvert xy_in=rad xy_out=deg"
+   },
+   {
+    "name": "PZ-90 to WGS 84 (2) (with axis order normalized for visualization)",
+    "accuracy": 0.5,
+    "definition": "proj=pipeline step proj=unitconvert xy_in=deg z_in=m xy_out=rad z_out=m step inv proj=longlat a=6378136 rf=298.257839303 step proj=push v_3 step proj=cart a=6378136 rf=298.257839303 step proj=helmert x=-1.08 y=-0.27 z=-0.9 rx=0 ry=0 rz=-0.16 s=-0.12 convention=coordinate_frame step inv proj=cart ellps=WGS84 step proj=pop v_3 step proj=unitconvert xy_in=rad xy_out=deg"
+   }
+  ]
+ },
+ {
+  "epsg": 7677,
+  "name": "PZ-90.02",
+  "datum": "Parametry Zemli 1990.02",
+  "type": "Geocentric CRS",
+  "deprecated": false,
+  "ellipsoid": "PZ-90",
+  "a": 6378136.0,
+  "inv_f": 298.257839303,
+  "area": "World.",
+  "to_wgs84": [
+   {
+    "name": "Conversion from PZ-90.02 to PZ-90.02 (geographic) + Ballpark geographic offset from PZ-90.02 (geographic) to WGS 84 (with axis order normalized for visualization)",
+    "accuracy": -1.0,
+    "definition": "proj=pipeline step inv proj=cart a=6378136 rf=298.257839303 step proj=longlat a=6378136 rf=298.257839303 step proj=unitconvert xy_in=rad xy_out=deg"
+   }
+  ]
+ },
+ {
+  "epsg": 7678,
+  "name": "PZ-90.02",
+  "datum": "Parametry Zemli 1990.02",
+  "type": "Geographic 3D CRS",
+  "deprecated": false,
+  "ellipsoid": "PZ-90",
+  "a": 6378136.0,
+  "inv_f": 298.257839303,
+  "area": "World.",
+  "to_wgs84": [
+   {
+    "name": "Ballpark geographic offset from PZ-90.02 to WGS 84 (with axis order normalized for visualization)",
+    "accuracy": -1.0,
+    "definition": "proj=noop ellps=GRS80"
+   }
+  ]
+ },
+ {
+  "epsg": 7679,
+  "name": "PZ-90.11",
+  "datum": "Parametry Zemli 1990.11",
+  "type": "Geocentric CRS",
+  "deprecated": false,
+  "ellipsoid": "PZ-90",
+  "a": 6378136.0,
+  "inv_f": 298.257839303,
+  "area": "World.",
+  "to_wgs84": [
+   {
+    "name": "Inverse of PZ-90 to PZ-90.11 (1) + Conversion from PZ-90 (geocentric) to PZ-90 (geog2D) + PZ-90 to WGS 84 (1) (with axis order normalized for visualization)",
+    "accuracy": 1.7,
+    "definition": "proj=pipeline step inv proj=helmert x=-1.443 y=0.156 z=0.222 rx=-0.0023 ry=0.00354 rz=-0.13421 s=-0.228 convention=coordinate_frame step inv proj=cart a=6378136 rf=298.257839303 step proj=push v_3 step proj=cart a=6378136 rf=298.257839303 step proj=helmert x=0 y=0 z=1.5 rx=0 ry=0 rz=-0.076 s=0 convention=coordinate_frame step inv proj=cart ellps=WGS84 step proj=pop v_3 step proj=unitconvert xy_in=rad xy_out=deg"
+   },
+   {
+    "name": "Inverse of PZ-90 to PZ-90.11 (1) + Conversion from PZ-90 (geocentric) to PZ-90 (geog2D) + PZ-90 to WGS 84 (2) (with axis order normalized for visualization)",
+    "accuracy": 0.7,
+    "definition": "proj=pipeline step inv proj=helmert x=-1.443 y=0.156 z=0.222 rx=-0.0023 ry=0.00354 rz=-0.13421 s=-0.228 convention=coordinate_frame step inv proj=cart a=6378136 rf=298.257839303 step proj=push v_3 step proj=cart a=6378136 rf=298.257839303 step proj=helmert x=-1.08 y=-0.27 z=-0.9 rx=0 ry=0 rz=-0.16 s=-0.12 convention=coordinate_frame step inv proj=cart ellps=WGS84 step proj=pop v_3 step proj=unitconvert xy_in=rad xy_out=deg"
+   },
+   {
+    "name": "Conversion from PZ-90.11 to PZ-90.11 (geographic) + Ballpark geographic offset from PZ-90.11 (geographic) to WGS 84 (with axis order normalized for visualization)",
+    "accuracy": -1.0,
+    "definition": "proj=pipeline step inv proj=cart a=6378136 rf=298.257839303 step proj=longlat a=6378136 rf=298.257839303 step proj=unitconvert xy_in=rad xy_out=deg"
+   }
+  ]
+ },
+ {
+  "epsg": 7680,
+  "name": "PZ-90.11",
+  "datum": "Parametry Zemli 1990.11",
+  "type": "Geographic 3D CRS",
+  "deprecated": false,
+  "ellipsoid": "PZ-90",
+  "a": 6378136.0,
+  "inv_f": 298.257839303,
+  "area": "World.",
+  "to_wgs84": [
+   {
+    "name": "Conversion from PZ-90.11 (geog3D) to PZ-90.11 (geocentric) + Inverse of PZ-90 to PZ-90.11 (1) + Conversion from PZ-90 (geocentric) to PZ-90 (geog2D) + PZ-90 to WGS 84 (1) (with axis order normalized for visualization)",
+    "accuracy": 1.7,
+    "definition": "proj=pipeline step proj=unitconvert xy_in=deg z_in=m xy_out=rad z_out=m step inv proj=longlat a=6378136 rf=298.257839303 step proj=cart a=6378136 rf=298.257839303 step inv proj=helmert x=-1.443 y=0.156 z=0.222 rx=-0.0023 ry=0.00354 rz=-0.13421 s=-0.228 convention=coordinate_frame step inv proj=cart a=6378136 rf=298.257839303 step proj=push v_3 step proj=cart a=6378136 rf=298.257839303 step proj=helmert x=0 y=0 z=1.5 rx=0 ry=0 rz=-0.076 s=0 convention=coordinate_frame step inv proj=cart ellps=WGS84 step proj=pop v_3 step proj=unitconvert xy_in=rad xy_out=deg"
+   },
+   {
+    "name": "Conversion from PZ-90.11 (geog3D) to PZ-90.11 (geocentric) + Inverse of PZ-90 to PZ-90.11 (1) + Conversion from PZ-90 (geocentric) to PZ-90 (geog2D) + PZ-90 to WGS 84 (2) (with axis order normalized for visualization)",
+    "accuracy": 0.7,
+    "definition": "proj=pipeline step proj=unitconvert xy_in=deg z_in=m xy_out=rad z_out=m step inv proj=longlat a=6378136 rf=298.257839303 step proj=cart a=6378136 rf=298.257839303 step inv proj=helmert x=-1.443 y=0.156 z=0.222 rx=-0.0023 ry=0.00354 rz=-0.13421 s=-0.228 convention=coordinate_frame step inv proj=cart a=6378136 rf=298.257839303 step proj=push v_3 step proj=cart a=6378136 rf=298.257839303 step proj=helmert x=-1.08 y=-0.27 z=-0.9 rx=0 ry=0 rz=-0.16 s=-0.12 convention=coordinate_frame step inv proj=cart ellps=WGS84 step proj=pop v_3 step proj=unitconvert xy_in=rad xy_out=deg"
+   },
+   {
+    "name": "Ballpark geographic offset from PZ-90.11 to WGS 84 (with axis order normalized for visualization)",
+    "accuracy": -1.0,
+    "definition": "proj=noop ellps=GRS80"
+   }
+  ]
+ },
+ {
+  "epsg": 7681,
+  "name": "GSK-2011",
+  "datum": "Geodezicheskaya Sistema Koordinat 2011",
+  "type": "Geocentric CRS",
+  "deprecated": false,
+  "ellipsoid": "GSK-2011",
+  "a": 6378136.5,
+  "inv_f": 298.2564151,
+  "area": "Russian Federation - onshore and offshore.",
+  "to_wgs84": [
+   {
+    "name": "Conversion from GSK-2011 (geocentric) to GSK-2011 (geog2D) + GSK-2011 to WGS 84 (1) (with axis order normalized for visualization)",
+    "accuracy": 1.0,
+    "definition": "proj=pipeline step inv proj=cart ellps=GSK2011 step proj=push v_3 step proj=cart ellps=GSK2011 step inv proj=cart ellps=WGS84 step proj=pop v_3 step proj=unitconvert xy_in=rad xy_out=deg"
+   }
+  ]
+ },
+ {
+  "epsg": 7682,
+  "name": "GSK-2011",
+  "datum": "Geodezicheskaya Sistema Koordinat 2011",
+  "type": "Geographic 3D CRS",
+  "deprecated": false,
+  "ellipsoid": "GSK-2011",
+  "a": 6378136.5,
+  "inv_f": 298.2564151,
+  "area": "Russian Federation - onshore and offshore.",
+  "to_wgs84": [
+   {
+    "name": "GSK-2011 to WGS 84 (1) (with axis order normalized for visualization)",
+    "accuracy": 1.0,
+    "definition": "proj=pipeline step proj=unitconvert xy_in=deg z_in=m xy_out=rad z_out=m step proj=push v_3 step proj=cart ellps=GSK2011 step inv proj=cart ellps=WGS84 step proj=pop v_3 step proj=unitconvert xy_in=rad xy_out=deg"
+   }
+  ]
+ },
+ {
+  "epsg": 7683,
+  "name": "GSK-2011",
+  "datum": "Geodezicheskaya Sistema Koordinat 2011",
+  "type": "Geographic 2D CRS",
+  "deprecated": false,
+  "ellipsoid": "GSK-2011",
+  "a": 6378136.5,
+  "inv_f": 298.2564151,
+  "area": "Russian Federation - onshore and offshore.",
+  "to_wgs84": [
+   {
+    "name": "GSK-2011 to WGS 84 (1) (with axis order normalized for visualization)",
+    "accuracy": 1.0,
+    "definition": "proj=pipeline step proj=unitconvert xy_in=deg xy_out=rad step proj=push v_3 step proj=cart ellps=GSK2011 step inv proj=cart ellps=WGS84 step proj=pop v_3 step proj=unitconvert xy_in=rad xy_out=deg"
+   }
+  ]
+ },
+ {
+  "epsg": 9474,
+  "name": "PZ-90.02",
+  "datum": "Parametry Zemli 1990.02",
+  "type": "Geographic 2D CRS",
+  "deprecated": false,
+  "ellipsoid": "PZ-90",
+  "a": 6378136.0,
+  "inv_f": 298.257839303,
+  "area": "World.",
+  "to_wgs84": [
+   {
+    "name": "Ballpark geographic offset from PZ-90.02 to WGS 84 (with axis order normalized for visualization)",
+    "accuracy": -1.0,
+    "definition": "proj=noop ellps=GRS80"
+   }
+  ]
+ },
+ {
+  "epsg": 9475,
+  "name": "PZ-90.11",
+  "datum": "Parametry Zemli 1990.11",
+  "type": "Geographic 2D CRS",
+  "deprecated": false,
+  "ellipsoid": "PZ-90",
+  "a": 6378136.0,
+  "inv_f": 298.257839303,
+  "area": "World.",
+  "to_wgs84": [
+   {
+    "name": "Conversion from PZ-90.11 (geog2D) to PZ-90.11 (geocentric) + Inverse of PZ-90 to PZ-90.11 (1) + Conversion from PZ-90 (geocentric) to PZ-90 (geog2D) + PZ-90 to WGS 84 (1) (with axis order normalized for visualization)",
+    "accuracy": 1.7,
+    "definition": "proj=pipeline step proj=unitconvert xy_in=deg xy_out=rad step inv proj=longlat a=6378136 rf=298.257839303 step proj=cart a=6378136 rf=298.257839303 step inv proj=helmert x=-1.443 y=0.156 z=0.222 rx=-0.0023 ry=0.00354 rz=-0.13421 s=-0.228 convention=coordinate_frame step inv proj=cart a=6378136 rf=298.257839303 step proj=push v_3 step proj=cart a=6378136 rf=298.257839303 step proj=helmert x=0 y=0 z=1.5 rx=0 ry=0 rz=-0.076 s=0 convention=coordinate_frame step inv proj=cart ellps=WGS84 step proj=pop v_3 step proj=unitconvert xy_in=rad xy_out=deg"
+   },
+   {
+    "name": "Conversion from PZ-90.11 (geog2D) to PZ-90.11 (geocentric) + Inverse of PZ-90 to PZ-90.11 (1) + Conversion from PZ-90 (geocentric) to PZ-90 (geog2D) + PZ-90 to WGS 84 (2) (with axis order normalized for visualization)",
+    "accuracy": 0.7,
+    "definition": "proj=pipeline step proj=unitconvert xy_in=deg xy_out=rad step inv proj=longlat a=6378136 rf=298.257839303 step proj=cart a=6378136 rf=298.257839303 step inv proj=helmert x=-1.443 y=0.156 z=0.222 rx=-0.0023 ry=0.00354 rz=-0.13421 s=-0.228 convention=coordinate_frame step inv proj=cart a=6378136 rf=298.257839303 step proj=push v_3 step proj=cart a=6378136 rf=298.257839303 step proj=helmert x=-1.08 y=-0.27 z=-0.9 rx=0 ry=0 rz=-0.16 s=-0.12 convention=coordinate_frame step inv proj=cart ellps=WGS84 step proj=pop v_3 step proj=unitconvert xy_in=rad xy_out=deg"
+   },
+   {
+    "name": "Ballpark geographic offset from PZ-90.11 to WGS 84 (with axis order normalized for visualization)",
+    "accuracy": -1.0,
+    "definition": "proj=noop ellps=GRS80"
+   }
+  ]
+ }
+]
