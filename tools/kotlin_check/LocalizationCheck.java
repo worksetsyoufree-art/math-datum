@@ -12,6 +12,9 @@ import ru.gsisoft.common.math.localization.model.LocalizationData;
 import ru.gsisoft.common.math.localization.model.MathResult;
 import ru.gsisoft.common.math.localization.model.ResLocalization;
 import ru.gsisoft.common.model.cs.Datum;
+import ru.gsisoft.common.model.cs.Ellipsoid;
+import ru.gsisoft.common.model.cs.EllipsoidType;
+import ru.gsisoft.common.model.cs.Parameters7;
 import ru.gsisoft.common.model.objects.coordinate.Coordinate;
 
 /**
@@ -45,6 +48,11 @@ public class LocalizationCheck {
         var common = MathModule.INSTANCE.getCommonMathRepository();
         var transform = MathModule.INSTANCE.getTransformCoordinateRepository();
         Datum wgs = Datum.Companion.getWGS84();
+        // CSTransformations.WGS_84_NULL_ELLIPSOID_DATUM — WGS-84 в метрах (ECEF).
+        Datum wgsMeterDatum = wgs.copy(wgs.getAzimuth(), wgs.getOrientation(), wgs.getCountry(), wgs.getCsCode(),
+            Ellipsoid.Companion.getByType(EllipsoidType.WGS_84), null, wgs.getProjectionOrNull(), new Parameters7(),
+            wgs.getParamGSKOOrNull(), wgs.getParamVSKOOrNull(), wgs.isPredefined(), wgs.isLocal(), wgs.getRtcmData(),
+            wgs.getGeoid(), wgs.isFromLocalization());
 
         for (var e : regions.entrySet()) {
             String iso = e.getKey();
@@ -88,10 +96,14 @@ public class LocalizationCheck {
                     // wgsCoordinate (calculateFromOriginalCoordinate) → actualCoordinate (calculateToActualCoordinate).
                     Coordinate w = common.calculateFromOriginalCoordinate(p.local, loc, null);
                     Coordinate back = common.calculateToActualCoordinate(w, loc, null);
+                    // Как CSTransformations.wgsMeterToLocal без геоида (рабочий экран): ECEF → датум проекта.
+                    Coordinate ecef = transform.getTransformationTwoDatums(p.wgs, Datum.Companion.getNull(), wgsMeterDatum);
+                    Coordinate live = transform.getTransformationTwoDatums(ecef, wgsMeterDatum, loc);
                     System.out.println(String.format(Locale.ROOT,
-                        "%s OK %s %s %s %s %.6f %.6f %.6f %.6f %.6f %.6f %.10f %.10f %.6f %.6f %.6f %.6f",
+                        "%s OK %s %s %s %s %.6f %.6f %.6f %.6f %.6f %.6f %.10f %.10f %.6f %.6f %.6f %.6f %.6f %.6f %.6f",
                         iso, p.kind, rl, ro, rh, a.getLatBN(), a.getLonLE(), a.getAltHZ(), b.getLatBN(), b.getLonLE(), b.getAltHZ(),
-                        w.getLatBN(), w.getLonLE(), w.getAltHZ(), back.getLatBN(), back.getLonLE(), back.getAltHZ()));
+                        w.getLatBN(), w.getLonLE(), w.getAltHZ(), back.getLatBN(), back.getLonLE(), back.getAltHZ(),
+                        live.getLatBN(), live.getLonLE(), live.getAltHZ()));
                 }
             } catch (Throwable ex) {
                 System.out.println(iso + " EXCEPTION " + ex);
