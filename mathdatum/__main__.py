@@ -14,6 +14,17 @@
       по умолчанию при --geoid). В датуме — ссылка на сетку (имя файла и SHA-256), не сама сетка.
       --projection ldp.json [--zone 2] | tm:lon0=..,lat0=..,k0=..,x0=..,y0=.. — своя рабочая проекция
       (например, спроектированная командой ldp: масштаб подобия остаётся ≈ 1).
+      Метаданные: --object, --organization, --author, --catalog-source, --gnss-equipment, --note;
+      --previous old.json — новая ревизия (revision + 1, ссылка на UUID old.json, описательные поля
+      наследуются). Время расчёта (UTC), версия, UUID и SHA-256 пар и параметров — автоматически.
+      --report report.html — сразу HTML-отчёт.
+
+  python -m mathdatum info datum.json [--geoid сетка]
+      Метаданные датума, сверка контрольной суммы и пересчёт по сохранённым парам (код 1 — не совпало).
+
+  python -m mathdatum report datum.json -o report.html [--pairs pairs.csv] [--geoid сетка]
+      HTML-отчёт для исполнительной документации (один файл, печать в PDF на A4 из браузера).
+      --pairs — пары для старого датума без сохранённых пар (или сверка с сохранёнными).
 
   python -m mathdatum to-local datum.json wgs.csv -o local.csv [--quality]
       Пересчитать точки name;B;L;h → name;x;y;H.
@@ -71,9 +82,10 @@ import sys
 
 import numpy as np
 
-from . import datums, export as export_mod, geoid as geoid_mod, ldp as ldp_mod
+from . import datums, export as export_mod, geoid as geoid_mod, ldp as ldp_mod, report as report_mod
+from .meta import DatumMeta, inputs_checksum
 from .io import read_columns, read_pairs, read_points, write_points
-from .localization import LocalizationDatum, LocalizationError, localize, suggest_exclusions
+from .localization import LocalizationDatum, LocalizationError, localize, relocalize, suggest_exclusions
 
 OUTSIDE_TOL = 1e-3  # м: точка дальше от оболочки опорных пунктов — экстраполяция
 
@@ -163,6 +175,89 @@ def export_cmd(a) -> None:
         for (n, B, L, x, y), (*_, x2, y2) in zip(export_mod.check_points(d), export_mod.check_points(d, -1)):
             print(f"  {n}: B = {B:.9f}, L = {L:.9f} → x = {x:.3f}, y = {y:.3f}   (x′ = {x2:.3f}, y′ = {y2:.3f})",
                   file=sys.stderr)
+
+
+META_ARGS = (("object", "объект / наименование"), ("organization", "организация"), ("author", "исполнитель"),
+             ("catalog_source", "источник каталога пунктов"),
+             ("gnss_equipment", "система ГНСС, оборудование, базовая станция"), ("note", "примечание"))
+
+
+def meta_from_args(a) -> DatumMeta:
+    given = {k: getattr(a, k) for k, _ in META_ARGS if getattr(a, k) is not None}
+    if a.previous:
+        prev = LocalizationDatum.load(a.previous, require_geoid=False).meta
+        if prev is None:
+            raise ValueError(f"{a.previous}: в датуме нет метаданных (старый формат) — ревизию не связать.")
+        return prev.next_revision(**given)
+    return DatumMeta(**given)
+
+
+def _load_any(a) -> LocalizationDatum:
+    try:
+        return load_datum(a)
+    except geoid_mod.GeoidError:
+        return load_datum(a, require_geoid=False)   # без сетки: сведения и отчёт без пересчёта высот
+
+
+def info_cmd(a) -> int:
+    d = _load_any(a)
+    m = d.meta
+    rows = []
+    if m is None:
+        rows.append(("Метаданные", "нет (датум старого формата)"))
+    else:
+        rev = "—" if m.revision is None else str(m.revision) + (f" (предыдущая {m.previous_id})" if m.previous_id else "")
+        rows += [("Объект", m.object), ("Организация", m.organization), ("Исполнитель", m.author),
+                 ("Расчёт (UTC)", m.computed_at), ("Версия библиотеки", m.library_version),
+                 ("Идентификатор (UUID)", m.datum_id), ("Ревизия", rev), ("Каталог пунктов", m.catalog_source),
+                 ("ГНСС, оборудование", m.gnss_equipment), ("Примечание", m.note), ("SHA-256 исходных", m.inputs_sha256)]
+    if d.pairs is not None:
+        n_ctl = sum(p.use == "none" for p in d.pairs)
+        rows.append(("Исходные пары", f"{len(d.pairs)} (опорных {len(d.pairs) - n_ctl}, контрольных {n_ctl})"))
+    i = d.inputs
+    if i is not None:
+        rows.append(("Параметры", f"{i.gnss_datum}, σ0 {i.sigma_plan:g} / {i.sigma_height:g} м, |w| ≤ {i.w_limit:g}, "
+                                  f"высота {i.height_model}" + (f" ({i.geoid_interpolation}, sha256 {i.geoid_sha256})"
+                                                                  if i.geoid_sha256 else "")))
+    for k, v in rows:
+        print(f"{k + ':':<22}{'—' if v in (None, '') else v}")
+    code = 0
+    ok = d.verify_checksum()
+    if ok is None:
+        print("Контрольная сумма:    сверить нельзя (нет исходных данных или суммы)")
+    elif ok:
+        print("Контрольная сумма:    совпадает с сохранёнными парами и параметрами")
+    else:
+        print(f"Контрольная сумма:    НЕ СОВПАДАЕТ (по данным файла {d.checksum()}) — файл изменён после расчёта")
+        code = 1
+    if d.pairs is not None and d.inputs is not None:
+        try:
+            r = relocalize(d)
+        except (geoid_mod.GeoidError, LocalizationError) as e:
+            print(f"Пересчёт:             пропущен ({e})")
+        else:
+            P = [np.array([getattr(p, k) for p in d.pairs]) for k in ("B", "L", "h")]
+            dev = max(float(np.max(np.abs(u - v))) for u, v in zip(d.to_local(*P), r.to_local(*P)))
+            if dev < 1e-6:
+                print(f"Пересчёт:             параметры датума воспроизводятся по исходным данным (расхождение {dev:.1e} м)")
+            else:
+                print(f"Пересчёт:             НЕ СОВПАДАЕТ с параметрами датума: до {dev:.4f} м в точках")
+                code = 1
+    return code
+
+
+def report_cmd(a) -> None:
+    d = _load_any(a)
+    pairs = None
+    if a.pairs:
+        pairs = read_pairs(a.pairs)
+        if d.pairs is not None and d.inputs is not None and inputs_checksum(pairs, d.inputs) != d.checksum():
+            raise ValueError(f"{a.pairs}: пары не совпадают с сохранёнными в датуме — отчёт строится по датуму; "
+                             "уберите --pairs или пересчитайте датум.")
+    text = report_mod.html_report(d, pairs)
+    with open(a.out, "w", encoding="utf-8", newline="\n") as f:
+        f.write(text)
+    print(f"Отчёт: {a.out}", file=sys.stderr)
 
 
 def geoid_cmd(a) -> None:
@@ -346,6 +441,18 @@ def main(argv=None):
     p.add_argument("--geoid-interpolation", choices=geoid_mod.INTERPOLATIONS, default="bilinear")
     p.add_argument("--projection", help="рабочая проекция: JSON ldp или tm:lon0=…,lat0=…,k0=…,x0=…,y0=…")
     p.add_argument("--zone", type=int, help="зона из JSON ldp (1…n)")
+    for k, h in META_ARGS:
+        p.add_argument("--" + k.replace("_", "-"), dest=k, help=h)
+    p.add_argument("--previous", help="датум предыдущей ревизии (JSON): новая ревизия ссылается на его UUID")
+    p.add_argument("--report", help="записать HTML-отчёт")
+    p = sub.add_parser("info", help="метаданные датума и сверка контрольной суммы")
+    p.add_argument("datum")
+    p.add_argument("--geoid", help="файл сетки геоида датума (для пересчёта; если он не рядом с JSON)")
+    p = sub.add_parser("report", help="HTML-отчёт о локализации")
+    p.add_argument("datum")
+    p.add_argument("-o", "--out", default="report.html")
+    p.add_argument("--pairs", help="CSV пар (для старого датума без сохранённых пар)")
+    p.add_argument("--geoid", help="файл сетки геоида датума (если он не рядом с JSON)")
     for name, cols in (("to-local", "B L h → x y H"), ("to-wgs", "x y H → B L h")):
         p = sub.add_parser(name, help=f"пересчёт {cols}")
         p.add_argument("datum")
@@ -421,15 +528,20 @@ def main(argv=None):
                 kw["projection"] = work_projection(a.projection, a.zone, a.gnss_datum)
             elif a.zone is not None:
                 raise ValueError("--zone: нужен --projection ldp.json.")
-            d = localize(pairs, **kw)
+            d = localize(pairs, **kw, meta=meta_from_args(a))
             d.save(a.out)
+            if a.report:
+                with open(a.report, "w", encoding="utf-8", newline="\n") as f:
+                    f.write(report_mod.html_report(d))
             print(report(d))
             if a.suggest:
                 ex = suggest_exclusions(pairs, **kw)
                 print("\nПредлагается исключить (по порядку): " + (
                     ", ".join(f"{n} ({'план' if part == 'plan' else 'высота'}, |w| = {w:.2f})" for n, part, w in ex)
                     if ex else "ничего — подозрительных точек нет."))
-            print(f"\nДатум сохранён: {a.out}")
+            print(f"\nДатум сохранён: {a.out} (UUID {d.meta.datum_id}, ревизия {d.meta.revision}"
+                  + (f", предыдущая {d.meta.previous_id}" if d.meta.previous_id else "") + ")"
+                  + (f"; отчёт: {a.report}" if a.report else ""))
             if d.geoid is not None:
                 print(f"Сетка геоида в датуме — только ссылкой ({d.geoid.file}): держите файл рядом с датумом "
                       "или указывайте --geoid при пересчётах.")
@@ -437,6 +549,10 @@ def main(argv=None):
             _transform(load_datum(a), a, ("B", "L", "h"), ("x", "y", "H"), (4, 4, 4), True)
         elif a.cmd == "to-wgs":
             _transform(load_datum(a), a, ("x", "y", "H"), ("B", "L", "h"), (10, 10, 4), False)
+        elif a.cmd == "info":
+            return info_cmd(a)
+        elif a.cmd == "report":
+            report_cmd(a)
         elif a.cmd == "proj":
             print(load_datum(a, require_geoid=False).to_proj_pipeline())
         elif a.cmd == "export":

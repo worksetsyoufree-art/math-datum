@@ -43,7 +43,7 @@ from __future__ import annotations
 
 import json
 import math
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, fields, replace
 from pathlib import Path
 
 import numpy as np
@@ -51,6 +51,7 @@ from pyproj import Transformer
 
 from . import datums
 from .geoid import GeoidError, GeoidGrid, GeoidRef, INTERPOLATIONS, read_grid
+from .meta import LIBRARY, DatumMeta, Inputs, inputs_checksum, new_id, now_utc
 
 WGS84 = "+ellps=WGS84"
 ARCSEC = math.pi / (180 * 3600)
@@ -170,12 +171,37 @@ class LocalizationDatum:
     q_height: list[list[float]] | None = None  # кофакторы (c0, c1, c2), 3×3
     plan_hull: list[list[float]] | None = None # выпуклая оболочка опорных пунктов плана, [N, E]
     warnings: list[DatumWarning] = field(default_factory=list)
+    # Исходные данные и метаданные (в старых JSON нет → None).
+    pairs: list[Pair] | None = None      # входные пары точек
+    # Параметры и метаданные в сравнение датумов (==) не входят: результат тот же при другом UUID.
+    inputs: Inputs | None = field(default=None, compare=False)    # параметры localize
+    meta: DatumMeta | None = field(default=None, compare=False)   # объект, исполнитель, UUID, ревизия, сумма
 
     _grid = None  # загруженная GeoidGrid (атрибут, не поле: в JSON не попадает)
 
     def __post_init__(self):
         if isinstance(self.geoid, dict):
             self.geoid = GeoidRef(**self.geoid)
+        if self.pairs is not None:
+            self.pairs = [Pair(**p) if isinstance(p, dict) else p for p in self.pairs]
+        if isinstance(self.inputs, dict):
+            self.inputs = Inputs.from_dict(self.inputs)
+        if isinstance(self.meta, dict):
+            self.meta = DatumMeta.from_dict(self.meta)
+
+    # --- контрольная сумма ---
+    def checksum(self) -> str | None:
+        """SHA-256 канонической записи сохранённых пар и параметров (None — их нет, старый JSON)."""
+        if self.pairs is None or self.inputs is None:
+            return None
+        return inputs_checksum(self.pairs, self.inputs)
+
+    def verify_checksum(self) -> bool | None:
+        """Совпадает ли контрольная сумма метаданных с парами и параметрами; None — сверять нечего."""
+        c = self.checksum()
+        if c is None or self.meta is None or not self.meta.inputs_sha256:
+            return None
+        return c == self.meta.inputs_sha256
 
     # --- сетка геоида ---
     def attach_geoid(self, grid) -> "LocalizationDatum":
@@ -362,16 +388,23 @@ class LocalizationDatum:
         Path(path).write_text(json.dumps(self.to_dict(), indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
 
     @classmethod
+    def from_dict(cls, d: dict) -> "LocalizationDatum":
+        """Датум из словаря JSON; неизвестные ключи (summary, поля будущих версий) пропускаются."""
+        names = {f.name for f in fields(cls)}
+        d = {k: v for k, v in d.items() if k in names}
+        d["residuals"] = [Residual(**_known(Residual, r)) for r in d.get("residuals", [])]
+        d["warnings"] = [DatumWarning(**_known(DatumWarning, w)) for w in d.get("warnings", [])]
+        if d.get("pairs") is not None:
+            d["pairs"] = [Pair(**_known(Pair, p)) for p in d["pairs"]]
+        return cls(**d)
+
+    @classmethod
     def load(cls, path: str | Path, geoid=None, require_geoid: bool = True) -> "LocalizationDatum":
         """Читает датум. Если он ссылается на сетку геоида — подключает её: geoid (путь или GeoidGrid),
         иначе файл с именем из ссылки рядом с JSON или в текущем каталоге. Нет файла или другая
         SHA-256 — GeoidError (require_geoid=False — читать без сетки; пересчёты высот тогда — ошибка)."""
         path = Path(path)
-        d = json.loads(path.read_text(encoding="utf-8"))
-        d.pop("summary", None)
-        d["residuals"] = [Residual(**r) for r in d.get("residuals", [])]
-        d["warnings"] = [DatumWarning(**w) for w in d.get("warnings", [])]
-        datum = cls(**d)
+        datum = cls.from_dict(json.loads(path.read_text(encoding="utf-8")))
         if datum.geoid is None:
             if geoid is not None:
                 raise GeoidError("Датум без модели геоида: сетка (--geoid) не нужна.")
@@ -393,6 +426,11 @@ class LocalizationError(ValueError):
     pass
 
 
+def _known(cls, d: dict) -> dict:
+    names = {f.name for f in fields(cls)}
+    return {k: v for k, v in d.items() if k in names}
+
+
 def _num(v: float) -> str:
     v = float(v)
     return str(int(v)) if v == math.floor(v) and abs(v) < 1e15 else repr(v)
@@ -403,7 +441,7 @@ def localize(pairs: list[Pair], lat0: float | None = None, lon0: float | None = 
              w_limit: float = 3.29, max_scale_ppm: float = 200.0,
              max_rotation_deg: float = 3.0, gnss_datum: str = "WGS-84", height_model: str = "plane",
              geoid=None, geoid_interpolation: str = "bilinear", projection=None, k0: float = 1.0,
-             x0: float = 0.0, y0: float = 0.0) -> LocalizationDatum:
+             x0: float = 0.0, y0: float = 0.0, meta: DatumMeta | None = None) -> LocalizationDatum:
     """Вычисляет датум локализации по парам точек.
 
     lat0, lon0 — центр рабочей проекции; по умолчанию — среднее по всем используемым точкам.
@@ -418,6 +456,9 @@ def localize(pairs: list[Pair], lat0: float | None = None, lon0: float | None = 
     на эллипсоиде системы gnss_datum, geoid_interpolation — bilinear или bicubic.
     projection — рабочая проекция целиком (ldp.LdpProjection типа tmerc или datums.TransverseMercator):
     заменяет lat0, lon0, k0, x0, y0 и ellipsoid; k0, x0 (север), y0 (восток) — её масштаб и смещения.
+    meta — метаданные (объект, исполнитель, …; для новой ревизии — DatumMeta.next_revision): незаполненные
+    время расчёта, версия, UUID и ревизия (1) назначаются; контрольная сумма пар и параметров — всегда.
+    Датум хранит пары (pairs) и параметры (inputs) — по ним отчёт и сверка суммы.
     """
     system = datums.get_system(gnss_datum)
     if projection is not None:
@@ -429,7 +470,37 @@ def localize(pairs: list[Pair], lat0: float | None = None, lon0: float | None = 
                  height_model, grid, geoid_interpolation, (k0, x0, y0))
     datum.gnss_datum = system.id
     _diagnose(datum, pairs, sigma_plan, sigma_height, w_limit, max_scale_ppm, max_rotation_deg)
+    datum.pairs = [replace(p) for p in pairs]
+    datum.inputs = Inputs(
+        gnss_datum=system.id, sigma_plan=float(sigma_plan), sigma_height=float(sigma_height), w_limit=float(w_limit),
+        max_scale_ppm=float(max_scale_ppm), max_rotation_deg=float(max_rotation_deg), height_model=height_model,
+        geoid_sha256=None if grid is None else grid.sha256, geoid_interpolation=None if grid is None else geoid_interpolation,
+        lat0=None if lat0 is None else float(lat0), lon0=None if lon0 is None else float(lon0), ellipsoid=ellipsoid,
+        k0=float(k0), x0=float(x0), y0=float(y0))
+    m = replace(meta) if meta is not None else DatumMeta()
+    m.computed_at = m.computed_at or now_utc()
+    m.library_version = m.library_version or LIBRARY
+    m.datum_id = m.datum_id or new_id()
+    m.revision = m.revision or 1
+    m.inputs_sha256 = inputs_checksum(datum.pairs, datum.inputs)
+    datum.meta = m
     return datum
+
+
+def relocalize(d: LocalizationDatum, geoid=None) -> LocalizationDatum:
+    """Повторный расчёт по сохранённым парам и параметрам (для сверки); geoid — сетка для моделей с геоидом."""
+    if d.pairs is None or d.inputs is None:
+        raise LocalizationError("В датуме нет исходных пар и параметров (старый формат) — пересчитать нельзя.")
+    i = d.inputs
+    kw = dict(lat0=i.lat0, lon0=i.lon0, ellipsoid=i.ellipsoid, sigma_plan=i.sigma_plan, sigma_height=i.sigma_height,
+              w_limit=i.w_limit, max_scale_ppm=i.max_scale_ppm, max_rotation_deg=i.max_rotation_deg,
+              gnss_datum=i.gnss_datum, height_model=i.height_model, k0=i.k0, x0=i.x0, y0=i.y0)
+    if i.height_model != "plane":
+        g = geoid if geoid is not None else d.geoid_grid
+        if g is None:
+            raise GeoidError("Для пересчёта нужна сетка геоида датума.")
+        kw.update(geoid=g, geoid_interpolation=i.geoid_interpolation or "bilinear")
+    return localize(d.pairs, **kw, meta=d.meta)
 
 
 def _geoid_setup(height_model, geoid, interpolation):

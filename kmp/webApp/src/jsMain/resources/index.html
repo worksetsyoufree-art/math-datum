@@ -70,6 +70,13 @@
   #ldpCompare th:first-child, #ldpCompare td:first-child { text-align: left; }
   #ldpCompare th:nth-child(2), #ldpCompare td:nth-child(2) { text-align: right; }
   td.fit { color: var(--ok); font-weight: 600; }
+  details.meta { margin-top: 12px; border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; }
+  details.meta summary { cursor: pointer; font-weight: 600; }
+  .meta-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 8px 14px; margin-top: 10px; }
+  .meta-grid label { display: flex; flex-direction: column; gap: 3px; font-size: 13px; color: var(--muted); min-width: 0; }
+  .meta-grid input { font: inherit; width: 100%; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--text); }
+  #metaRevision { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+  .stat .v .small { display: block; font-size: 13.5px; overflow-wrap: anywhere; }
 </style>
 </head>
 <body>
@@ -110,6 +117,19 @@
         <option value="">TM по центру точек, k = 1</option>
       </select>
     </div>
+    <details class="meta" id="metaBox">
+      <summary>Метаданные для отчёта и JSON (необязательно)</summary>
+      <div class="meta-grid">
+        <label>Объект / наименование<input id="metaObject" maxlength="300" autocomplete="off"></label>
+        <label>Организация<input id="metaOrganization" maxlength="300" autocomplete="organization"></label>
+        <label>Исполнитель<input id="metaAuthor" maxlength="200" autocomplete="name"></label>
+        <label>Источник каталога пунктов<input id="metaCatalog" maxlength="300" autocomplete="off"></label>
+        <label>Система ГНСС, оборудование, базовая станция<input id="metaEquipment" maxlength="300" autocomplete="off"></label>
+        <label>Примечание<input id="metaNote" maxlength="500" autocomplete="off"></label>
+      </div>
+      <div class="row"><span id="metaRevision">Новый датум: ревизия 1. Дата и время расчёта (UTC), UUID и контрольная сумма SHA-256 исходных данных назначаются при расчёте.</span>
+        <button id="metaNewDatum" class="hidden">Новый датум вместо ревизии</button></div>
+    </details>
     <div class="row">
       <button class="primary" id="calc">Рассчитать локализацию</button>
       <button id="example">Пример</button>
@@ -128,9 +148,12 @@
       30 мм по высоте — единица веса σ0; порог 3.29). σ — использованные СКО точек, свои выделены. Подсвечено |w| выше порога — вероятна грубая ошибка; точки автоматически не исключаются.
       «Без точки» — ошибка прогноза в точке датумом, рассчитанным без неё; «—» — проверить нельзя (без точки модель не определена).</p>
     <div class="row">
+      <button class="primary" id="openReport" title="HTML-отчёт для исполнительной документации: открыть в новой вкладке (печать в PDF на A4 — из браузера)">Отчёт</button>
+      <button id="saveReport">Скачать отчёт (HTML)</button>
       <button id="saveDatum">Скачать датум (JSON)</button>
       <button id="copyProj">Скопировать строку PROJ</button>
     </div>
+    <p class="hint" id="reportNote" style="margin-top:8px"></p>
     <div class="row" id="exportRow">
       <span class="hint">Экспорт:</span>
       <button id="export-wkt2" title="ISO 19162:2019 — QGIS, GDAL, pyproj">WKT2</button>

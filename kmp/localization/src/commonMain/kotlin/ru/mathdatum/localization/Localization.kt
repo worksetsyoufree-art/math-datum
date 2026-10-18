@@ -162,6 +162,10 @@ data class LocalizationDatum(
     /** Выпуклая оболочка опорных пунктов плана, [N, E] рабочей проекции. */
     @SerialName("plan_hull") val planHull: List<List<Double>>? = null,
     val warnings: List<DatumWarning> = emptyList(),
+    /** Исходные пары, параметры localize и метаданные (в старых JSON нет → null). */
+    val pairs: List<LocalizationPair>? = null,
+    val inputs: LocalizeInputs? = null,
+    val meta: DatumMeta? = null,
     /** Загруженная сетка геоида (в JSON не попадает). */
     @Transient val geoidGrid: GeoidGrid? = null,
 ) {
@@ -299,6 +303,31 @@ data class LocalizationDatum(
 
     fun toJson(): String = JSON.encodeToString(serializer(), this)
 
+    /** SHA-256 канонической записи сохранённых пар и параметров (null — их нет, старый JSON). */
+    fun checksum(): String? {
+        val p = pairs ?: return null
+        val i = inputs ?: return null
+        return DatumChecksum.of(p, i)
+    }
+
+    /** Совпадает ли контрольная сумма метаданных с парами и параметрами; null — сверять нечего. */
+    fun verifyChecksum(): Boolean? {
+        val c = checksum() ?: return null
+        val m = meta?.inputsSha256?.takeIf { it.isNotEmpty() } ?: return null
+        return c == m
+    }
+
+    /** Повторный расчёт по сохранённым парам и параметрам (для сверки); для моделей с геоидом нужна сетка. */
+    fun relocalize(geoid: GeoidGrid? = geoidGrid): LocalizationDatum {
+        val p = pairs ?: throw LocalizationException("В датуме нет исходных пар и параметров (старый формат) — пересчитать нельзя.")
+        val i = inputs ?: throw LocalizationException("В датуме нет параметров расчёта (старый формат) — пересчитать нельзя.")
+        val g = if (i.heightModel == "plane") null else geoid ?: throw GeoidException("Для пересчёта нужна сетка геоида датума.")
+        return localize(
+            p, i.lat0, i.lon0, i.ellipsoid, i.sigmaPlan, i.sigmaHeight, i.wLimit, i.maxScalePpm, i.maxRotationDeg, i.gnssDatum,
+            i.heightModel, g, i.geoidInterpolation ?: "bilinear", i.k0, i.x0, i.y0, meta,
+        )
+    }
+
     companion object {
         internal val JSON = Json { prettyPrint = true; ignoreUnknownKeys = true; encodeDefaults = true }
 
@@ -340,10 +369,11 @@ internal class WorkProjection(e: Ellipsoid, lat0: Double, lon0: Double, private 
 
 /** Локализация в заданной рабочей проекции (спроектированная LDP типа tmerc): масштаб подобия остаётся ≈ 1. */
 fun localizeIn(projection: LdpProjection, pairs: List<LocalizationPair>, gnssDatum: String = "WGS-84",
-               heightModel: String = "plane", geoid: GeoidGrid? = null, geoidInterpolation: String = "bilinear"): LocalizationDatum =
+               heightModel: String = "plane", geoid: GeoidGrid? = null, geoidInterpolation: String = "bilinear",
+               meta: DatumMeta? = null): LocalizationDatum =
     localize(
         pairs, projection.lat0, projection.lon0, projection.system.ellipsoid.proj, gnssDatum = gnssDatum, heightModel = heightModel,
-        geoid = geoid, geoidInterpolation = geoidInterpolation, k0 = projection.k0, x0 = projection.x0, y0 = projection.y0,
+        geoid = geoid, geoidInterpolation = geoidInterpolation, k0 = projection.k0, x0 = projection.x0, y0 = projection.y0, meta = meta,
     )
 
 /**
@@ -357,6 +387,9 @@ fun localizeIn(projection: LdpProjection, pairs: List<LocalizationPair>, gnssDat
  * [heightModel] — plane (по умолчанию, без геоида), geoid или geoid_plane; для двух последних [geoid] — сетка
  * на эллипсоиде системы [gnssDatum], [geoidInterpolation] — bilinear или bicubic.
  * [k0], [x0] (север), [y0] (восток) — масштаб и смещения рабочей проекции (своя, например LDP: [localizeIn]).
+ * [meta] — метаданные (объект, исполнитель, …; новая ревизия — [DatumMeta.nextRevision]): незаполненные время
+ * расчёта, версия, UUID и ревизия (1) назначаются; контрольная сумма пар и параметров — всегда. Датум хранит пары
+ * ([LocalizationDatum.pairs]) и параметры ([LocalizationDatum.inputs]) — по ним отчёт ([Report]) и сверка суммы.
  */
 fun localize(
     pairs: List<LocalizationPair>,
@@ -375,6 +408,7 @@ fun localize(
     k0: Double = 1.0,
     x0: Double = 0.0,
     y0: Double = 0.0,
+    meta: DatumMeta? = null,
 ): LocalizationDatum {
     val system = Datums.system(gnssDatum)
     checkHeightModel(heightModel, geoid, geoidInterpolation)
@@ -382,7 +416,20 @@ fun localize(
         pairs, lat0, lon0, ellipsoid ?: system.ellipsoid.proj, sigmaPlan, sigmaHeight, heightModel, geoid, geoidInterpolation,
         k0, x0, y0,
     ).copy(gnssDatum = system.id)
+    val inputs = LocalizeInputs(
+        system.id, sigmaPlan, sigmaHeight, wLimit, maxScalePpm, maxRotationDeg, heightModel,
+        geoid?.sha256, if (geoid == null) null else geoidInterpolation, lat0, lon0, ellipsoid, k0, x0, y0,
+    )
+    val m = meta ?: DatumMeta()
+    val full = m.copy(
+        computedAt = m.computedAt ?: DatumChecksum.nowUtc(),
+        libraryVersion = m.libraryVersion ?: MATHDATUM_LIBRARY,
+        datumId = m.datumId ?: DatumChecksum.newId(),
+        revision = m.revision ?: 1,
+        inputsSha256 = DatumChecksum.of(pairs, inputs),
+    )
     return diagnose(d, pairs, sigmaPlan, sigmaHeight, wLimit, maxScalePpm, maxRotationDeg)
+        .copy(pairs = pairs.toList(), inputs = inputs, meta = full)
 }
 
 /** Модели высоты, которые можно запросить, и модели с плоскостью (3 параметра). */

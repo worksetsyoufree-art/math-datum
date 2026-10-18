@@ -24,6 +24,11 @@
   `sigma_plan;sigma_height` задают σ точки (вес `p = σ0²/σ²`), использованные σ видны в таблице;
 - посмотреть невязки, нормированные поправки |w| (подсвечиваются |w| > 3.29 — вероятные грубые ошибки),
   ошибки «без точки» (leave-one-out), избыточность и предупреждения датума;
+- заполнить метаданные (объект, организация, исполнитель, источник каталога, ГНСС и оборудование, примечание) —
+  они попадают в JSON датума и в отчёт; UUID, время расчёта и SHA-256 исходных данных назначаются при расчёте;
+  датум, загруженный из JSON, подставляет свои пары и метаданные, и новый расчёт становится его следующей ревизией;
+- получить HTML-отчёт о локализации (кнопки «Отчёт» — открыть в новой вкладке, «Скачать отчёт») — тот же, что
+  `python -m mathdatum report` (см. «Отчёт» ниже);
 - скачать датум в JSON и скопировать строку PROJ; экспортировать его в WKT2, PROJJSON, Trimble JobXML и LandXML
   (под кнопками — ограничения формата, оценки по объекту и для JobXML контрольные точки);
 - пересчитать точки ГНСС → местная и обратно (кнопка «Обратно ←» проверяет пересчёт туда и обратно);
@@ -89,8 +94,15 @@
   (числа — до 1e-13 относительно: atan2/hypot в libm, JVM и JS отличаются в последнем бите), контрольные точки,
   запись чисел как `repr` в Python, ошибки закрытых форматов.
 
+- метаданные и отчёт (`ReportTest`): SHA-256 исходных данных совпадает с Python для 7 датумов (метаданные, грубая
+  ошибка и веса, ПЗ-90.11 + геоид, LDP с ревизией 3, 2 точки, старый JSON без пар и с CSV) и при расчёте в Kotlin;
+  чувствительность суммы к паре и параметру, подмена пары обнаруживается; ревизии и UUID; JSON туда и обратно,
+  чтение датума Python с метаданными, старых JSON и полей будущих версий; все величины `data-k` отчёта (> 500) совпадают
+  с отчётом Python до единицы последнего знака, все точки — в таблице и на схеме; экранирование имён и метаданных.
+
 Эталонные данные генерирует `python tools/gen_kotlin_reference.py`, запускать из корня репозитория
-(`ReferenceData.kt`, `DatumReferenceData.kt`, `GeoidReferenceData.kt`, `LdpReferenceData.kt`, `ExportReferenceData.kt`; тестовые сетки — `tests/data/geoid`). Python-эталон сам сверен с PROJ в `tests/`.
+(`ReferenceData.kt`, `DatumReferenceData.kt`, `GeoidReferenceData.kt`, `LdpReferenceData.kt`, `ExportReferenceData.kt`,
+`ReportReferenceData.kt`; время и UUID датумов в эталонах постоянные; тестовые сетки — `tests/data/geoid`). Python-эталон сам сверен с PROJ в `tests/`.
 
 ## API
 
@@ -122,6 +134,17 @@ localize(pairs.map { it.copy(sigmaPlan = 0.01) })     // свои σ точек 
 datum.quality(WgsPoint(55.08, 39.34, 230.9))     // PointQuality(outside, mPlan, mHeight)
 datum.covariancePlan(posterior = true)           // σ²·Q для (tx, ty, a, b)
 suggestExclusions(pairs)                         // [Exclusion("R4", "plan", 3.87)] — только предложение
+```
+
+Метаданные и отчёт:
+
+```kotlin
+val d = localize(pairs, meta = DatumMeta(objectName = "ЖК «Север»", author = "Иванов И. И.", catalogSource = "…"))
+d.meta                                           // + computedAt (UTC), libraryVersion, datumId (UUID), revision = 1, inputsSha256
+d.verifyChecksum()                               // true / false (файл изменён) / null (старый JSON)
+val r2 = localize(pairs2, meta = d.meta!!.nextRevision())   // ревизия 2, previousId = d.meta.datumId
+val html = Report.html(d)                        // HTML-отчёт (тот же, что в Python); старый датум: Report.html(d, pairs)
+d.relocalize()                                   // пересчёт по сохранённым pairs + inputs (для сверки)
 ```
 
 Пересчёты между системами (ГОСТ 32453-2017):
@@ -163,6 +186,17 @@ localize(pairs, lat0, lon0, ellipsoid, k0 = 1.000078, x0 = 20000.0, y0 = 100000.
 let datum = LocalizationKt.localize(pairs: pairs, lat0: nil, lon0: nil, ellipsoid: "+ellps=WGS84")
 let p = datum.toLocal(p: WgsPoint(lat: 55.08, lon: 39.34, h: 230.9))
 ```
+
+## Отчёт
+
+`Report.html(datum, pairs = null, generatedAt = null)` (`commonMain`, работает на Android, iOS, Web и Desktop) строит
+тот же HTML-отчёт для исполнительной документации, что Python-эталон (`mathdatum/report.py`, описание разделов — в
+README в корне): титул с метаданными и сверкой SHA-256, исходные данные, модель и параметры с СКО, точность (невязки в мм,
+|w|, leave-one-out, контрольные пункты), предупреждения, схема пунктов (inline SVG: оболочка, векторы невязок, СКО
+прогноза цветом, север, масштаб), экспорт с обязательным предупреждением о знаке разворота JobXML и контрольными
+точками x/y, x′/y′. Файл самодостаточный, печать из браузера в PDF на A4 (`@page` с колонтитулами). Тексты и формат чисел
+совпадают с Python; ключевые величины (`data-k`) сверяются в `ReportTest`. В Android/iOS HTML можно показать в WebView
+и распечатать системной печатью (`PrintManager` / `UIPrintInteractionController`).
 
 ## Модель
 

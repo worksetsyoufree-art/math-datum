@@ -5,6 +5,8 @@ from .geoid import GeoidError, GeoidGrid, read_grid
 from .localization import (DatumWarning, LocalizationDatum, LocalizationError, Pair, Residual, localize,
                            suggest_exclusions)
 from .io import read_pairs, read_points, write_points
+from .meta import VERSION as __version__, DatumMeta
+from .report import html_report
 
 __all__ = ["GeoidError", "GeoidGrid", "geoid", "ldp", "read_grid", "DatumWarning", "LocalizationDatum", "LocalizationError", "Pair", "Residual", "datums", "localize",
-           "suggest_exclusions", "read_pairs", "read_points", "write_points"]
+           "suggest_exclusions", "read_pairs", "read_points", "write_points", "DatumMeta", "html_report"]

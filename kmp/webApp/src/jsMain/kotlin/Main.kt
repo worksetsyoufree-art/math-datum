@@ -19,7 +19,10 @@ import ru.mathdatum.localization.Datums
 import ru.mathdatum.localization.GaussKruger
 import ru.mathdatum.localization.GeodeticPoint
 import ru.mathdatum.localization.Xyz
+import ru.mathdatum.localization.DatumMeta
 import ru.mathdatum.localization.Exclusion
+import ru.mathdatum.localization.LocalizationPair
+import ru.mathdatum.localization.Report
 import ru.mathdatum.localization.Export
 import ru.mathdatum.localization.Ldp
 import ru.mathdatum.localization.LdpContour
@@ -95,6 +98,67 @@ private var mapHover: ((org.w3c.dom.events.Event) -> Unit)? = null
 private var geoidGrid: GeoidGrid? = null
 /** Датум со ссылкой на сетку, ожидающий загрузки этой сетки. */
 private var pendingDatumJson: String? = null
+/** Метаданные загруженного датума: новый расчёт — его следующая ревизия. */
+private var previousMeta: DatumMeta? = null
+
+/** Поля метаданных формы: id поля → (чтение из DatumMeta, запись в DatumMeta). */
+private val META_FIELDS: List<Triple<String, (DatumMeta) -> String?, (DatumMeta, String?) -> DatumMeta>> = listOf(
+    Triple("metaObject", { m -> m.objectName }, { m, v -> m.copy(objectName = v) }),
+    Triple("metaOrganization", { m -> m.organization }, { m, v -> m.copy(organization = v) }),
+    Triple("metaAuthor", { m -> m.author }, { m, v -> m.copy(author = v) }),
+    Triple("metaCatalog", { m -> m.catalogSource }, { m, v -> m.copy(catalogSource = v) }),
+    Triple("metaEquipment", { m -> m.gnssEquipment }, { m, v -> m.copy(gnssEquipment = v) }),
+    Triple("metaNote", { m -> m.note }, { m, v -> m.copy(note = v) }),
+)
+
+/** Описательные метаданные из формы поверх [base] (UUID, время, ревизия и сумма — из base). */
+private fun withFormMeta(base: DatumMeta): DatumMeta =
+    META_FIELDS.fold(base) { m, (id, _, set) -> set(m, el<HTMLInputElement>(id).value.trim().ifEmpty { null }) }
+
+private fun updateRevisionNote() {
+    val p = previousMeta
+    el<HTMLElement>("metaRevision").textContent = if (p == null) {
+        "Новый датум: ревизия 1. Дата и время расчёта (UTC), UUID и контрольная сумма SHA-256 исходных данных назначаются при расчёте."
+    } else {
+        "Расчёт создаёт ревизию ${(p.revision ?: 1) + 1} датума ${p.datumId} (загружен из JSON): ссылка на его UUID сохраняется."
+    }
+    el<HTMLElement>("metaNewDatum").classList.toggle("hidden", p == null)
+}
+
+/** Текущий датум с метаданными из формы (поля можно поправить после расчёта). */
+private fun currentDatum(): LocalizationDatum? = datum?.let { d -> d.copy(meta = withFormMeta(d.meta ?: DatumMeta())) }
+
+/** Пары → CSV (для датума из JSON с сохранёнными парами). */
+private fun pairsCsv(pairs: List<LocalizationPair>): String {
+    val sig = pairs.any { it.sigmaPlan != null || it.sigmaHeight != null }
+    return "name;B;L;h;x;y;H;use" + (if (sig) ";sigma_plan;sigma_height" else "") + "\n" + pairs.joinToString("") { p ->
+        "${p.name};${p.lat};${p.lon};${p.h};${p.x};${p.y};${p.height};${p.use.name.lowercase()}" +
+            (if (sig) ";${p.sigmaPlan ?: ""};${p.sigmaHeight ?: ""}" else "") + "\n"
+    }
+}
+
+/** HTML-отчёт: открыть в новой вкладке или скачать. */
+private fun report(open: Boolean) {
+    val d = currentDatum() ?: return
+    val note = el<HTMLElement>("reportNote")
+    try {
+        val html = Report.html(d)
+        val name = "report" + (d.meta?.revision?.let { "-r$it" } ?: "") + ".html"
+        if (open) {
+            val url = URL.createObjectURL(Blob(arrayOf(html), BlobPropertyBag(type = "text/html;charset=utf-8")))
+            val w = window.open(url, "_blank")
+            window.setTimeout({ URL.revokeObjectURL(url) }, 60_000)
+            if (w == null) download(name, html, "text/html")
+            note.textContent = if (w == null) "Всплывающее окно заблокировано — отчёт скачан ($name)." else
+                "Отчёт открыт в новой вкладке; печать в PDF (A4) — Ctrl+P / «Поделиться → Печать»."
+        } else {
+            download(name, html, "text/html")
+            note.textContent = "Скачан $name: один файл без внешних ресурсов, печать в PDF (A4) — из браузера."
+        }
+    } catch (e: Throwable) {
+        note.textContent = "Отчёт: ${e.message ?: e.toString()}"
+    }
+}
 
 /** Форматы пересчёта между системами: столбцы и знаки после точки. */
 private val FORMATS = mapOf(
@@ -153,8 +217,11 @@ fun main() {
     el<HTMLButtonElement>("transform").onclick = { transform(); null }
     el<HTMLButtonElement>("swap").onclick = { swap(); null }
     el<HTMLButtonElement>("saveDatum").onclick = {
-        datum?.let { download("datum.json", it.toJson(), "application/json") }; null
+        currentDatum()?.let { download("datum.json", it.toJson(), "application/json") }; null
     }
+    el<HTMLButtonElement>("openReport").onclick = { report(open = true); null }
+    el<HTMLButtonElement>("saveReport").onclick = { report(open = false); null }
+    el<HTMLButtonElement>("metaNewDatum").onclick = { previousMeta = null; updateRevisionNote(); calculate(); null }
     el<HTMLButtonElement>("saveOutput").onclick = {
         download("points.csv", el<HTMLTextAreaElement>("output").value, "text/csv"); null
     }
@@ -187,6 +254,11 @@ private fun loadDatum(text: String) {
             LocalizationDatum.fromJson(text, g)
         }
         pendingDatumJson = null
+        // Метаданные — в форму; новый расчёт по этим данным станет следующей ревизией датума.
+        d.meta?.let { m -> META_FIELDS.forEach { (id, get, _) -> el<HTMLInputElement>(id).value = get(m) ?: "" } }
+        previousMeta = d.meta?.takeIf { it.datumId != null }
+        d.pairs?.let { el<HTMLTextAreaElement>("pairs").value = pairsCsv(it) }
+        updateRevisionNote()
         show(d)
         err.textContent = ""
     } catch (e: Throwable) {
@@ -213,6 +285,7 @@ private fun calculate() {
         val d = localize(
             pairs, wp?.lat0, wp?.lon0, wp?.system?.ellipsoid?.proj, gnssDatum = gnss, heightModel = model, geoid = grid,
             geoidInterpolation = interp, k0 = wp?.k0 ?: 1.0, x0 = wp?.x0 ?: 0.0, y0 = wp?.y0 ?: 0.0,
+            meta = withFormMeta(previousMeta?.nextRevision() ?: DatumMeta()),
         )
         show(d, if (d.residuals.any { it.suspect }) {
             suggestExclusions(
@@ -255,6 +328,15 @@ private fun show(d: LocalizationDatum, exclusions: List<Exclusion> = emptyList()
         stat("Избыточность план / высота", if (d.redundancyPlan == null) "—" else "${d.redundancyPlan} / ${d.redundancyHeight ?: "—"}"),
         stat("СКО ед. веса план / высота", "${mm(d.s0Plan)} / ${mm(d.s0Height)} мм" +
             (d.sigma0Plan?.let { " (априори ${mm(it)} / ${mm(d.sigma0Height)})" } ?: "")),
+        stat("Датум", d.meta?.let { m ->
+            "<span class=\"small\">ревизия ${m.revision ?: "—"} · ${escape(m.datumId ?: "без UUID")}" +
+                (m.computedAt?.let { " · $it" } ?: "") + "</span>"
+        } ?: "старый формат: без метаданных"),
+        stat("SHA-256 исходных данных", when (d.verifyChecksum()) {
+            true -> "<span class=\"small\">${d.meta!!.inputsSha256!!.take(16)}… совпадает</span>"
+            false -> "<span class=\"small\" style=\"color:var(--bad)\">НЕ СОВПАДАЕТ — файл изменён после расчёта</span>"
+            null -> "—"
+        }),
     ).joinToString("")
 
     // Предупреждения датума и предложение исключить точки (только диагностика, расчёт не меняется).
@@ -309,6 +391,7 @@ private fun show(d: LocalizationDatum, exclusions: List<Exclusion> = emptyList()
     }
     el<HTMLElement>("proj").textContent = d.toProjPipeline()
     el<HTMLElement>("exportNotes").innerHTML = ""
+    el<HTMLElement>("reportNote").textContent = ""
 }
 
 private fun transform() {

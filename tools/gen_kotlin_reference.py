@@ -30,6 +30,11 @@
 
 и .../ExportReferenceData.kt (экспорт датума, mathdatum.export — сам сверен с pyproj и схемами в tests/):
   - EXPORT_CASES: датумы (JSON) и тексты WKT2, PROJJSON, JobXML, LandXML с предупреждениями, контрольные точки.
+
+и .../ReportReferenceData.kt (метаданные, контрольная сумма и HTML-отчёт, mathdatum.meta / mathdatum.report):
+  - REPORT_CASES: датумы (JSON с парами и метаданными; старый без пар), SHA-256 исходных данных, величины
+    отчёта с атрибутом data-k (ключ → текст);
+  - PY_DEFAULT_CHECKSUM: SHA-256 датума examples/pairs.csv с параметрами по умолчанию.
 """
 
 import itertools
@@ -50,6 +55,7 @@ OUT_DATUMS = OUT.with_name("DatumReferenceData.kt")
 OUT_GEOID = OUT.with_name("GeoidReferenceData.kt")
 OUT_LDP = OUT.with_name("LdpReferenceData.kt")
 OUT_EXPORT = OUT.with_name("ExportReferenceData.kt")
+OUT_REPORT = OUT.with_name("ReportReferenceData.kt")
 GEOID_DIR = ROOT / "tests/data/geoid"
 GEOID_FILES = ["RU-MOW_truth.ggf", "RU-MOW_truth.gtx", "RU-MOW_truth.isg", "RU-MOW_bump.ggf",
                "nodata.ggf", "nodata.gtx", "nodata.isg"]
@@ -616,11 +622,91 @@ def write_export():
     print(f"{OUT_EXPORT}: {len(cases)} случаев экспорта")
 
 
+REPORT_TIME = "2026-10-18T12:00:00Z"
+
+
+def report_cases():
+    """(имя, датум, сетка или None, пары для отчёта или None)."""
+    from dataclasses import replace
+    from mathdatum.localization import LocalizationDatum
+    from mathdatum.meta import DatumMeta
+    pairs = read_pairs(ROOT / "examples/pairs.csv")
+    meta = DatumMeta(object='ЖК «Север» <script>alert("x")</script> & корпус 3', organization="ООО \"Геодезия\"",
+                     author="Иванов И. И.", computed_at="2026-10-18T11:00:00Z",
+                     datum_id="3f1c2a64-1d7e-4b8a-9a51-0c2d5e6f7a80", catalog_source="Каталог МСК-50 (2024)",
+                     gnss_equipment="Trimble R12i; база BASE1", note="строка 1\nстрока 2 </td>")
+    out = [("пример с метаданными", localize(pairs, meta=meta), None, None)]
+    bad = [replace(p, x=p.x + 0.15) if p.name == "R4" else p for p in pairs]
+    bad = [replace(p, sigma_plan=0.01, sigma_height=0.015) if p.name == "R1" else p for p in bad]
+    out.append(("грубая ошибка и веса", localize(bad, meta=meta.next_revision(note="R4 сдвинут")), None, None))
+    g = read_grid(GEOID_DIR / "RU-MOW_truth.ggf")
+    path = ROOT / "data/geodetic/regions/RU-MOW.json"
+    task = next(t for t in json.loads(path.read_text(encoding="utf-8"))["tasks"] if t["type"] == "site_localization")
+    mow = [Pair(q["id"], *q["gnss_B_L_h"], *q["local_x_y_H"]) for q in task["control_points"]]
+    out.append(("геоид + плоскость, ПЗ-90.11", localize(mow, height_model="geoid_plane", geoid=g, geoid_interpolation="bicubic",
+                                                       gnss_datum="PZ-90.11", meta=DatumMeta(object="Геоид")),
+                "RU-MOW_truth.ggf", None))
+    out.append(("LDP", localize(pairs, lat0=55.1, lon0=39.0, k0=1.000035, x0=20000.0, y0=100000.0,
+                                meta=DatumMeta(datum_id="00000000-0000-4000-8000-000000000001", revision=3,
+                                               previous_id="00000000-0000-4000-8000-000000000000")), None, None))
+    out.append(("2 точки", localize(pairs[:2] + pairs[6:8]), None, None))
+    old = LocalizationDatum.load(ROOT / "tests/data/datum_old_format.json")
+    out.append(("старый датум без пар", old, None, None))
+    out.append(("старый датум + CSV", old, None, pairs))
+    return out
+
+
+def report_values(html):
+    """data-k → текст для листовых элементов (td, span, text)."""
+    import re
+    return [(m.group(2), m.group(3)) for m in re.finditer(r'<(td|span|text)\b[^>]*?data-k="([^"]*)"[^>]*>([^<]*)', html)]
+
+
+def write_report():
+    from mathdatum import report as rp
+    cases = []
+    for name, dt, grid, csv_pairs in report_cases():
+        html = rp.html_report(dt, csv_pairs, generated_at=REPORT_TIME)
+        vals = report_values(html)
+        keys = ", ".join(f"{kstr(k)} to {kstr(v)}" for k, v in vals)
+        pairs_csv = "null" if csv_pairs is None else kstr(
+            "name;B;L;h;x;y;H;use\n" + "".join(f"{p.name};{p.B!r};{p.L!r};{p.h!r};{p.x!r};{p.y!r};{p.H!r};{p.use}\n"
+                                                for p in csv_pairs))
+        cs = dt.checksum()
+        cases.append(f"ReportCase({kstr(name)}, {kstr(json.dumps(dt.to_dict(), ensure_ascii=False))}, "
+                     f"{kstr(grid) if grid else 'null'}, {pairs_csv}, {kstr(cs) if cs else 'null'},\n"
+                     f"        listOf({keys}))")
+    default = localize(read_pairs(ROOT / "examples/pairs.csv")).meta.inputs_sha256
+    OUT_REPORT.write_text(
+        "// Сгенерировано tools/gen_kotlin_reference.py из Python-эталона (mathdatum.report). Не редактировать вручную.\n"
+        "package ru.mathdatum.localization\n\n"
+        "/** Датум (JSON Python), сетка из GEOID_FILES, пары CSV для отчёта (старый датум), SHA-256 исходных данных по Python;\n"
+        " *  values — data-k → текст листовых элементов отчёта Python (время формирования REPORT_TIME). */\n"
+        "class ReportCase(val name: String, val datumJson: String, val grid: String?, val pairsCsv: String?,\n"
+        "                 val checksum: String?, val values: List<Pair<String, String>>)\n\n"
+        f"const val REPORT_TIME = {kstr(REPORT_TIME)}\n\n"
+        f"/** SHA-256 датума examples/pairs.csv с параметрами localize по умолчанию. */\nconst val PY_DEFAULT_CHECKSUM = {kstr(default)}\n\n"
+        + "".join(f"private fun report{i}() = {c}\n\n" for i, c in enumerate(cases))
+        + "val REPORT_CASES: List<ReportCase> by lazy { listOf(" + ", ".join(f"report{i}()" for i in range(len(cases))) + ") }\n",
+        encoding="utf-8")
+    print(f"{OUT_REPORT}: {len(cases)} случаев отчёта")
+
+
 def arr(m):
     return "listOf(" + ", ".join("doubleArrayOf(" + ", ".join(d(v) for v in row) + ")" for row in m) + ")"
 
 
+def deterministic_meta():
+    """Время расчёта и UUID датумов — постоянные: эталоны не меняются при повторной генерации."""
+    import itertools
+    from mathdatum import localization as loc
+    counter = itertools.count(1)
+    loc.now_utc = lambda: "2026-10-18T12:00:00Z"
+    loc.new_id = lambda: f"00000000-0000-4000-8000-{next(counter):012d}"
+
+
 def main():
+    deterministic_meta()
     tm, rg, dc = tm_cases(), regions(), diag_cases()
     OUT.write_text(
         "// Сгенерировано tools/gen_kotlin_reference.py из Python-эталона. Не редактировать вручную.\n"
@@ -652,6 +738,7 @@ def main():
     write_geoid()
     write_ldp()
     write_export()
+    write_report()
 
 
 if __name__ == "__main__":
