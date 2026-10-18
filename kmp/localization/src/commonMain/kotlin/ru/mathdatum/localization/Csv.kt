@@ -85,13 +85,37 @@ fun LocalizationDatum.report(): String = buildString {
     appendLine("План:   модель $planModel; масштаб ${scale.fixed(9)} (${signed(scalePpm, 2)} ppm), разворот ${signed(rotationArcsec, 2)}″")
     appendLine("Высота: модель $heightModel; c0 = ${signed(c0, 4)} м, наклон N ${signed(c1 * 1e6, 2)} мм/км, E ${signed(c2 * 1e6, 2)} мм/км")
     appendLine("СКО:    план ${rmsPlan?.fixed(4) ?: "—"} м, высота ${rmsHeight?.fixed(4) ?: "—"} м")
+    if (redundancyPlan != null) {
+        appendLine(
+            "Избыточность: план $redundancyPlan, высота ${redundancyHeight ?: "—"}; СКО ед. веса (на координату): " +
+                "план ${f4(s0Plan)} м (априори ${f4(sigma0Plan)}), высота ${f4(s0Height)} м (априори ${f4(sigma0Height)})",
+        )
+    }
     appendLine()
-    appendLine("точка".padEnd(12) + "use".padEnd(8) + "dx, м".padStart(10) + "dy, м".padStart(10) + "dH, м".padStart(10))
+    appendLine(
+        "точка".padEnd(12) + "use".padEnd(8) + "dx, м".padStart(10) + "dy, м".padStart(10) + "dH, м".padStart(10) +
+            "|w|план".padStart(9) + "|w|выс".padStart(8) + "LOO план".padStart(10) + "LOO dH".padStart(9),
+    )
     for (r in residuals) {
         append(r.name.padEnd(12) + r.use.name.lowercase().padEnd(8))
         append(r.dx.fixed(4).padStart(10) + r.dy.fixed(4).padStart(10) + r.dH.fixed(4).padStart(10))
-        appendLine(if (r.use == Use.NONE) "  (контроль)" else "")
+        append((r.wPlan?.fixed(2) ?: "—").padStart(9) + (r.wH?.let { kotlin.math.abs(it).fixed(2) } ?: "—").padStart(8))
+        append(f4(r.looPlan).padStart(10) + f4(r.looDH).padStart(9))
+        appendLine((if (r.suspect) "  !" else "") + (if (r.use == Use.NONE) "  (контроль)" else ""))
+    }
+    if (redundancyPlan != null) {
+        appendLine(
+            "|w| — нормированная поправка (тест Баарда, порог $wLimit, «!» — подозрение); " +
+                "LOO — ошибка прогноза без точки, м; «—» — нельзя проверить.",
+        )
+    }
+    if (warnings.isNotEmpty()) {
+        appendLine()
+        appendLine("Предупреждения:")
+        for (w in warnings) appendLine("  - ${w.message}")
     }
 }
 
-private fun signed(v: Double, d: Int) = (if (v >= 0) "+" else "") + v.fixed(d)
+private fun f4(v: Double?) = v?.fixed(4) ?: "—"
+
+internal fun signed(v: Double, d: Int) = (if (v >= 0) "+" else "") + v.fixed(d)

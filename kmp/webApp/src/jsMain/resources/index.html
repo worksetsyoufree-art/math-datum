@@ -43,6 +43,10 @@
   th:first-child, td:first-child, th:nth-child(2), td:nth-child(2) { text-align: left; }
   tr.control td { color: var(--muted); }
   td.big { color: var(--bad); font-weight: 600; }
+  tr.suspect td:first-child { color: var(--bad); font-weight: 600; }
+  .warnings ul { margin: 0 0 14px; padding: 10px 14px 10px 30px; border: 1px solid var(--bad); border-radius: 8px; color: var(--text); }
+  .warnings li { margin: 2px 0; }
+  .note { color: var(--bad); margin-top: 10px; font-size: 14px; }
   code.proj { display: block; white-space: pre-wrap; word-break: break-all; background: var(--mono-bg); padding: 10px; border-radius: 8px; font-size: 12.5px; }
   .hidden { display: none; }
   .two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
@@ -71,7 +75,11 @@
   <section id="resultSection" class="hidden">
     <h2>2. Датум</h2>
     <div class="grid" id="stats"></div>
+    <div class="warnings" id="warnings"></div>
     <div class="table-wrap"><table id="residuals"></table></div>
+    <p class="hint" style="margin-top:8px">|w| — нормированная поправка (тест Баарда; априорная СКО 20 мм в плане на координату,
+      30 мм по высоте; порог 3.29). Подсвечено |w| выше порога — вероятна грубая ошибка; точки автоматически не исключаются.
+      «Без точки» — ошибка прогноза в точке датумом, рассчитанным без неё; «—» — проверить нельзя (без точки модель не определена).</p>
     <div class="row">
       <button id="saveDatum">Скачать датум (JSON)</button>
       <button id="copyProj">Скопировать строку PROJ</button>
@@ -96,7 +104,9 @@
       <button class="primary" id="transform">Пересчитать</button>
       <button id="swap">Обратно ←</button>
       <button id="saveOutput">Скачать результат (CSV)</button>
+      <label><input type="checkbox" id="qualityCols" style="display:inline"> столбцы качества (outside_m, m_plan, m_H)</label>
     </div>
+    <div class="note" id="transformNote"></div>
     <div class="error" id="transformError"></div>
   </section>
 </main>

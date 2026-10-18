@@ -1,3 +1,4 @@
 tools/kotlin_check/lib/
 results/local/
 __pycache__/
+.pytest_cache/

@@ -59,9 +59,10 @@ def read_points(path, columns: tuple[str, str, str]):
     return names, a, b, c
 
 
-def write_points(path, names, columns, a, b, c, digits=(4, 4, 4)) -> None:
+def write_points(path, names, columns, *values, digits=(4, 4, 4)) -> None:
+    """Пишет name и столбцы columns (значения — по массиву на столбец); nan → пустая ячейка."""
     with open(path, "w", newline="", encoding="utf-8") as f:
         w = csv.writer(f, delimiter=";")
         w.writerow(["name", *columns])
-        for n, *v in zip(names, a, b, c):
-            w.writerow([n] + [f"{float(x):.{dg}f}" for x, dg in zip(v, digits)])
+        for n, *v in zip(names, *values):
+            w.writerow([n] + ["" if x != x else f"{float(x):.{dg}f}" for x, dg in zip(v, digits)])

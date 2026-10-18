@@ -1,6 +1,7 @@
 """Локализация ГНСС и пересчёты координат."""
 
-from .localization import LocalizationDatum, LocalizationError, Pair, localize
+from .localization import (DatumWarning, LocalizationDatum, LocalizationError, Pair, Residual, localize,
+                           suggest_exclusions)
 from .io import read_pairs, read_points, write_points
 
-__all__ = ["LocalizationDatum", "LocalizationError", "Pair", "localize", "read_pairs", "read_points", "write_points"]
+__all__ = ["DatumWarning", "LocalizationDatum", "LocalizationError", "Pair", "Residual", "localize", "suggest_exclusions", "read_pairs", "read_points", "write_points"]

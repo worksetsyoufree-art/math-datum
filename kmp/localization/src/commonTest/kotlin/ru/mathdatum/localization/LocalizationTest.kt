@@ -1,6 +1,7 @@
 package ru.mathdatum.localization
 
 import kotlin.math.abs
+import kotlin.math.max
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -11,6 +12,50 @@ class LocalizationTest {
 
     private fun near(expected: Double, actual: Double, tol: Double, what: String) =
         assertTrue(abs(expected - actual) <= tol, "$what: ожидалось $expected, получено $actual (допуск $tol)")
+
+    /** NaN в эталоне — величина не определена (null); иначе допуск tol·max(1, |ожидаемое|). */
+    private fun nearOrNull(expected: Double, actual: Double?, tol: Double, what: String) {
+        if (expected.isNaN()) {
+            assertTrue(actual == null, "$what: ожидалось null, получено $actual")
+        } else {
+            assertTrue(actual != null, "$what: ожидалось $expected, получено null")
+            near(expected, actual, tol * max(1.0, abs(expected)), what)
+        }
+    }
+
+    /** Сверка диагностики надёжности с Python-эталоном. */
+    private fun checkDiag(what: String, d: LocalizationDatum, diag: DoubleArray, resid: List<DoubleArray>) {
+        nearOrNull(diag[0], d.redundancyPlan?.toDouble(), 0.0, "$what redundancyPlan")
+        nearOrNull(diag[1], d.redundancyHeight?.toDouble(), 0.0, "$what redundancyHeight")
+        nearOrNull(diag[2], d.s0Plan, 1e-6, "$what s0Plan")
+        nearOrNull(diag[3], d.s0Height, 1e-6, "$what s0Height")
+        assertEquals(resid.size, d.residuals.size)
+        resid.forEachIndexed { i, e ->
+            val r = d.residuals[i]
+            val w = "$what ${r.name}"
+            near(e[0], r.qvvPlan!!, 1e-8, "$w qvvPlan")
+            nearOrNull(e[1], r.qvvHeight, 1e-8, "$w qvvHeight")
+            nearOrNull(e[2], r.wx, 1e-4, "$w wx")
+            nearOrNull(e[3], r.wy, 1e-4, "$w wy")
+            nearOrNull(e[4], r.wH, 1e-4, "$w wH")
+            nearOrNull(e[5], r.looDx, 1e-6, "$w looDx")
+            nearOrNull(e[6], r.looDy, 1e-6, "$w looDy")
+            nearOrNull(e[7], r.looDH, 1e-6, "$w looDH")
+        }
+    }
+
+    private fun checkQuality(what: String, d: LocalizationDatum, pts: List<DoubleArray>, expected: List<DoubleArray>) {
+        pts.forEachIndexed { i, p ->
+            val q = d.quality(WgsPoint(p[0], p[1], p[2]))
+            val qp = d.quality(WgsPoint(p[0], p[1], p[2]), posterior = true)
+            val e = expected[i]
+            nearOrNull(e[0], q.outside, 1e-6, "$what #$i outside")
+            nearOrNull(e[1], q.mPlan, 1e-7, "$what #$i mPlan")
+            nearOrNull(e[2], q.mHeight, 1e-7, "$what #$i mH")
+            nearOrNull(e[3], qp.mPlan, 1e-7, "$what #$i mPlan апост.")
+            nearOrNull(e[4], qp.mHeight, 1e-7, "$what #$i mH апост.")
+        }
+    }
 
     @Test
     fun transverseMercatorMatchesProj() {
@@ -56,6 +101,70 @@ class LocalizationTest {
                 near(r.catalogWgs[i][1], w.lon, 2e-9, "${r.iso} L")
                 near(r.catalogWgs[i][2], w.h, 1e-4, "${r.iso} h")
             }
+            checkDiag(r.iso, d, r.diag, r.residDiag)
+            checkQuality(r.iso, d, r.checkWgs, r.checkQuality)
+            // Разворот > 1° в 4 регионах — сближение меридианов псевдо-МСК, других предупреждений нет.
+            assertTrue(d.warnings.all { it.code == "rotation_implausible" }, "${r.iso}: ${d.warnings}")
+        }
+    }
+
+    @Test
+    fun reliabilityMatchesPythonReference() {
+        for (c in DIAG_CASES) {
+            val d = localize(c.pairs)
+            checkDiag(c.name, d, c.diag, c.residDiag)
+            checkQuality(c.name, d, c.points, c.quality)
+            assertEquals(c.suspect, d.residuals.map { it.suspect }, "${c.name} suspect")
+            assertEquals(c.warnings, d.warnings.map { it.code }, "${c.name} warnings")
+            assertEquals(c.exclusions, suggestExclusions(c.pairs).map { "${it.name}:${it.part}" }, "${c.name} exclusions")
+        }
+        val blunder = localize(DIAG_CASES.first { it.name == "blunder_plan_10cm" }.pairs)
+        assertEquals(listOf("R4"), blunder.residuals.filter { it.suspect }.map { it.name })
+        assertEquals("R4", blunder.warnings.single().point)
+        // Подсветка 3·СКО на 6 точках не срабатывает: max|v| ≤ √n·СКО.
+        assertTrue(blunder.residuals.all { kotlin.math.hypot(it.dx, it.dy) < 3 * blunder.rmsPlan!! })
+    }
+
+    @Test
+    fun leaveOneOutMatchesManualRefit() {
+        val pairs = REGIONS[5].pairs
+        val d = localize(pairs)
+        pairs.forEachIndexed { i, p ->
+            val m = localize(pairs.filterIndexed { j, _ -> j != i }, d.lat0, d.lon0)
+            val q = m.toLocal(WgsPoint(p.lat, p.lon, p.h))
+            val r = d.residuals[i]
+            near(p.x - q.x, r.looDx!!, 1e-8, "looDx")
+            near(p.y - q.y, r.looDy!!, 1e-8, "looDy")
+            near(p.height - q.height, r.looDH!!, 1e-8, "looDH")
+            near(r.dx / r.qvvPlan!!, r.looDx!!, 1e-8, "v/q")
+        }
+        assertEquals(d.redundancyPlan!!.toDouble(), d.residuals.sumOf { 2 * it.qvvPlan!! }, 1e-9)
+    }
+
+    @Test
+    fun convexHullAndOutside() {
+        val hull = convexHull(listOf(0.0 to 0.0, 2.0 to 0.0, 1.0 to 1.0, 2.0 to 2.0, 0.0 to 2.0, 1.0 to 0.0))
+        assertEquals(listOf(0.0 to 0.0, 2.0 to 0.0, 2.0 to 2.0, 0.0 to 2.0), hull)
+        val h = hull.map { listOf(it.first, it.second) }
+        assertEquals(0.0, outsideHull(h, 1.0, 1.0))
+        assertEquals(1.0, outsideHull(h, 3.0, 1.0), 1e-12)
+        assertEquals(0.5, outsideHull(h, 1.0, 2.5), 1e-12)
+        assertEquals(3.0, outsideHull(listOf(listOf(0.0, 0.0), listOf(4.0, 0.0)), 2.0, 3.0), 1e-12)
+        assertEquals(5.0, outsideHull(listOf(listOf(1.0, 1.0)), 4.0, 5.0), 1e-12)
+    }
+
+    @Test
+    fun pythonDatumWithDiagnostics() {
+        val py = LocalizationDatum.fromJson(PY_DATUM_JSON)
+        val c = DIAG_CASES.first { it.name == "example" }
+        val kt = localize(c.pairs)
+        checkDiag("python json", py, c.diag, c.residDiag)
+        checkQuality("python json", py, c.points, c.quality)
+        assertEquals(kt.planHull!!.size, py.planHull!!.size)
+        assertEquals(LocalizationDatum.fromJson(kt.toJson()), kt)
+        // Python читает то, что пишет Kotlin: имена полей совпадают.
+        for (key in listOf("\"redundancy_plan\"", "\"q_height\"", "\"plan_hull\"", "\"loo_dH\"", "\"qvv_plan\"", "\"warnings\"")) {
+            assertTrue(key in kt.toJson(), key)
         }
     }
 
@@ -84,6 +193,9 @@ class LocalizationTest {
         val p = LocalizationDatum.fromJson(py)
         assertEquals(-5.0, p.c0)
         assertEquals(Use.BOTH, p.residuals.single().use)
+        // Старый формат без сведений о надёжности: поля пустые, точность не определена.
+        assertTrue(p.warnings.isEmpty() && p.redundancyPlan == null && p.residuals.single().wx == null)
+        assertEquals(PointQuality(null, null, null), p.quality(WgsPoint(55.0, 37.0, 0.0)))
     }
 
     @Test

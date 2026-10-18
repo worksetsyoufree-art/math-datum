@@ -12,10 +12,14 @@ import org.w3c.files.BlobPropertyBag
 import org.w3c.files.FileReader
 import org.w3c.files.get
 import ru.mathdatum.localization.Csv
+import ru.mathdatum.localization.Exclusion
 import ru.mathdatum.localization.LocalizationDatum
+import ru.mathdatum.localization.PointQuality
 import ru.mathdatum.localization.Use
 import ru.mathdatum.localization.fixed
 import ru.mathdatum.localization.localize
+import ru.mathdatum.localization.suggestExclusions
+import kotlin.math.abs
 
 private const val EXAMPLE_PAIRS = """name;B;L;h;x;y;H;use
 R1;55.0527657163;39.2668049556;215.5380;-200498.0340;3258049.8198;209.3761;both
@@ -60,6 +64,7 @@ fun main() {
         datum?.let { window.navigator.clipboard.writeText(it.toProjPipeline()) }; null
     }
     el<HTMLSelectElement>("direction").onchange = { el<HTMLTextAreaElement>("output").value = ""; null }
+    el<HTMLInputElement>("qualityCols").onchange = { if (el<HTMLTextAreaElement>("output").value.isNotBlank()) transform(); null }
     readFile("pairsFile") { pairs.value = it; calculate() }
     readFile("datumFile") { text ->
         try {
@@ -75,14 +80,18 @@ fun main() {
 private fun calculate() {
     val err = el<HTMLElement>("calcError")
     try {
-        show(localize(Csv.parsePairs(el<HTMLTextAreaElement>("pairs").value)))
+        val pairs = Csv.parsePairs(el<HTMLTextAreaElement>("pairs").value)
+        val d = localize(pairs)
+        show(d, if (d.residuals.any { it.suspect }) suggestExclusions(pairs) else emptyList())
         err.textContent = ""
     } catch (e: Throwable) {
         err.textContent = e.message ?: e.toString()
     }
 }
 
-private fun show(d: LocalizationDatum) {
+private fun mm(v: Double?) = v?.let { (it * 1000).fixed(1) } ?: "—"
+
+private fun show(d: LocalizationDatum, exclusions: List<Exclusion> = emptyList()) {
     datum = d
     el<HTMLElement>("resultSection").classList.remove("hidden")
     el<HTMLElement>("transformSection").classList.remove("hidden")
@@ -95,17 +104,37 @@ private fun show(d: LocalizationDatum) {
         stat("Сдвиг высоты c0", "${d.c0.fixed(4)} м"),
         stat("Наклон N / E", "${(d.c1 * 1e6).fixed(2)} / ${(d.c2 * 1e6).fixed(2)} мм/км"),
         stat("Модель", "план: ${d.planModel}, высота: ${d.heightModel}"),
+        stat("Избыточность план / высота", if (d.redundancyPlan == null) "—" else "${d.redundancyPlan} / ${d.redundancyHeight ?: "—"}"),
+        stat("СКО ед. веса план / высота", "${mm(d.s0Plan)} / ${mm(d.s0Height)} мм" +
+            (d.sigma0Plan?.let { " (априори ${mm(it)} / ${mm(d.sigma0Height)})" } ?: "")),
     ).joinToString("")
+
+    // Предупреждения датума и предложение исключить точки (только диагностика, расчёт не меняется).
+    val notes = d.warnings.map { escape(it.message) }.toMutableList()
+    if (d.redundancyPlan == null) notes += "Датум в старом формате: сведений о надёжности нет — пересчитайте его по парам точек."
+    if (exclusions.isNotEmpty()) {
+        notes += "Итеративно по худшему |w| предлагается исключить: " + exclusions.joinToString(", ") {
+            "${escape(it.name)} (${if (it.part == "plan") "план" else "высота"}, |w| = ${it.w.fixed(2)})"
+        } + ". Измените <code>use</code> и пересчитайте."
+    }
+    el<HTMLElement>("warnings").innerHTML =
+        if (notes.isEmpty()) "" else "<ul>" + notes.joinToString("") { "<li>$it</li>" } + "</ul>"
 
     val table = el<HTMLTableElement>("residuals")
     if (d.residuals.isEmpty()) {
         table.innerHTML = ""
     } else {
-        // Подсвечиваем невязки больше трёх СКО — кандидаты на исключение.
-        val limPlan = 3 * (d.rmsPlan ?: Double.MAX_VALUE)
-        val limH = 3 * (d.rmsHeight ?: Double.MAX_VALUE)
-        fun cell(v: Double, lim: Double) = "<td${if (kotlin.math.abs(v) > lim && lim > 0.001) " class=\"big\"" else ""}>${(v * 1000).fixed(1)}</td>"
-        table.innerHTML = "<tr><th>Точка</th><th>Использование</th><th>dx, мм</th><th>dy, мм</th><th>dH, мм</th></tr>" +
+        // Подсвечиваем по нормированной поправке |w| > порога (тест Баарда), а не по 3·СКО:
+        // max|v| ≤ √n·СКО, поэтому при n ≤ 9 такой порог недостижим, а выброс ещё и раздувает СКО.
+        val lim = d.wLimit ?: Double.MAX_VALUE
+        fun cell(text: String, bad: Boolean, title: String? = null) =
+            "<td${if (bad) " class=\"big\"" else ""}${title?.let { " title=\"$it\"" } ?: ""}>$text</td>"
+        fun w(v: Double?, na: String) = cell(v?.let { abs(it).fixed(2) } ?: "—", v != null && abs(v) > lim, if (v == null) na else null)
+        val noCheck = "нельзя проверить: без точки модель не определена"
+        table.innerHTML = "<tr><th>Точка</th><th>Использование</th><th>dx, мм</th><th>dy, мм</th><th>dH, мм</th>" +
+            "<th title=\"нормированная поправка, план: max(|wx|, |wy|)\">|w| план</th><th title=\"нормированная поправка, высота\">|w| выс.</th>" +
+            "<th title=\"ошибка прогноза в точке датумом без неё (для контрольных — сама невязка)\">Без точки план, мм</th>" +
+            "<th>Без точки dH, мм</th></tr>" +
             d.residuals.joinToString("") { r ->
                 val use = when (r.use) {
                     Use.BOTH -> "план и высота"
@@ -113,8 +142,14 @@ private fun show(d: LocalizationDatum) {
                     Use.HEIGHT -> "высота"
                     Use.NONE -> "контроль"
                 }
-                "<tr${if (r.use == Use.NONE) " class=\"control\"" else ""}><td>${escape(r.name)}</td><td>$use</td>" +
-                    cell(r.dx, limPlan) + cell(r.dy, limPlan) + cell(r.dH, limH) + "</tr>"
+                val badP = r.wPlan?.let { it > lim } == true
+                val badH = r.wH?.let { abs(it) > lim } == true
+                val cls = listOfNotNull("control".takeIf { r.use == Use.NONE }, "suspect".takeIf { r.suspect })
+                "<tr${if (cls.isEmpty()) "" else " class=\"${cls.joinToString(" ")}\""}><td>${escape(r.name)}${if (r.suspect) " ⚠" else ""}</td><td>$use</td>" +
+                    cell(mm(r.dx), badP) + cell(mm(r.dy), badP) + cell(mm(r.dH), badH) +
+                    w(r.wPlan, noCheck) + w(r.wH, noCheck) +
+                    cell(mm(r.looPlan), badP, if (r.looPlan == null) noCheck else null) +
+                    cell(mm(r.looDH), badH, if (r.looDH == null) noCheck else null) + "</tr>"
             }
     }
     el<HTMLElement>("proj").textContent = d.toProjPipeline()
@@ -125,14 +160,40 @@ private fun transform() {
     val err = el<HTMLElement>("transformError")
     val input = el<HTMLTextAreaElement>("input").value
     try {
-        el<HTMLTextAreaElement>("output").value = when (el<HTMLSelectElement>("direction").value) {
-            "toLocal" -> Csv.formatLocal(Csv.parseWgsPoints(input).map { (n, p) -> n to d.toLocal(p) })
-            else -> Csv.formatWgs(Csv.parseLocalPoints(input).map { (n, p) -> n to d.toWgs(p) })
+        val withQuality = el<HTMLInputElement>("qualityCols").checked
+        val quality = mutableListOf<Pair<String, PointQuality>>()
+        val text = when (el<HTMLSelectElement>("direction").value) {
+            "toLocal" -> Csv.parseWgsPoints(input).let { pts ->
+                pts.forEach { (n, p) -> quality += n to d.quality(p) }
+                Csv.formatLocal(pts.map { (n, p) -> n to d.toLocal(p) })
+            }
+            else -> Csv.parseLocalPoints(input).let { pts ->
+                pts.forEach { (n, p) -> quality += n to d.quality(p) }
+                Csv.formatWgs(pts.map { (n, p) -> n to d.toWgs(p) })
+            }
+        }
+        el<HTMLTextAreaElement>("output").value = if (!withQuality) text else addQualityColumns(text, quality)
+        val far = quality.filter { (it.second.outside ?: 0.0) > 1e-3 }
+        el<HTMLElement>("transformNote").innerHTML = when {
+            d.planHull == null -> "Датум в старом формате: экстраполяция не проверяется."
+            far.isEmpty() -> ""
+            else -> "⚠ ${far.size} из ${quality.size} точек вне выпуклой оболочки опорных пунктов (экстраполяция, точность падает): " +
+                far.joinToString(", ") { "${escape(it.first)} (${it.second.outside!!.fixed(0)} м)" }
         }
         err.textContent = ""
     } catch (e: Throwable) {
         err.textContent = e.message ?: e.toString()
     }
+}
+
+/** Добавляет к CSV столбцы outside_m (расстояние до оболочки опорных пунктов), m_plan, m_H (СКО прогноза, априори). */
+private fun addQualityColumns(csv: String, quality: List<Pair<String, PointQuality>>): String {
+    val lines = csv.trimEnd('\n').split("\n")
+    fun f(v: Double?, d: Int) = v?.fixed(d) ?: ""
+    return lines.first() + ";outside_m;m_plan;m_H\n" + lines.drop(1).mapIndexed { i, line ->
+        val q = quality[i].second
+        "$line;${f(q.outside, 3)};${f(q.mPlan, 4)};${f(q.mHeight, 4)}\n"
+    }.joinToString("")
 }
 
 /** Переносит результат во вход и меняет направление — удобно проверить пересчёт туда и обратно. */
