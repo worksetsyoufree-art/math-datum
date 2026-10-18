@@ -7,7 +7,7 @@
   - REGIONS: по каждому из 83 регионов — пары точек, датум по Python-эталону, прогноз
     в контрольных точках и обратный пересчёт, диагностика надёжности;
   - DIAG_CASES: особые случаи надёжности (грубые ошибки, нулевая избыточность, вырождение без
-    точки, флаги use, неправдоподобные масштаб и разворот).
+    точки, флаги use, неправдоподобные масштаб и разворот) и веса точек (взвешенный МНК).
 """
 
 import json
@@ -29,8 +29,21 @@ def d(v):
 
 
 def resid_diag(dt):
-    """По каждой невязке: qvvPlan, qvvHeight, wx, wy, wH, looDx, looDy, looDH (NaN — null)."""
-    return [[r.qvv_plan, r.qvv_height, r.wx, r.wy, r.wH, r.loo_dx, r.loo_dy, r.loo_dH] for r in dt.residuals]
+    """По каждой невязке: qvvPlan, qvvHeight, wx, wy, wH, looDx, looDy, looDH, pPlan, pHeight, dx, dy, dH
+    (NaN — null)."""
+    return [[r.qvv_plan, r.qvv_height, r.wx, r.wy, r.wH, r.loo_dx, r.loo_dy, r.loo_dH, r.p_plan, r.p_height,
+             r.dx, r.dy, r.dH] for r in dt.residuals]
+
+
+def params(dt):
+    """lat0, lon0, Nc, Ec, a, b, tx, ty, c0, c1, c2, rmsPlan, rmsHeight."""
+    return [dt.lat0, dt.lon0, dt.Nc, dt.Ec, dt.a, dt.b, dt.tx, dt.ty, dt.c0, dt.c1, dt.c2, dt.rms_plan, dt.rms_height]
+
+
+def pair_kt(p):
+    sig = "" if p.sigma_plan is None and p.sigma_height is None else f", {d(p.sigma_plan)}, {d(p.sigma_height)}"
+    return (f'LocalizationPair("{p.name}", {d(p.B)}, {d(p.L)}, {d(p.h)}, {d(p.x)}, {d(p.y)}, {d(p.H)}, '
+            f'Use.{p.use.upper()}{sig})').replace("Double.NaN", "null")
 
 
 def datum_diag(dt):
@@ -76,7 +89,7 @@ def regions():
             f'LocalizationPair("{p.name}", {d(p.B)}, {d(p.L)}, {d(p.h)}, {d(p.x)}, {d(p.y)}, {d(p.H)})' for p in pairs)
         out.append(
             f'RegionCase("{case["region"]["iso_3166_2"]}", listOf({pairs_kt}),\n'
-            f'  doubleArrayOf({", ".join(d(v) for v in (dt.lat0, dt.lon0, dt.Nc, dt.Ec, dt.a, dt.b, dt.tx, dt.ty, dt.c0, dt.c1, dt.c2, dt.rms_plan, dt.rms_height))}),\n'
+            f'  doubleArrayOf({", ".join(d(v) for v in params(dt))}),\n'
             f'  {arr(chk)},\n  {arr(np.column_stack([x, y, H]))},\n  {arr(loc)},\n  {arr(np.column_stack([B, L, h]))},\n'
             f'  doubleArrayOf({", ".join(d(v) for v in datum_diag(dt))}),\n  {arr(resid_diag(dt))},\n'
             f'  {arr(quality(dt, chk))})')
@@ -110,17 +123,33 @@ def diag_cases():
         q.x, q.y = q.y, q.x
     cases.append(("swapped_axes", c))
     cases.append(("one_point", copy(base[:1])))
+    # Веса точек.
+    c = copy(base)
+    for q, sp, sh in zip(c, (0.005, 0.05, None, 0.01, 0.04, None, 0.03, None, 0.1, None),
+                         (0.01, None, 0.08, 0.02, None, 0.05, 0.015, 0.2, None, None)):
+        q.sigma_plan, q.sigma_height = sp, sh
+    c[2].use = "plan"; c[4].use = "height"
+    cases.append(("weighted", c))
+    c = copy(base[:6])
+    for q in c:
+        q.sigma_plan, q.sigma_height = 0.05, 0.07
+    cases.append(("weighted_equal", c))
+    c = copy(base[:6]); c[3].x += 0.5; c[3].H += 0.5; c[3].sigma_plan = c[3].sigma_height = 10.0
+    cases.append(("weighted_large_sigma_blunder", c))
+    c = copy(base[:6]); c[3].x += 0.10; c[3].sigma_plan = 0.01
+    cases.append(("weighted_small_sigma_blunder", c))
+    c = copy(base[:4]); c[0].sigma_plan = 0.001; c[1].sigma_height = 0.002
+    cases.append(("weighted_four_points", c))
 
     out = []
     for name, pairs in cases:
         dt = localize(pairs)
         pts = np.array([[p.B, p.L, p.h] for p in base])
         ex = [f"{n}:{part}" for n, part, _ in suggest_exclusions(pairs)]
-        pairs_kt = ", ".join(
-            f'LocalizationPair("{p.name}", {d(p.B)}, {d(p.L)}, {d(p.h)}, {d(p.x)}, {d(p.y)}, {d(p.H)}, Use.{p.use.upper()})'
-            for p in pairs)
+        pairs_kt = ", ".join(pair_kt(p) for p in pairs)
         out.append(
             f'DiagCase("{name}", listOf({pairs_kt}),\n'
+            f'  doubleArrayOf({", ".join(d(v) for v in params(dt))}),\n'
             f'  doubleArrayOf({", ".join(d(v) for v in datum_diag(dt))}),\n  {arr(resid_diag(dt))},\n'
             f'  listOf({", ".join("true" if r.suspect else "false" for r in dt.residuals)}),\n'
             f'  listOf({", ".join(chr(34) + w.code + chr(34) for w in dt.warnings)}),\n'
@@ -145,9 +174,10 @@ def main():
         "                 val checkWgs: List<DoubleArray>, val checkLocal: List<DoubleArray>,\n"
         "                 val catalogLocal: List<DoubleArray>, val catalogWgs: List<DoubleArray>,\n"
         "                 val diag: DoubleArray, val residDiag: List<DoubleArray>, val checkQuality: List<DoubleArray>)\n\n"
-        "/** diag: redundancyPlan, redundancyHeight, s0Plan, s0Height; residDiag: qvvPlan, qvvHeight, wx, wy, wH,\n"
-        " *  looDx, looDy, looDH; quality: outside, mPlan, mH (априори), mPlan, mH (апостериори). NaN — null. */\n"
-        "class DiagCase(val name: String, val pairs: List<LocalizationPair>, val diag: DoubleArray,\n"
+        "/** expected — как у RegionCase; diag: redundancyPlan, redundancyHeight, s0Plan, s0Height;\n"
+        " *  residDiag: qvvPlan, qvvHeight, wx, wy, wH, looDx, looDy, looDH, pPlan, pHeight, dx, dy, dH;\n"
+        " *  quality: outside, mPlan, mH (априори), mPlan, mH (апостериори). NaN — null. */\n"
+        "class DiagCase(val name: String, val pairs: List<LocalizationPair>, val expected: DoubleArray, val diag: DoubleArray,\n"
         "               val residDiag: List<DoubleArray>, val suspect: List<Boolean>, val warnings: List<String>,\n"
         "               val exclusions: List<String>, val points: List<DoubleArray>, val quality: List<DoubleArray>)\n\n"
         "val TM_CASES = listOf(\n    " + ",\n    ".join(tm) + ",\n)\n\n"

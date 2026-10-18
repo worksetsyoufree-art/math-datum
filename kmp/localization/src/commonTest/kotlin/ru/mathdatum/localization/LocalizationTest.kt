@@ -33,7 +33,7 @@ class LocalizationTest {
         resid.forEachIndexed { i, e ->
             val r = d.residuals[i]
             val w = "$what ${r.name}"
-            near(e[0], r.qvvPlan!!, 1e-8, "$w qvvPlan")
+            nearOrNull(e[0], r.qvvPlan, 1e-8, "$w qvvPlan")
             nearOrNull(e[1], r.qvvHeight, 1e-8, "$w qvvHeight")
             nearOrNull(e[2], r.wx, 1e-4, "$w wx")
             nearOrNull(e[3], r.wy, 1e-4, "$w wy")
@@ -41,7 +41,29 @@ class LocalizationTest {
             nearOrNull(e[5], r.looDx, 1e-6, "$w looDx")
             nearOrNull(e[6], r.looDy, 1e-6, "$w looDy")
             nearOrNull(e[7], r.looDH, 1e-6, "$w looDH")
+            nearOrNull(e[8], r.pPlan, 1e-12, "$w pPlan")
+            nearOrNull(e[9], r.pHeight, 1e-12, "$w pHeight")
+            near(e[10], r.dx, 1e-6, "$w dx")
+            near(e[11], r.dy, 1e-6, "$w dy")
+            near(e[12], r.dH, 1e-6, "$w dH")
         }
+    }
+
+    /** Параметры датума против эталона (те же допуски, что по регионам). */
+    private fun checkParams(what: String, d: LocalizationDatum, e: DoubleArray) {
+        near(e[0], d.lat0, 1e-12, "$what lat0")
+        near(e[1], d.lon0, 1e-12, "$what lon0")
+        near(e[2], d.nc, 1e-5, "$what Nc")
+        near(e[3], d.ec, 1e-5, "$what Ec")
+        near(e[4], d.a, 1e-10, "$what a")
+        near(e[5], d.b, 1e-10, "$what b")
+        near(e[6], d.tx, 1e-6, "$what tx")
+        near(e[7], d.ty, 1e-6, "$what ty")
+        near(e[8], d.c0, 1e-6, "$what c0")
+        near(e[9], d.c1, 1e-10, "$what c1")
+        near(e[10], d.c2, 1e-10, "$what c2")
+        near(e[11], d.rmsPlan!!, 1e-6, "$what rmsPlan")
+        nearOrNull(e[12], d.rmsHeight, 1e-6, "$what rmsHeight")
     }
 
     private fun checkQuality(what: String, d: LocalizationDatum, pts: List<DoubleArray>, expected: List<DoubleArray>) {
@@ -75,20 +97,7 @@ class LocalizationTest {
         assertEquals(83, REGIONS.size)
         for (r in REGIONS) {
             val d = localize(r.pairs)
-            val e = r.expected
-            near(e[0], d.lat0, 1e-12, "${r.iso} lat0")
-            near(e[1], d.lon0, 1e-12, "${r.iso} lon0")
-            near(e[2], d.nc, 1e-5, "${r.iso} Nc")
-            near(e[3], d.ec, 1e-5, "${r.iso} Ec")
-            near(e[4], d.a, 1e-10, "${r.iso} a")
-            near(e[5], d.b, 1e-10, "${r.iso} b")
-            near(e[6], d.tx, 1e-6, "${r.iso} tx")
-            near(e[7], d.ty, 1e-6, "${r.iso} ty")
-            near(e[8], d.c0, 1e-6, "${r.iso} c0")
-            near(e[9], d.c1, 1e-10, "${r.iso} c1")
-            near(e[10], d.c2, 1e-10, "${r.iso} c2")
-            near(e[11], d.rmsPlan!!, 1e-6, "${r.iso} rmsPlan")
-            near(e[12], d.rmsHeight!!, 1e-6, "${r.iso} rmsHeight")
+            checkParams(r.iso, d, r.expected)
             r.checkWgs.forEachIndexed { i, w ->
                 val p = d.toLocal(WgsPoint(w[0], w[1], w[2]))
                 near(r.checkLocal[i][0], p.x, 1e-4, "${r.iso} x")
@@ -103,8 +112,8 @@ class LocalizationTest {
             }
             checkDiag(r.iso, d, r.diag, r.residDiag)
             checkQuality(r.iso, d, r.checkWgs, r.checkQuality)
-            // Разворот > 1° в 4 регионах — сближение меридианов псевдо-МСК, других предупреждений нет.
-            assertTrue(d.warnings.all { it.code == "rotation_implausible" }, "${r.iso}: ${d.warnings}")
+            // Разворот до ~1.5° (сближение меридианов псевдо-МСК) ниже порога 3°: предупреждений нет.
+            assertTrue(d.warnings.isEmpty(), "${r.iso}: ${d.warnings}")
         }
     }
 
@@ -112,6 +121,7 @@ class LocalizationTest {
     fun reliabilityMatchesPythonReference() {
         for (c in DIAG_CASES) {
             val d = localize(c.pairs)
+            checkParams(c.name, d, c.expected)
             checkDiag(c.name, d, c.diag, c.residDiag)
             checkQuality(c.name, d, c.points, c.quality)
             assertEquals(c.suspect, d.residuals.map { it.suspect }, "${c.name} suspect")
@@ -142,6 +152,45 @@ class LocalizationTest {
     }
 
     @Test
+    fun weightedLeastSquares() {
+        // Равные веса: параметры как без весов, w масштабируются как σ0/σ.
+        val base = DIAG_CASES.first { it.name == "example" }.pairs.take(6)
+        val d = localize(base)
+        val e = localize(base.map { it.copy(sigmaPlan = 0.05, sigmaHeight = 0.07) })
+        for ((x, y) in listOf(d.a to e.a, d.b to e.b, d.c1 to e.c1, d.c2 to e.c2)) near(x, y, 1e-12, "равные веса")
+        for ((x, y) in listOf(d.tx to e.tx, d.ty to e.ty, d.nc to e.nc, d.c0 to e.c0)) near(x, y, 1e-12 * max(1.0, abs(x)), "равные веса")
+        d.residuals.zip(e.residuals).forEach { (r, q) -> near(r.wx!! * 0.02 / 0.05, q.wx!!, 1e-7, "w") }
+        assertTrue(!d.weighted && e.weighted)
+        // σ = σ0 у всех — то же, что без весов.
+        val f = localize(base.map { it.copy(sigmaPlan = 0.02, sigmaHeight = 0.03) })
+        assertEquals(d.residuals.map { it.wx }, f.residuals.map { it.wx })
+        // Leave-one-out = v / (p·q_vv) = прямой пересчёт; Σ p·q_vv = r.
+        val pairs = DIAG_CASES.first { it.name == "weighted" }.pairs
+        val w = localize(pairs)
+        pairs.forEachIndexed { i, p ->
+            val r = w.residuals[i]
+            if (!p.use.inPlan || !p.use.inHeight) return@forEachIndexed
+            val m = localize(pairs.filterIndexed { j, _ -> j != i }, w.lat0, w.lon0)
+            val q = m.toLocal(WgsPoint(p.lat, p.lon, p.h))
+            near(p.x - q.x, r.looDx!!, 1e-8, "looDx")
+            near(p.height - q.height, r.looDH!!, 1e-8, "looDH")
+            near(r.dx / (r.pPlan!! * r.qvvPlan!!), r.looDx!!, 1e-8, "v/(p·q)")
+            near(r.dH / (r.pHeight!! * r.qvvHeight!!), r.looDH!!, 1e-8, "v/(p·q) H")
+        }
+        val inP = w.residuals.filter { it.use.inPlan }
+        val inH = w.residuals.filter { it.use.inHeight }
+        assertEquals(w.redundancyPlan!!.toDouble(), inP.sumOf { 2 * it.pPlan!! * it.qvvPlan!! }, 1e-9)
+        assertEquals(w.redundancyHeight!!.toDouble(), inH.sumOf { it.pHeight!! * it.qvvHeight!! }, 1e-9)
+        assertEquals(0.005, w.residuals[0].sigmaPlan)
+        assertEquals(0.03, w.residuals[1].sigmaHeight)
+        // Точка с большой σ и ошибкой 0.5 м не помечена; с малой σ — помечена.
+        assertTrue(localize(DIAG_CASES.first { it.name == "weighted_large_sigma_blunder" }.pairs).residuals.none { it.suspect })
+        assertTrue(localize(DIAG_CASES.first { it.name == "weighted_small_sigma_blunder" }.pairs).residuals[3].suspect)
+        assertFailsWith<LocalizationException> { localize(base.mapIndexed { i, p -> if (i == 0) p.copy(sigmaPlan = 0.0) else p }) }
+        assertTrue("σ план" in w.report() && "σ план" !in d.report())
+    }
+
+    @Test
     fun convexHullAndOutside() {
         val hull = convexHull(listOf(0.0 to 0.0, 2.0 to 0.0, 1.0 to 1.0, 2.0 to 2.0, 0.0 to 2.0, 1.0 to 0.0))
         assertEquals(listOf(0.0 to 0.0, 2.0 to 0.0, 2.0 to 2.0, 0.0 to 2.0), hull)
@@ -163,7 +212,7 @@ class LocalizationTest {
         assertEquals(kt.planHull!!.size, py.planHull!!.size)
         assertEquals(LocalizationDatum.fromJson(kt.toJson()), kt)
         // Python читает то, что пишет Kotlin: имена полей совпадают.
-        for (key in listOf("\"redundancy_plan\"", "\"q_height\"", "\"plan_hull\"", "\"loo_dH\"", "\"qvv_plan\"", "\"warnings\"")) {
+        for (key in listOf("\"sigma_plan\"", "\"p_height\"", "\"redundancy_plan\"", "\"q_height\"", "\"plan_hull\"", "\"loo_dH\"", "\"qvv_plan\"", "\"warnings\"")) {
             assertTrue(key in kt.toJson(), key)
         }
     }
@@ -231,6 +280,11 @@ class LocalizationTest {
         assertEquals(55.1, p[0].lat)
         assertEquals(Use.PLAN, p[0].use)
         assertEquals(Use.BOTH, p[1].use)
+        assertTrue(p.all { it.sigmaPlan == null && it.sigmaHeight == null })
+        val s = Csv.parsePairs("name;B;L;h;x;y;H;use;sigma_plan;sigma_height\nR1;55;37;150;100;200;145;;0,005;\nR2;55;37;150;1;2;3;;;0.04\n")
+        assertEquals(0.005, s[0].sigmaPlan)
+        assertEquals(null, s[0].sigmaHeight)
+        assertEquals(0.04, s[1].sigmaHeight)
         val w = Csv.parseWgsPoints("name,B,L,h\nT1,55.5,37.5,140\n")
         assertEquals(37.5, w.single().second.lon)
         assertFailsWith<IllegalArgumentException> { Csv.parsePairs("name;B;L\nR1;1;2\n") }

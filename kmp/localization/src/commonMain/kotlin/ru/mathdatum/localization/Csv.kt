@@ -7,7 +7,8 @@ import kotlin.math.round
 /*
  * CSV в том же формате, что у Python-эталона (mathdatum/io.py).
  * Первая строка — заголовок; разделитель «;» или «,» определяется по заголовку.
- * Пары:   name;B;L;h;x;y;H[;use]     Точки WGS: name;B;L;h     Местные точки: name;x;y;H
+ * Пары:   name;B;L;h;x;y;H[;use][;sigma_plan][;sigma_height]     Точки WGS: name;B;L;h     Местные точки: name;x;y;H
+ * sigma_plan, sigma_height — необязательные априорные СКО точки, м; пусто — глобальная σ.
  */
 object Csv {
     fun parsePairs(text: String): List<LocalizationPair> = rows(text).mapIndexed { i, (r, line) ->
@@ -17,6 +18,8 @@ object Csv {
                 lat = num(r, "B"), lon = num(r, "L"), h = num(r, "h"),
                 x = num(r, "x"), y = num(r, "y"), height = num(r, "H"),
                 use = r["use"]?.takeIf { it.isNotEmpty() }?.let(Use::parse) ?: Use.BOTH,
+                sigmaPlan = r["sigma_plan"]?.takeIf { it.isNotEmpty() }?.let { num(r, "sigma_plan") },
+                sigmaHeight = r["sigma_height"]?.takeIf { it.isNotEmpty() }?.let { num(r, "sigma_height") },
             )
         } catch (e: IllegalArgumentException) {
             throw IllegalArgumentException("Строка $line: ${e.message}")
@@ -92,13 +95,16 @@ fun LocalizationDatum.report(): String = buildString {
         )
     }
     appendLine()
+    val w = weighted
     appendLine(
         "точка".padEnd(12) + "use".padEnd(8) + "dx, м".padStart(10) + "dy, м".padStart(10) + "dH, м".padStart(10) +
+            (if (w) "σ план".padStart(9) + "σ выс".padStart(8) else "") +
             "|w|план".padStart(9) + "|w|выс".padStart(8) + "LOO план".padStart(10) + "LOO dH".padStart(9),
     )
     for (r in residuals) {
         append(r.name.padEnd(12) + r.use.name.lowercase().padEnd(8))
         append(r.dx.fixed(4).padStart(10) + r.dy.fixed(4).padStart(10) + r.dH.fixed(4).padStart(10))
+        if (w) append(f4(r.sigmaPlan).padStart(9) + f4(r.sigmaHeight).padStart(8))
         append((r.wPlan?.fixed(2) ?: "—").padStart(9) + (r.wH?.let { kotlin.math.abs(it).fixed(2) } ?: "—").padStart(8))
         append(f4(r.looPlan).padStart(10) + f4(r.looDH).padStart(9))
         appendLine((if (r.suspect) "  !" else "") + (if (r.use == Use.NONE) "  (контроль)" else ""))
@@ -106,13 +112,14 @@ fun LocalizationDatum.report(): String = buildString {
     if (redundancyPlan != null) {
         appendLine(
             "|w| — нормированная поправка (тест Баарда, порог $wLimit, «!» — подозрение); " +
-                "LOO — ошибка прогноза без точки, м; «—» — нельзя проверить.",
+                "LOO — ошибка прогноза без точки, м; «—» — нельзя проверить." +
+                (if (w) " σ — априорная СКО точки, м (вес p = σ0² / σ²)." else ""),
         )
     }
     if (warnings.isNotEmpty()) {
         appendLine()
         appendLine("Предупреждения:")
-        for (w in warnings) appendLine("  - ${w.message}")
+        for (x in warnings) appendLine("  - ${x.message}")
     }
 }
 

@@ -4,7 +4,8 @@
       Рассчитать локализацию по парам точек и сохранить датум; печатает отчёт.
 
       Параметры надёжности: --sigma-plan 0.02 --sigma-height 0.03 (априорные СКО, м),
-      --w-limit 3.29 (порог теста Баарда), --max-scale-ppm 200, --max-rotation-deg 1;
+      --w-limit 3.29 (порог теста Баарда), --max-scale-ppm 200, --max-rotation-deg 3;
+      σ точки из столбцов sigma_plan / sigma_height даёт вес p = σ0² / σi² (пусто — p = 1).
       --suggest — дополнительно предложить, какие точки исключить (итеративно, по худшему |w|).
 
   python -m mathdatum to-local datum.json wgs.csv -o local.csv [--quality]
@@ -42,19 +43,23 @@ def report(d: LocalizationDatum) -> str:
         lines.append(f"Избыточность: план {d.redundancy_plan}, высота {fmt(d.redundancy_height, 'd')}; "
                      f"СКО ед. веса (на координату): план {fmt(d.s0_plan)} м "
                      f"(априори {fmt(d.sigma0_plan)}), высота {fmt(d.s0_height)} м (априори {fmt(d.sigma0_height)})")
+    weighted = d.weighted
     lines += [
         "",
         f"{'точка':<12}{'use':<8}{'dx, м':>10}{'dy, м':>10}{'dH, м':>10}"
-        f"{'|w|план':>9}{'|w|выс':>8}{'LOO план':>10}{'LOO dH':>9}",
+        + (f"{'σ план':>9}{'σ выс':>8}" if weighted else "")
+        + f"{'|w|план':>9}{'|w|выс':>8}{'LOO план':>10}{'LOO dH':>9}",
     ]
     for r in d.residuals:
         mark = ("  !" if r.suspect else "") + ("" if r.use != "none" else "  (контроль)")
-        lines.append(f"{r.name:<12}{r.use:<8}{r.dx:>10.4f}{r.dy:>10.4f}{r.dH:>10.4f}"
+        sig = f"{fmt(r.sigma_plan):>9}{fmt(r.sigma_height):>8}" if weighted else ""
+        lines.append(f"{r.name:<12}{r.use:<8}{r.dx:>10.4f}{r.dy:>10.4f}{r.dH:>10.4f}{sig}"
                      f"{fmt(r.w_plan, '.2f'):>9}{fmt(None if r.wH is None else abs(r.wH), '.2f'):>8}"
                      f"{fmt(r.loo_plan):>10}{fmt(r.loo_dH):>9}{mark}")
     if d.redundancy_plan is not None:
         lines.append(f"|w| — нормированная поправка (тест Баарда, порог {fmt(d.w_limit, 'g')}, «!» — подозрение); "
-                     "LOO — ошибка прогноза без точки, м; «—» — нельзя проверить.")
+                     "LOO — ошибка прогноза без точки, м; «—» — нельзя проверить."
+                     + (" σ — априорная СКО точки, м (вес p = σ0² / σ²)." if weighted else ""))
     if d.warnings:
         lines += ["", "Предупреждения:"] + [f"  - {w.message}" for w in d.warnings]
     return "\n".join(lines)
@@ -87,11 +92,13 @@ def main(argv=None):
     p = sub.add_parser("localize", help="рассчитать датум по парам точек")
     p.add_argument("pairs")
     p.add_argument("-o", "--out", default="datum.json")
-    p.add_argument("--sigma-plan", type=float, default=0.02, help="априорная СКО координаты в плане, м")
-    p.add_argument("--sigma-height", type=float, default=0.03, help="априорная СКО высоты, м")
+    p.add_argument("--sigma-plan", type=float, default=0.02,
+                   help="априорная СКО координаты в плане (единицы веса и для точек без sigma_plan), м")
+    p.add_argument("--sigma-height", type=float, default=0.03,
+                   help="априорная СКО высоты (единицы веса и для точек без sigma_height), м")
     p.add_argument("--w-limit", type=float, default=3.29, help="порог нормированной поправки")
     p.add_argument("--max-scale-ppm", type=float, default=200.0)
-    p.add_argument("--max-rotation-deg", type=float, default=1.0)
+    p.add_argument("--max-rotation-deg", type=float, default=3.0)
     p.add_argument("--suggest", action="store_true", help="предложить точки к исключению")
     for name, cols in (("to-local", "B L h → x y H"), ("to-wgs", "x y H → B L h")):
         p = sub.add_parser(name, help=f"пересчёт {cols}")

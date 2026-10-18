@@ -9,20 +9,22 @@
   3. Высота — наклонная плоскость (3 параметра):
         H = h + c0 + c1·(N - Nc) + c2·(E - Ec)
 
-Все подгонки — линейный МНК в замкнутой форме, без итераций.
+Все подгонки — взвешенный линейный МНК в замкнутой форме, без итераций. Вес точки
+p = σ0² / σi², σi — её априорная СКО (sigma_plan / sigma_height пары; пусто → σ0, p = 1),
+σ0 — глобальная СКО из параметров localize. Центроид плана — взвешенный.
 Если точек мало, модель упрощается автоматически:
   план:   1 точка → только сдвиг (масштаб 1, разворот 0); ≥ 2 → подобие;
   высота: 1–2 точки → только сдвиг c0; ≥ 3 → плоскость.
 
 Надёжность (диагностика, точки автоматически не исключаются):
   избыточность  r_plan = 2n − 4 (сдвиг: 2n − 2),  r_height = n − 3 (сдвиг: n − 1);
-  кофакторы параметров  Q = (AᵀA)⁻¹;  ковариация  C = σ²·Q,  σ — априорная (sigma_plan,
-     sigma_height — СКО одной координаты) или апостериорная  s0 = sqrt(Σv² / r);
-  поправка точки  v = каталог − вычисленное,  кофактор  q_vv = 1 − aᵀQa  (для точек вне
-     подгонки — ошибка прогноза, q_vv = 1 + aᵀQa), a — строка матрицы плана;
-  нормированная поправка (тест Баарда)  w = v / (σ·sqrt(q_vv)),  |w| > w_limit (3.29) → подозрение;
-  ошибка с исключением (leave-one-out) — прогноз датумом без этой точки,  v_loo = v / q_vv;
-  СКО прогноза в точке  m = σ·sqrt(aᵀQa)  (план: радиальная, по x и y);
+  кофакторы параметров  Q = (AᵀPA)⁻¹;  ковариация  C = σ²·Q,  σ — априорная σ0 (sigma_plan,
+     sigma_height — СКО единицы веса, на одну координату) или апостериорная  s0 = sqrt(vᵀPv / r);
+  поправка точки  v = каталог − вычисленное,  кофактор  q_vv = 1/p − aᵀQa  (для точек вне
+     подгонки — ошибка прогноза, q_vv = 1/p + aᵀQa), a — строка матрицы плана;  Σ p·q_vv = r;
+  нормированная поправка (тест Баарда)  w = v / (σ0·sqrt(q_vv)),  |w| > w_limit (3.29) → подозрение;
+  ошибка с исключением (leave-one-out) — прогноз датумом без этой точки,  v_loo = v / (p·q_vv);
+  СКО прогноза в точке  m = σ0·sqrt(aᵀQa)  (план: радиальная, по x и y);
   экстраполяция — расстояние от точки до выпуклой оболочки опорных пунктов плана.
 """
 
@@ -44,7 +46,10 @@ USE_BOTH, USE_PLAN, USE_HEIGHT, USE_NONE = "both", "plan", "height", "none"
 
 @dataclass
 class Pair:
-    """Пара точек: ГНСС (B, L в градусах, h — эллипсоидальная высота) и местные x (север), y (восток), H."""
+    """Пара точек: ГНСС (B, L в градусах, h — эллипсоидальная высота) и местные x (север), y (восток), H.
+
+    sigma_plan, sigma_height — априорные СКО точки, м (план — на одну координату): суммарная
+    точность каталога и ГНСС, sqrt(σ_кат² + σ_ГНСС²). None — глобальная σ из параметров localize."""
 
     name: str
     B: float
@@ -54,6 +59,8 @@ class Pair:
     y: float
     H: float
     use: str = USE_BOTH
+    sigma_plan: float | None = None
+    sigma_height: float | None = None
 
     @property
     def in_plan(self) -> bool:
@@ -74,6 +81,10 @@ class Residual:
     dx: float
     dy: float
     dH: float
+    sigma_plan: float | None = None  # использованная априорная СКО точки, м (σi или σ0)
+    sigma_height: float | None = None
+    p_plan: float | None = None      # вес p = σ0² / σi²
+    p_height: float | None = None
     qvv_plan: float | None = None    # кофактор поправки по x (= по y)
     qvv_height: float | None = None
     wx: float | None = None          # нормированные поправки (априорная σ)
@@ -129,8 +140,8 @@ class LocalizationDatum:
     # Надёжность (в старых JSON отсутствует → None).
     redundancy_plan: int | None = None
     redundancy_height: int | None = None
-    sigma0_plan: float | None = None      # априорная СКО одной координаты в плане, м
-    sigma0_height: float | None = None    # априорная СКО высоты, м
+    sigma0_plan: float | None = None      # СКО единицы веса (p = 1): координата в плане, м
+    sigma0_height: float | None = None    # то же по высоте, м
     s0_plan: float | None = None          # апостериорная СКО (на одну координату), None при r = 0
     s0_height: float | None = None
     w_limit: float | None = None
@@ -151,6 +162,11 @@ class LocalizationDatum:
     @property
     def rotation_arcsec(self) -> float:
         return math.atan2(self.b, self.a) / ARCSEC
+
+    @property
+    def weighted(self) -> bool:
+        """Есть точки со своей σ (вес ≠ 1)."""
+        return any(p is not None and p != 1.0 for r in self.residuals for p in (r.p_plan, r.p_height))
 
     @property
     def projection(self) -> str:
@@ -280,22 +296,37 @@ class LocalizationError(ValueError):
 def localize(pairs: list[Pair], lat0: float | None = None, lon0: float | None = None,
              ellipsoid: str = WGS84, sigma_plan: float = 0.02, sigma_height: float = 0.03,
              w_limit: float = 3.29, max_scale_ppm: float = 200.0,
-             max_rotation_deg: float = 1.0) -> LocalizationDatum:
+             max_rotation_deg: float = 3.0) -> LocalizationDatum:
     """Вычисляет датум локализации по парам точек.
 
     lat0, lon0 — центр рабочей проекции; по умолчанию — среднее по всем используемым точкам.
     ellipsoid — эллипсоид рабочей проекции (PROJ), по умолчанию WGS-84.
-    sigma_plan, sigma_height — априорные СКО (м) одной координаты плана и высоты для теста Баарда
-    и ковариаций; w_limit — порог |w| (3.29 ≈ α = 0.001, двусторонний).
+    sigma_plan, sigma_height — априорные СКО (м) одной координаты плана и высоты (СКО единицы веса σ0)
+    для теста Баарда и ковариаций; точки со своей σi получают вес p = σ0² / σi².
+    w_limit — порог |w| (3.29 ≈ α = 0.001, двусторонний).
     max_scale_ppm, max_rotation_deg — пределы правдоподобия масштаба и разворота.
     """
-    datum = _fit(pairs, lat0, lon0, ellipsoid)
+    datum = _fit(pairs, lat0, lon0, ellipsoid, sigma_plan, sigma_height)
     _diagnose(datum, pairs, sigma_plan, sigma_height, w_limit, max_scale_ppm, max_rotation_deg)
     return datum
 
 
-def _fit(pairs, lat0, lon0, ellipsoid) -> LocalizationDatum:
-    """Подгонка параметров и невязки, без диагностики."""
+def _weights(points, sigma0: float, part: str) -> np.ndarray:
+    """Веса p = σ0² / σi² (σi = sigma_plan или sigma_height пары; None → p = 1)."""
+    out = []
+    for p in points:
+        s = getattr(p, f"sigma_{part}")
+        if s is None:
+            out.append(1.0)
+        elif not (math.isfinite(s) and s > 0):
+            raise LocalizationError(f"{p.name}: sigma_{part} = {s} — ожидается СКО > 0.")
+        else:
+            out.append((sigma0 / s) ** 2)
+    return np.array(out, float)
+
+
+def _fit(pairs, lat0, lon0, ellipsoid, sigma_plan, sigma_height) -> LocalizationDatum:
+    """Подгонка параметров (взвешенный МНК) и невязки, без диагностики."""
     plan = [p for p in pairs if p.in_plan]
     height = [p for p in pairs if p.in_height]
     if not plan:
@@ -314,16 +345,18 @@ def _fit(pairs, lat0, lon0, ellipsoid) -> LocalizationDatum:
         E, N = proj.transform([p.L for p in points], [p.B for p in points])
         return np.asarray(N, float), np.asarray(E, float)
 
-    # План: подобие в комплексной форме w = t + k·(z - zc), z = N + iE, w = x + iy.
+    # План: подобие в комплексной форме w = t + k·(z - zc), z = N + iE, w = x + iy;
+    # zc, wc — взвешенные центроиды, k = Σ p·conj(z - zc)·(w - wc) / Σ p·|z - zc|².
     N, E = ne(plan)
     z = N + 1j * E
     w = np.array([p.x + 1j * p.y for p in plan])
-    zc, wc = z.mean(), w.mean()
+    pw = _weights(plan, sigma_plan, "plan")
+    P = pw.sum()
+    zc, wc = np.sum(pw * z) / P, np.sum(pw * w) / P
     if len(plan) >= 2:
-        denom = np.sum(np.abs(z - zc) ** 2)
-        if denom < 1e-6:
+        if np.sum(np.abs(z - zc) ** 2) < 1e-6:
             raise LocalizationError("Точки для плана совпадают: нельзя определить разворот и масштаб.")
-        k = np.sum(np.conj(z - zc) * (w - wc)) / denom
+        k = np.sum(pw * np.conj(z - zc) * (w - wc)) / np.sum(pw * np.abs(z - zc) ** 2)
         datum.plan_model = "similarity"
     else:
         k = 1.0 + 0j
@@ -337,23 +370,25 @@ def _fit(pairs, lat0, lon0, ellipsoid) -> LocalizationDatum:
         Nh, Eh = ne(height)
         dN, dE = Nh - datum.Nc, Eh - datum.Ec
         dh = np.array([p.H - p.h for p in height])
-        # Плоскость определена, если точки не лежат на одной линии: det ковариации (dN, dE)
-        # не мал относительно её следа (тот же критерий, что в Kotlin-модуле).
-        u, v = dN - dN.mean(), dE - dE.mean()
-        snn, see, sne = u @ u, v @ v, u @ v
+        ph = _weights(height, sigma_height, "height")
+        # Плоскость определена, если точки не лежат на одной линии: det взвешенной ковариации
+        # (dN, dE) не мал относительно её следа (тот же критерий, что в Kotlin-модуле).
+        u, v = dN - ph @ dN / ph.sum(), dE - ph @ dE / ph.sum()
+        snn, see, sne = ph @ (u * u), ph @ (v * v), ph @ (u * v)
         trace, det = snn + see, snn * see - sne * sne
         if len(height) >= 3 and trace > 0 and det > 1e-12 * trace * trace:
-            A = np.column_stack([np.ones(len(height)), dN, dE])
-            datum.c0, datum.c1, datum.c2 = (float(v) for v in np.linalg.lstsq(A, dh, rcond=None)[0])
+            sp = np.sqrt(ph)
+            A = np.column_stack([np.ones(len(height)), dN, dE]) * sp[:, None]
+            datum.c0, datum.c1, datum.c2 = (float(v) for v in np.linalg.lstsq(A, dh * sp, rcond=None)[0])
             datum.height_model = "plane"
         else:
-            datum.c0, datum.c1, datum.c2 = float(dh.mean()), 0.0, 0.0
+            datum.c0, datum.c1, datum.c2 = float(ph @ dh / ph.sum()), 0.0, 0.0
             datum.height_model = "shift"
     else:
         datum.height_model = "none"
 
     # Невязки (каталог минус вычисленное) по всем точкам. Для точек, не участвовавших
-    # в подгонке, это ошибка контроля; в СКО они не входят.
+    # в подгонке, это ошибка контроля; в СКО они не входят. СКО — невзвешенные.
     sp, sh = [], []
     for p in pairs:
         x, y, H = datum.to_local(p.B, p.L, p.h)
@@ -368,7 +403,7 @@ def _fit(pairs, lat0, lon0, ellipsoid) -> LocalizationDatum:
     return datum
 
 
-Q_EPS = 1e-8  # q_vv меньше — у точки нет контроля (без неё модель вырождается)
+Q_EPS = 1e-8  # p·q_vv меньше — у точки нет контроля (без неё модель вырождается)
 
 
 def _qform(Q, a):
@@ -377,34 +412,35 @@ def _qform(Q, a):
 
 
 def _cofactors(datum: LocalizationDatum, pairs: list[Pair]):
-    """Q = (AᵀA)⁻¹ для плана (tx, ty, a, b) и высоты (c0, c1, c2) в замкнутой форме.
+    """Q = (AᵀPA)⁻¹ для плана (tx, ty, a, b) и высоты (c0, c1, c2) в замкнутой форме.
 
-    План (координаты относительно центроида, Σ dN = Σ dE = 0): AᵀA = diag(n, n, S, S),
-    S = Σ (dN² + dE²); для модели «сдвиг» — diag(1/n, 1/n, 0, 0).
-    Высота: m = средние (dN, dE) по точкам высоты, K = ковариация (u, v) = (dN − mN, dE − mE):
-        Q[c1,c2] = K⁻¹,  Q[c0,c·] = −K⁻¹m,  Q[c0,c0] = 1/n + mᵀK⁻¹m;  «сдвиг» — Q[c0,c0] = 1/n.
+    План (относительно взвешенного центроида, Σ p·dN = Σ p·dE = 0): AᵀPA = diag(P, P, S, S),
+    P = Σ p, S = Σ p·(dN² + dE²); для модели «сдвиг» — Q = diag(1/P, 1/P, 0, 0).
+    Высота: m = взвешенные средние (dN, dE), K = Σ p·(u, v)ᵀ(u, v), (u, v) = (dN − mN, dE − mE):
+        Q[c1,c2] = K⁻¹,  Q[c0,c·] = −K⁻¹m,  Q[c0,c0] = 1/P + mᵀK⁻¹m;  «сдвиг» — Q[c0,c0] = 1/P.
     """
     plan = [p for p in pairs if p.in_plan]
     proj = datum._proj()
     E, N = proj.transform([p.L for p in plan], [p.B for p in plan])
     dN, dE = np.asarray(N, float) - datum.Nc, np.asarray(E, float) - datum.Ec
-    n = len(plan)
+    P = float(_weights(plan, datum.sigma0_plan, "plan").sum())
     if datum.plan_model == "similarity":
-        S = float(np.sum(dN ** 2 + dE ** 2))
-        qp = [[1 / n, 0, 0, 0], [0, 1 / n, 0, 0], [0, 0, 1 / S, 0], [0, 0, 0, 1 / S]]
+        S = float(_weights(plan, datum.sigma0_plan, "plan") @ (dN ** 2 + dE ** 2))
+        qp = [[1 / P, 0, 0, 0], [0, 1 / P, 0, 0], [0, 0, 1 / S, 0], [0, 0, 0, 1 / S]]
     else:
-        qp = [[1 / n, 0, 0, 0], [0, 1 / n, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]
+        qp = [[1 / P, 0, 0, 0], [0, 1 / P, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]
     qp = [[float(v) for v in row] for row in qp]
     height = [p for p in pairs if p.in_height]
     qh = None
     if height:
         E, N = proj.transform([p.L for p in height], [p.B for p in height])
         hn, he = np.asarray(N, float) - datum.Nc, np.asarray(E, float) - datum.Ec
-        nh = len(height)
+        ph = _weights(height, datum.sigma0_height, "height")
+        nh = float(ph.sum())
         if datum.height_model == "plane":
-            mn, me = float(hn.mean()), float(he.mean())
+            mn, me = float(ph @ hn / nh), float(ph @ he / nh)
             u, v = hn - mn, he - me
-            snn, see, sne = float(u @ u), float(v @ v), float(u @ v)
+            snn, see, sne = float(ph @ (u * u)), float(ph @ (v * v)), float(ph @ (u * v))
             det = snn * see - sne * sne
             k11, k22, k12 = see / det, snn / det, -sne / det
             g1, g2 = k11 * mn + k12 * me, k12 * mn + k22 * me   # K⁻¹m
@@ -428,7 +464,8 @@ def _loo(datum: LocalizationDatum, pairs: list[Pair], i: int, part: str):
     """Ошибка прогноза в точке i датумом без неё (та же рабочая проекция). None — без точки
     модель этой части вырождается или меняется (например, плоскость → сдвиг)."""
     try:
-        d = _fit(_without(pairs, i, part), datum.lat0, datum.lon0, datum.ellipsoid)
+        d = _fit(_without(pairs, i, part), datum.lat0, datum.lon0, datum.ellipsoid,
+                 datum.sigma0_plan, datum.sigma0_height)
     except LocalizationError:
         return None
     r = d.residuals[i]
@@ -450,8 +487,9 @@ def _diagnose(datum: LocalizationDatum, pairs: list[Pair], sigma_plan, sigma_hei
     E, N = proj.transform([p.L for p in plan], [p.B for p in plan])
     datum.plan_hull = convex_hull(list(zip((float(v) for v in N), (float(v) for v in E))))
 
-    vp = [r.dx ** 2 + r.dy ** 2 for r, p in zip(datum.residuals, pairs) if p.in_plan]
-    vh = [r.dH ** 2 for r, p in zip(datum.residuals, pairs) if p.in_height]
+    pp, ph = _weights(pairs, sigma_plan, "plan"), _weights(pairs, sigma_height, "height")
+    vp = [w * (r.dx ** 2 + r.dy ** 2) for r, p, w in zip(datum.residuals, pairs, pp) if p.in_plan]
+    vh = [w * r.dH ** 2 for r, p, w in zip(datum.residuals, pairs, ph) if p.in_height]
     rp, rh = datum.redundancy_plan, datum.redundancy_height
     datum.s0_plan = float(math.sqrt(sum(vp) / rp)) if rp > 0 else None
     datum.s0_height = float(math.sqrt(sum(vh) / rh)) if rh else None
@@ -478,25 +516,30 @@ def _diagnose(datum: LocalizationDatum, pairs: list[Pair], sigma_plan, sigma_hei
     dN_all, dE_all = datum._dne_wgs([p.B for p in pairs], [p.L for p in pairs])
     for i, (p, r) in enumerate(zip(pairs, datum.residuals)):
         dN, dE = float(dN_all[i]), float(dE_all[i])
-        # План: кофактор поправки по x и по y одинаков, q_vv = 1 ∓ aᵀQa.
+        r.p_plan, r.p_height = float(pp[i]), float(ph[i])
+        r.sigma_plan = float(sigma_plan if p.sigma_plan is None else p.sigma_plan)
+        r.sigma_height = float(sigma_height if p.sigma_height is None else p.sigma_height)
+        # План: кофактор поправки по x и по y одинаков, q_vv = 1/p ∓ aᵀQa.
         hp = float(_qform(datum.q_plan, (1, 0, dN, -dE)))
-        r.qvv_plan = 1 - hp if p.in_plan else 1 + hp
-        if r.qvv_plan > Q_EPS:
+        r.qvv_plan = 1 / r.p_plan - hp if p.in_plan else 1 / r.p_plan + hp
+        ok = r.p_plan * r.qvv_plan > Q_EPS
+        if ok:
             s = sigma_plan * math.sqrt(r.qvv_plan)
             r.wx, r.wy = r.dx / s, r.dy / s
         if p.in_plan:
-            loo = _loo(datum, pairs, i, "plan") if r.qvv_plan > Q_EPS else None
+            loo = _loo(datum, pairs, i, "plan") if ok else None
             if loo is not None:
                 r.loo_dx, r.loo_dy = (float(v) for v in loo)
         else:
             r.loo_dx, r.loo_dy = r.dx, r.dy
         if datum.q_height is not None:
             hh = float(_qform(datum.q_height, (1, dN, dE)))
-            r.qvv_height = 1 - hh if p.in_height else 1 + hh
-            if r.qvv_height > Q_EPS:
+            r.qvv_height = 1 / r.p_height - hh if p.in_height else 1 / r.p_height + hh
+            ok = r.p_height * r.qvv_height > Q_EPS
+            if ok:
                 r.wH = r.dH / (sigma_height * math.sqrt(r.qvv_height))
             if p.in_height:
-                r.loo_dH = _loo(datum, pairs, i, "height") if r.qvv_height > Q_EPS else None
+                r.loo_dH = _loo(datum, pairs, i, "height") if ok else None
             else:
                 r.loo_dH = r.dH
         for part, w, loo, inside in (("plan", r.w_plan, r.loo_plan, p.in_plan),

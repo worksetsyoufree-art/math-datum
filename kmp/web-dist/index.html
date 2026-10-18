@@ -43,6 +43,7 @@
   th:first-child, td:first-child, th:nth-child(2), td:nth-child(2) { text-align: left; }
   tr.control td { color: var(--muted); }
   td.big { color: var(--bad); font-weight: 600; }
+  td.own { font-weight: 600; }
   tr.suspect td:first-child { color: var(--bad); font-weight: 600; }
   .warnings ul { margin: 0 0 14px; padding: 10px 14px 10px 30px; border: 1px solid var(--bad); border-radius: 8px; color: var(--text); }
   .warnings li { margin: 2px 0; }
@@ -61,7 +62,9 @@
   <section>
     <h2>1. Пары точек</h2>
     <p class="hint">Формат: <code>name;B;L;h;x;y;H;use</code>. B, L — градусы WGS-84, h — высота ГНСС;
-      x — север, y — восток, H — местная высота. <code>use</code>: both, plan, height или none (контрольная точка).</p>
+      x — север, y — восток, H — местная высота. <code>use</code>: both, plan, height или none (контрольная точка).
+      Необязательные столбцы <code>sigma_plan;sigma_height</code> — априорная СКО точки, м (каталог и ГНСС вместе:
+      √(σ<sub>кат</sub>² + σ<sub>ГНСС</sub>²)); точка получает вес p = σ0² / σ², пусто — глобальная σ0.</p>
     <textarea id="pairs" spellcheck="false"></textarea>
     <div class="row">
       <button class="primary" id="calc">Рассчитать локализацию</button>
@@ -78,7 +81,7 @@
     <div class="warnings" id="warnings"></div>
     <div class="table-wrap"><table id="residuals"></table></div>
     <p class="hint" style="margin-top:8px">|w| — нормированная поправка (тест Баарда; априорная СКО 20 мм в плане на координату,
-      30 мм по высоте; порог 3.29). Подсвечено |w| выше порога — вероятна грубая ошибка; точки автоматически не исключаются.
+      30 мм по высоте — единица веса σ0; порог 3.29). σ — использованные СКО точек, свои выделены. Подсвечено |w| выше порога — вероятна грубая ошибка; точки автоматически не исключаются.
       «Без точки» — ошибка прогноза в точке датумом, рассчитанным без неё; «—» — проверить нельзя (без точки модель не определена).</p>
     <div class="row">
       <button id="saveDatum">Скачать датум (JSON)</button>

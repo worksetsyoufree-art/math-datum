@@ -3,10 +3,11 @@
 Разделитель — «;» или «,» (определяется автоматически), первая строка — заголовок.
 Десятичный разделитель — точка; при разделителе полей «;» допускается и запятая.
 
-Пары для локализации:   name;B;L;h;x;y;H[;use]
+Пары для локализации:   name;B;L;h;x;y;H[;use][;sigma_plan][;sigma_height]
    B, L — градусы WGS-84 (десятичные), h — эллипсоидальная высота, м;
    x — север, y — восток, H — местная высота, м;
-   use — both (по умолчанию) | plan | height | none (точка только для контроля).
+   use — both (по умолчанию) | plan | height | none (точка только для контроля);
+   sigma_plan, sigma_height — априорные СКО точки, м (план — на координату); пусто — глобальная σ.
 Точки для пересчёта:    name;B;L;h  или  name;x;y;H
 """
 
@@ -41,6 +42,8 @@ def read_pairs(path) -> list[Pair]:
                 B=_num(r["B"], d), L=_num(r["L"], d), h=_num(r["h"], d),
                 x=_num(r["x"], d), y=_num(r["y"], d), H=_num(r["H"], d),
                 use=(r.get("use") or USE_BOTH).lower(),
+                sigma_plan=_num(r["sigma_plan"], d) if r.get("sigma_plan") else None,
+                sigma_height=_num(r["sigma_height"], d) if r.get("sigma_height") else None,
             ))
         except (KeyError, ValueError) as e:
             raise ValueError(f"{path}: строка {i + 1}: {e}") from None

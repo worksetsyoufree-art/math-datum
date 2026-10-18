@@ -20,14 +20,16 @@ import kotlin.math.sqrt
  *  1. рабочая проекция — поперечный Меркатор с центром (lat0, lon0): (B, L) → (N, E);
  *  2. план — подобие относительно центроида:  [x, y] = [tx, ty] + [[a, -b], [b, a]]·([N, E] - [Nc, Ec]);
  *  3. высота — плоскость:  H = h + c0 + c1·(N - Nc) + c2·(E - Ec).
- * Подгонки — линейный МНК в замкнутой форме; при малом числе точек модель упрощается до сдвига.
+ * Подгонки — взвешенный линейный МНК в замкнутой форме; при малом числе точек модель упрощается до сдвига.
+ * Вес точки p = σ0² / σi² (σi — sigmaPlan / sigmaHeight пары, null → p = 1); центроид плана взвешенный.
  *
  * Надёжность (только диагностика, точки автоматически не исключаются):
  *  избыточность r_plan = 2n − 4 (сдвиг 2n − 2), r_height = n − 3 (сдвиг n − 1);
- *  кофакторы Q = (AᵀA)⁻¹, ковариация σ²·Q (σ — априорная или апостериорная s0 = sqrt(Σv²/r));
- *  q_vv = 1 − aᵀQa (для точек вне подгонки 1 + aᵀQa); нормированная поправка w = v / (σ·sqrt(q_vv));
- *  ошибка с исключением (leave-one-out) — прогноз датумом без точки, v / q_vv;
- *  СКО прогноза m = σ·sqrt(aᵀQa); экстраполяция — расстояние до выпуклой оболочки опорных пунктов.
+ *  кофакторы Q = (AᵀPA)⁻¹, ковариация σ²·Q (σ — априорная σ0 или апостериорная s0 = sqrt(vᵀPv/r));
+ *  q_vv = 1/p − aᵀQa (для точек вне подгонки 1/p + aᵀQa), Σ p·q_vv = r;
+ *  нормированная поправка w = v / (σ0·sqrt(q_vv));
+ *  ошибка с исключением (leave-one-out) — прогноз датумом без точки, v / (p·q_vv);
+ *  СКО прогноза m = σ0·sqrt(aᵀQa); экстраполяция — расстояние до выпуклой оболочки опорных пунктов.
  */
 
 /** Как использовать пару точек в расчёте. */
@@ -47,7 +49,11 @@ enum class Use {
     }
 }
 
-/** Пара точек: ГНСС (B, L — градусы WGS-84, h — эллипсоидальная высота) и местные x (север), y (восток), H. */
+/**
+ * Пара точек: ГНСС (B, L — градусы WGS-84, h — эллипсоидальная высота) и местные x (север), y (восток), H.
+ * [sigmaPlan], [sigmaHeight] — априорные СКО точки, м (план — на координату): суммарная точность каталога
+ * и ГНСС, sqrt(σ_кат² + σ_ГНСС²); null — глобальная σ из параметров [localize].
+ */
 @Serializable
 data class LocalizationPair(
     val name: String,
@@ -58,6 +64,8 @@ data class LocalizationPair(
     val y: Double,
     @SerialName("H") val height: Double,
     val use: Use = Use.BOTH,
+    @SerialName("sigma_plan") val sigmaPlan: Double? = null,
+    @SerialName("sigma_height") val sigmaHeight: Double? = null,
 )
 
 /** Невязка (каталог − вычисленное) и диагностика точки; null — не определено (см. Python-эталон). */
@@ -68,6 +76,11 @@ data class Residual(
     val dx: Double,
     val dy: Double,
     val dH: Double,
+    /** Использованная априорная СКО точки (σi или σ0), м, и вес p = σ0² / σi². */
+    @SerialName("sigma_plan") val sigmaPlan: Double? = null,
+    @SerialName("sigma_height") val sigmaHeight: Double? = null,
+    @SerialName("p_plan") val pPlan: Double? = null,
+    @SerialName("p_height") val pHeight: Double? = null,
     @SerialName("qvv_plan") val qvvPlan: Double? = null,
     @SerialName("qvv_height") val qvvHeight: Double? = null,
     val wx: Double? = null,
@@ -123,7 +136,7 @@ data class LocalizationDatum(
     @SerialName("rms_height") val rmsHeight: Double? = null,
     @SerialName("redundancy_plan") val redundancyPlan: Int? = null,
     @SerialName("redundancy_height") val redundancyHeight: Int? = null,
-    /** Априорная СКО одной координаты в плане и высоты, м. */
+    /** СКО единицы веса (p = 1): координата в плане и высота, м. */
     @SerialName("sigma0_plan") val sigma0Plan: Double? = null,
     @SerialName("sigma0_height") val sigma0Height: Double? = null,
     /** Апостериорная СКО (на координату), null при нулевой избыточности. */
@@ -145,6 +158,8 @@ data class LocalizationDatum(
     val scale: Double get() = hypot(a, b)
     val scalePpm: Double get() = (scale - 1) * 1e6
     val rotationArcsec: Double get() = atan2(b, a) * 180 * 3600 / PI
+    /** Есть точки со своей σ (вес ≠ 1). */
+    val weighted: Boolean get() = residuals.any { r -> listOf(r.pPlan, r.pHeight).any { it != null && it != 1.0 } }
     val projection: String get() = "+proj=tmerc +lat_0=$lat0 +lon_0=$lon0 +k=1 +x_0=0 +y_0=0 $ellipsoid +units=m"
 
     /** WGS-84 → местная система. */
@@ -234,7 +249,8 @@ class LocalizationException(message: String) : IllegalArgumentException(message)
 /**
  * Вычисляет датум локализации по парам точек.
  * [lat0], [lon0] — центр рабочей проекции; по умолчанию — среднее по используемым точкам.
- * [sigmaPlan], [sigmaHeight] — априорные СКО (м) координаты плана и высоты; [wLimit] — порог |w| теста Баарда;
+ * [sigmaPlan], [sigmaHeight] — априорные СКО (м) координаты плана и высоты (СКО единицы веса σ0); точки со своей
+ * σi получают вес p = σ0² / σi²; [wLimit] — порог |w| теста Баарда;
  * [maxScalePpm], [maxRotationDeg] — пределы правдоподобия масштаба и разворота.
  */
 fun localize(
@@ -246,12 +262,24 @@ fun localize(
     sigmaHeight: Double = 0.03,
     wLimit: Double = 3.29,
     maxScalePpm: Double = 200.0,
-    maxRotationDeg: Double = 1.0,
+    maxRotationDeg: Double = 3.0,
 ): LocalizationDatum =
-    diagnose(fit(pairs, lat0, lon0, ellipsoid), pairs, sigmaPlan, sigmaHeight, wLimit, maxScalePpm, maxRotationDeg)
+    diagnose(fit(pairs, lat0, lon0, ellipsoid, sigmaPlan, sigmaHeight), pairs, sigmaPlan, sigmaHeight, wLimit, maxScalePpm, maxRotationDeg)
 
-/** Подгонка параметров и невязки, без диагностики. */
-private fun fit(pairs: List<LocalizationPair>, lat0: Double?, lon0: Double?, ellipsoid: String): LocalizationDatum {
+/** Вес p = σ0² / σi² (σi — sigmaPlan или sigmaHeight пары; null → p = 1). */
+private fun weight(p: LocalizationPair, sigma0: Double, plan: Boolean): Double {
+    val s = (if (plan) p.sigmaPlan else p.sigmaHeight) ?: return 1.0
+    if (!(s.isFinite() && s > 0)) {
+        throw LocalizationException("${p.name}: sigma_${if (plan) "plan" else "height"} = $s — ожидается СКО > 0.")
+    }
+    val k = sigma0 / s
+    return k * k
+}
+
+/** Подгонка параметров (взвешенный МНК) и невязки, без диагностики. */
+private fun fit(
+    pairs: List<LocalizationPair>, lat0: Double?, lon0: Double?, ellipsoid: String, sigmaPlan: Double, sigmaHeight: Double,
+): LocalizationDatum {
     val plan = pairs.filter { it.use.inPlan }
     val height = pairs.filter { it.use.inHeight }
     if (plan.isEmpty()) throw LocalizationException("Нет ни одной точки для плана (use = both/plan).")
@@ -260,12 +288,15 @@ private fun fit(pairs: List<LocalizationPair>, lat0: Double?, lon0: Double?, ell
     val cLon = lon0 ?: used.map { it.lon }.average()
     val tm = TransverseMercator(Ellipsoid.fromProj(ellipsoid), cLat, cLon)
 
-    // План: подобие в комплексной форме w = t + k·(z - zc), z = N + iE, w = x + iy.
+    // План: подобие в комплексной форме w = t + k·(z - zc), z = N + iE, w = x + iy;
+    // zc, wc — взвешенные центроиды, k = Σ p·conj(z - zc)·(w - wc) / Σ p·|z - zc|².
     val zp = plan.map { tm.forward(it.lat, it.lon) }
-    val nc = zp.map { it.first }.average()
-    val ec = zp.map { it.second }.average()
-    val xc = plan.map { it.x }.average()
-    val yc = plan.map { it.y }.average()
+    val pw = plan.map { weight(it, sigmaPlan, true) }
+    val sp = pw.sum()
+    val nc = plan.indices.sumOf { pw[it] * zp[it].first } / sp
+    val ec = plan.indices.sumOf { pw[it] * zp[it].second } / sp
+    val xc = plan.indices.sumOf { pw[it] * plan[it].x } / sp
+    val yc = plan.indices.sumOf { pw[it] * plan[it].y } / sp
     var a = 1.0
     var b = 0.0
     val planModel: String
@@ -273,17 +304,19 @@ private fun fit(pairs: List<LocalizationPair>, lat0: Double?, lon0: Double?, ell
         var sRe = 0.0
         var sIm = 0.0
         var denom = 0.0
+        var spread = 0.0
         plan.forEachIndexed { i, p ->
             val zn = zp[i].first - nc
             val ze = zp[i].second - ec
             val wx = p.x - xc
             val wy = p.y - yc
-            // conj(z)·w = (zn - i·ze)(wx + i·wy)
-            sRe += zn * wx + ze * wy
-            sIm += zn * wy - ze * wx
-            denom += zn * zn + ze * ze
+            // p·conj(z)·w = p·(zn - i·ze)(wx + i·wy)
+            sRe += pw[i] * (zn * wx + ze * wy)
+            sIm += pw[i] * (zn * wy - ze * wx)
+            denom += pw[i] * (zn * zn + ze * ze)
+            spread += zn * zn + ze * ze
         }
-        if (denom < 1e-6) throw LocalizationException("Точки для плана совпадают: нельзя определить разворот и масштаб.")
+        if (spread < 1e-6) throw LocalizationException("Точки для плана совпадают: нельзя определить разворот и масштаб.")
         a = sRe / denom
         b = sIm / denom
         planModel = "similarity"
@@ -291,7 +324,8 @@ private fun fit(pairs: List<LocalizationPair>, lat0: Double?, lon0: Double?, ell
         planModel = "shift"
     }
 
-    // Высота: плоскость относительно центроида плана; решаем по центрированным данным (устойчиво).
+    // Высота: взвешенная плоскость относительно центроида плана; решаем по данным, центрированным
+    // на взвешенное среднее (устойчиво).
     var c0 = 0.0
     var c1 = 0.0
     var c2 = 0.0
@@ -303,15 +337,18 @@ private fun fit(pairs: List<LocalizationPair>, lat0: Double?, lon0: Double?, ell
         val dn = zh.map { it.first - nc }
         val de = zh.map { it.second - ec }
         val dh = height.map { it.height - it.h }
-        val mn = dn.average()
-        val me = de.average()
-        val mh = dh.average()
+        val ph = height.map { weight(it, sigmaHeight, false) }
+        val sh = ph.sum()
+        val mn = height.indices.sumOf { ph[it] * dn[it] } / sh
+        val me = height.indices.sumOf { ph[it] * de[it] } / sh
+        val mh = height.indices.sumOf { ph[it] * dh[it] } / sh
         var snn = 0.0; var see = 0.0; var sne = 0.0; var snh = 0.0; var seh = 0.0
         for (i in height.indices) {
             val u = dn[i] - mn
             val v = de[i] - me
             val w = dh[i] - mh
-            snn += u * u; see += v * v; sne += u * v; snh += u * w; seh += v * w
+            val q = ph[i]
+            snn += q * u * u; see += q * v * v; sne += q * u * v; snh += q * u * w; seh += q * v * w
         }
         val det = snn * see - sne * sne
         val trace = snn + see
@@ -330,21 +367,22 @@ private fun fit(pairs: List<LocalizationPair>, lat0: Double?, lon0: Double?, ell
         lat0 = cLat, lon0 = cLon, nc = nc, ec = ec, a = a, b = b, tx = xc, ty = yc,
         c0 = c0, c1 = c1, c2 = c2, ellipsoid = ellipsoid, planModel = planModel, heightModel = heightModel,
     )
-    // Невязки (каталог − вычисленное) по всем точкам; точки use = none — контроль, в СКО не входят.
+    // Невязки (каталог − вычисленное) по всем точкам; точки use = none — контроль, в СКО не входят. СКО невзвешенные.
     val residuals = pairs.map { p ->
         val r = datum.toLocal(WgsPoint(p.lat, p.lon, p.h))
         Residual(p.name, p.use, p.x - r.x, p.y - r.y, p.height - r.height)
     }
-    val sp = residuals.filter { it.use.inPlan }.map { it.dx * it.dx + it.dy * it.dy }
-    val sh = residuals.filter { it.use.inHeight }.map { it.dH * it.dH }
+    val vp = residuals.filter { it.use.inPlan }.map { it.dx * it.dx + it.dy * it.dy }
+    val vh = residuals.filter { it.use.inHeight }.map { it.dH * it.dH }
     return datum.copy(
         residuals = residuals,
-        rmsPlan = if (sp.isEmpty()) null else sqrt(sp.average()),
-        rmsHeight = if (sh.isEmpty()) null else sqrt(sh.average()),
+        rmsPlan = if (vp.isEmpty()) null else sqrt(vp.average()),
+        rmsHeight = if (vh.isEmpty()) null else sqrt(vh.average()),
+        sigma0Plan = sigmaPlan, sigma0Height = sigmaHeight,
     )
 }
 
-/** q_vv меньше — у точки нет контроля (без неё модель вырождается). */
+/** p·q_vv меньше — у точки нет контроля (без неё модель вырождается). */
 private const val Q_EPS = 1e-8
 
 /** aᵀ·Q·a. */
@@ -355,19 +393,21 @@ internal fun qform(q: List<List<Double>>, vararg a: Double): Double {
 }
 
 /**
- * Кофакторы Q = (AᵀA)⁻¹ в замкнутой форме (как в Python-эталоне).
- * План: AᵀA = diag(n, n, S, S), S = Σ(dN² + dE²); сдвиг — diag(1/n, 1/n, 0, 0).
- * Высота: m — средние (dN, dE), K — ковариация отклонений от m:
- *   Q[c1,c2] = K⁻¹, Q[c0,c·] = −K⁻¹m, Q[c0,c0] = 1/n + mᵀK⁻¹m; сдвиг — Q[c0,c0] = 1/n.
+ * Кофакторы Q = (AᵀPA)⁻¹ в замкнутой форме (как в Python-эталоне).
+ * План (относительно взвешенного центроида): AᵀPA = diag(P, P, S, S), P = Σp, S = Σp·(dN² + dE²);
+ * сдвиг — Q = diag(1/P, 1/P, 0, 0).
+ * Высота: m — взвешенные средние (dN, dE), K = Σp·(u, v)ᵀ(u, v) по отклонениям от m:
+ *   Q[c1,c2] = K⁻¹, Q[c0,c·] = −K⁻¹m, Q[c0,c0] = 1/P + mᵀK⁻¹m; сдвиг — Q[c0,c0] = 1/P.
  */
 private fun cofactors(d: LocalizationDatum, pairs: List<LocalizationPair>): Pair<List<List<Double>>, List<List<Double>>?> {
     val plan = pairs.filter { it.use.inPlan }
-    val n = plan.size.toDouble()
+    val sigmaPlan = d.sigma0Plan!!
+    val n = plan.sumOf { weight(it, sigmaPlan, true) }
     val qp = if (d.planModel == "similarity") {
         var s = 0.0
         for (p in plan) {
             val (pn, pe) = d.forwardNE(p.lat, p.lon)
-            s += (pn - d.nc) * (pn - d.nc) + (pe - d.ec) * (pe - d.ec)
+            s += weight(p, sigmaPlan, true) * ((pn - d.nc) * (pn - d.nc) + (pe - d.ec) * (pe - d.ec))
         }
         listOf(listOf(1 / n, 0.0, 0.0, 0.0), listOf(0.0, 1 / n, 0.0, 0.0), listOf(0.0, 0.0, 1 / s, 0.0), listOf(0.0, 0.0, 0.0, 1 / s))
     } else {
@@ -375,20 +415,21 @@ private fun cofactors(d: LocalizationDatum, pairs: List<LocalizationPair>): Pair
     }
     val height = pairs.filter { it.use.inHeight }
     if (height.isEmpty()) return qp to null
-    val nh = height.size.toDouble()
+    val ph = height.map { weight(it, d.sigma0Height!!, false) }
+    val nh = ph.sum()
     if (d.heightModel != "plane") {
         return qp to listOf(listOf(1 / nh, 0.0, 0.0), listOf(0.0, 0.0, 0.0), listOf(0.0, 0.0, 0.0))
     }
     val ne = height.map { d.forwardNE(it.lat, it.lon) }
     val dn = ne.map { it.first - d.nc }
     val de = ne.map { it.second - d.ec }
-    val mn = dn.average()
-    val me = de.average()
+    val mn = dn.indices.sumOf { ph[it] * dn[it] } / nh
+    val me = de.indices.sumOf { ph[it] * de[it] } / nh
     var snn = 0.0; var see = 0.0; var sne = 0.0
     for (i in dn.indices) {
         val u = dn[i] - mn
         val v = de[i] - me
-        snn += u * u; see += v * v; sne += u * v
+        snn += ph[i] * u * u; see += ph[i] * v * v; sne += ph[i] * u * v
     }
     val det = snn * see - sne * sne
     val k11 = see / det
@@ -409,7 +450,7 @@ private fun without(pairs: List<LocalizationPair>, i: Int, part: String): List<L
 /** Датум без точки i (та же рабочая проекция); null — модель этой части вырождается или меняется. */
 private fun looFit(d: LocalizationDatum, pairs: List<LocalizationPair>, i: Int, part: String): Residual? {
     val r = try {
-        fit(without(pairs, i, part), d.lat0, d.lon0, d.ellipsoid)
+        fit(without(pairs, i, part), d.lat0, d.lon0, d.ellipsoid, d.sigma0Plan!!, d.sigma0Height!!)
     } catch (e: LocalizationException) {
         return null
     }
@@ -428,14 +469,16 @@ private fun diagnose(
     val rp = 2 * plan.size - if (d.planModel == "similarity") 4 else 2
     val rh = if (nh == 0) null else nh - if (d.heightModel == "plane") 3 else 1
     val (qp, qh) = cofactors(d, pairs)
+    val pp = pairs.map { weight(it, sigmaPlan, true) }
+    val ph = pairs.map { weight(it, sigmaHeight, false) }
     val hull = convexHull(plan.map { d.forwardNE(it.lat, it.lon) })
 
     var vp = 0.0
     var vh = 0.0
     pairs.forEachIndexed { i, p ->
         val r = d.residuals[i]
-        if (p.use.inPlan) vp += r.dx * r.dx + r.dy * r.dy
-        if (p.use.inHeight) vh += r.dH * r.dH
+        if (p.use.inPlan) vp += pp[i] * (r.dx * r.dx + r.dy * r.dy)
+        if (p.use.inHeight) vh += ph[i] * r.dH * r.dH
     }
     val warnings = mutableListOf<DatumWarning>()
     if (rp == 0) warnings += DatumWarning("plan_no_redundancy", "План: избыточность 0 — невязки нулевые, контроля нет.")
@@ -459,27 +502,33 @@ private fun diagnose(
         val (pn, pe) = d.forwardNE(p.lat, p.lon)
         val dN = pn - d.nc
         val dE = pe - d.ec
-        // План: кофактор поправки по x и по y одинаков, q_vv = 1 ∓ aᵀQa.
+        r = r.copy(
+            sigmaPlan = p.sigmaPlan ?: sigmaPlan, sigmaHeight = p.sigmaHeight ?: sigmaHeight,
+            pPlan = pp[i], pHeight = ph[i],
+        )
+        // План: кофактор поправки по x и по y одинаков, q_vv = 1/p ∓ aᵀQa.
         val hp = qform(qp, 1.0, 0.0, dN, -dE)
-        val qvvP = if (p.use.inPlan) 1 - hp else 1 + hp
+        val qvvP = if (p.use.inPlan) 1 / pp[i] - hp else 1 / pp[i] + hp
+        val okP = pp[i] * qvvP > Q_EPS
         r = r.copy(qvvPlan = qvvP)
-        if (qvvP > Q_EPS) {
+        if (okP) {
             val s = sigmaPlan * sqrt(qvvP)
             r = r.copy(wx = r.dx / s, wy = r.dy / s)
         }
         r = if (p.use.inPlan) {
-            val l = if (qvvP > Q_EPS) looFit(d, pairs, i, "plan") else null
+            val l = if (okP) looFit(d, pairs, i, "plan") else null
             r.copy(looDx = l?.dx, looDy = l?.dy)
         } else {
             r.copy(looDx = r.dx, looDy = r.dy)
         }
         if (qh != null) {
             val hh = qform(qh, 1.0, dN, dE)
-            val qvvH = if (p.use.inHeight) 1 - hh else 1 + hh
+            val qvvH = if (p.use.inHeight) 1 / ph[i] - hh else 1 / ph[i] + hh
+            val okH = ph[i] * qvvH > Q_EPS
             r = r.copy(qvvHeight = qvvH)
-            if (qvvH > Q_EPS) r = r.copy(wH = r.dH / (sigmaHeight * sqrt(qvvH)))
+            if (okH) r = r.copy(wH = r.dH / (sigmaHeight * sqrt(qvvH)))
             r = if (p.use.inHeight) {
-                r.copy(looDH = if (qvvH > Q_EPS) looFit(d, pairs, i, "height")?.dH else null)
+                r.copy(looDH = if (okH) looFit(d, pairs, i, "height")?.dH else null)
             } else {
                 r.copy(looDH = r.dH)
             }

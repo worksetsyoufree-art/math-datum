@@ -131,7 +131,13 @@ private fun show(d: LocalizationDatum, exclusions: List<Exclusion> = emptyList()
             "<td${if (bad) " class=\"big\"" else ""}${title?.let { " title=\"$it\"" } ?: ""}>$text</td>"
         fun w(v: Double?, na: String) = cell(v?.let { abs(it).fixed(2) } ?: "—", v != null && abs(v) > lim, if (v == null) na else null)
         val noCheck = "нельзя проверить: без точки модель не определена"
+        // Использованные априорные СКО точек (свои σ из CSV или глобальные); свои — выделены.
+        val sigmas = d.residuals.any { it.sigmaPlan != null }
+        fun sigma(v: Double?, p: Double?) =
+            "<td${if (p != null && p != 1.0) " class=\"own\"" else ""}${p?.let { " title=\"вес p = ${it.fixed(3)}\"" } ?: ""}>${mm(v)}</td>"
         table.innerHTML = "<tr><th>Точка</th><th>Использование</th><th>dx, мм</th><th>dy, мм</th><th>dH, мм</th>" +
+            (if (sigmas) "<th title=\"априорная СКО точки на координату (столбец sigma_plan или глобальная)\">σ план, мм</th>" +
+                "<th title=\"априорная СКО высоты точки (столбец sigma_height или глобальная)\">σ выс., мм</th>" else "") +
             "<th title=\"нормированная поправка, план: max(|wx|, |wy|)\">|w| план</th><th title=\"нормированная поправка, высота\">|w| выс.</th>" +
             "<th title=\"ошибка прогноза в точке датумом без неё (для контрольных — сама невязка)\">Без точки план, мм</th>" +
             "<th>Без точки dH, мм</th></tr>" +
@@ -147,6 +153,7 @@ private fun show(d: LocalizationDatum, exclusions: List<Exclusion> = emptyList()
                 val cls = listOfNotNull("control".takeIf { r.use == Use.NONE }, "suspect".takeIf { r.suspect })
                 "<tr${if (cls.isEmpty()) "" else " class=\"${cls.joinToString(" ")}\""}><td>${escape(r.name)}${if (r.suspect) " ⚠" else ""}</td><td>$use</td>" +
                     cell(mm(r.dx), badP) + cell(mm(r.dy), badP) + cell(mm(r.dH), badH) +
+                    (if (sigmas) sigma(r.sigmaPlan, r.pPlan) + sigma(r.sigmaHeight, r.pHeight) else "") +
                     w(r.wPlan, noCheck) + w(r.wH, noCheck) +
                     cell(mm(r.looPlan), badP, if (r.looPlan == null) noCheck else null) +
                     cell(mm(r.looDH), badH, if (r.looDH == null) noCheck else null) + "</tr>"

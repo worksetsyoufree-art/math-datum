@@ -334,9 +334,19 @@ def test_plausibility_warnings():
     swapped = [Pair(p.name, p.B, p.L, p.h, p.y, p.x, p.H) for p in pairs]
     codes = [w.code for w in localize(swapped).warnings]
     assert "rotation_implausible" in codes
-    pairs, _ = synthetic_pairs(5, a=math.cos(math.radians(2)), b=math.sin(math.radians(2)))
+    # Порог по умолчанию 3°: 1.5° (сближение меридианов в МСК) — без предупреждения, 4° — с ним.
+    pairs, _ = synthetic_pairs(5, a=math.cos(math.radians(1.5)), b=math.sin(math.radians(1.5)))
+    assert not localize(pairs).warnings
+    assert [w.code for w in localize(pairs, max_rotation_deg=1).warnings] == ["rotation_implausible"]
+    pairs, _ = synthetic_pairs(5, a=math.cos(math.radians(4)), b=math.sin(math.radians(4)))
     assert [w.code for w in localize(pairs).warnings] == ["rotation_implausible"]
-    assert not localize(pairs, max_rotation_deg=3).warnings
+    assert not localize(pairs, max_rotation_deg=5).warnings
+
+
+def test_no_warnings_in_regions():
+    """В реальных МСК разворот до ~1.5° (4 региона) — при пороге 3° ложных срабатываний нет."""
+    for path in REGIONS:
+        assert not localize(pairs_of(site(path)["control_points"])).warnings, path.stem
 
 
 def test_save_load_diagnostics_and_old_format(tmp_path):
@@ -378,3 +388,215 @@ def test_cli_quality_and_report(tmp_path, capsys):
     assert float(rows[3][4]) == 0 and float(rows[2][4]) > 1000
     # Результат с доп. столбцами читается обратно.
     assert cli(["to-wgs", str(datum), str(tmp_path / "b.csv"), "-o", str(tmp_path / "c.csv")]) == 0
+
+
+# --- Веса точек (взвешенный МНК) ---
+
+def noisy_pairs(iso="RU-MOW"):
+    """Пары региона со своими σ части точек (план и высота)."""
+    pairs = region_pairs(iso)
+    for p, sp, sh in zip(pairs, (0.005, 0.05, None, 0.01, 0.04, None, 0.03),
+                         (0.01, None, 0.08, 0.02, None, 0.05, 0.015)):
+        p.sigma_plan, p.sigma_height = sp, sh
+    return pairs
+
+
+def params(d):
+    return np.array([d.Nc, d.Ec, d.a, d.b, d.tx, d.ty, d.c0, d.c1, d.c2])
+
+
+def test_weights_equal_reproduce_unweighted():
+    """Одинаковая σ у всех точек — параметры и w как без весов; σ = σ0 — совпадает и всё остальное."""
+    pairs = region_pairs("RU-SPE")
+    d = localize(pairs)
+    for p in pairs:
+        p.sigma_plan, p.sigma_height = 0.05, 0.07
+    e = localize(pairs, lat0=d.lat0, lon0=d.lon0)
+    assert np.allclose(params(e), params(d), rtol=1e-12, atol=1e-12)
+    for r, q in zip(d.residuals, e.residuals):
+        # Невязки — разность чисел ~3·10⁶ м: совпадают до ulp (5·10⁻¹⁰ м).
+        assert (r.dx, r.dy, r.dH) == pytest.approx((q.dx, q.dy, q.dH), abs=1e-9)
+        # w = v / (σ0·sqrt(q_vv)), q_vv = q_vv(p=1) / p → w(σi) = w(σ0)·σ0/σi.
+        assert q.wx == pytest.approx(r.wx * 0.02 / 0.05, abs=1e-7)
+        assert q.wH == pytest.approx(r.wH * 0.03 / 0.07, abs=1e-7)
+        assert (q.loo_dx, q.loo_dH) == pytest.approx((r.loo_dx, r.loo_dH), abs=1e-9)
+        assert (q.sigma_plan, q.p_plan) == (0.05, pytest.approx(0.16))
+    assert not d.weighted and e.weighted
+    for p in pairs:
+        p.sigma_plan, p.sigma_height = 0.02, 0.03            # σi = σ0 → p = 1, всё как без весов
+    f = localize(pairs)
+    assert np.allclose(params(f), params(d), rtol=1e-12, atol=1e-12)
+    assert f.s0_plan == pytest.approx(d.s0_plan, rel=1e-12) and not f.weighted
+    assert [r.wx for r in f.residuals] == pytest.approx([r.wx for r in d.residuals], rel=1e-12)
+
+
+def test_large_sigma_point_barely_affects_datum():
+    """Точка с σ = 10 м и грубой ошибкой 0.5 м почти не влияет: датум как без неё."""
+    pairs = region_pairs()
+    pairs[3].x += 0.5
+    pairs[3].H += 0.5
+    pairs[3].sigma_plan = pairs[3].sigma_height = 10.0
+    d = localize(pairs)
+    rest = localize([p for i, p in enumerate(pairs) if i != 3], lat0=d.lat0, lon0=d.lon0)
+    x, y, H = d.to_local(*np.array([[p.B, p.L, p.h] for p in pairs]).T)
+    x2, y2, H2 = rest.to_local(*np.array([[p.B, p.L, p.h] for p in pairs]).T)
+    assert np.abs(np.r_[x - x2, y - y2, H - H2]).max() < 1e-4
+    r = d.residuals[3]
+    assert r.dx == pytest.approx(0.5, abs=0.05) and not r.suspect   # |w| мал: σ точки велика
+    assert r.p_plan == pytest.approx((0.02 / 10) ** 2)
+    # Без весов та же ошибка сбивает датум на сантиметры.
+    for p in pairs:
+        p.sigma_plan = p.sigma_height = None
+    u = localize(pairs, lat0=d.lat0, lon0=d.lon0)
+    assert np.abs(np.asarray(u.to_local(pairs[0].B, pairs[0].L, pairs[0].h)[0]) - x[0]) > 0.01
+
+
+def test_small_sigma_point_attracts_solution():
+    """Точка с малой σ «притягивает» решение: её невязка → 0 при σ → 0."""
+    pairs = region_pairs("RU-SPE")
+    pairs[2].x += 0.05
+    pairs[2].H += 0.05
+    v0 = localize(pairs).residuals[2]
+    prev = (abs(v0.dx), abs(v0.dH))
+    for s in (0.005, 0.001, 0.0001):
+        pairs[2].sigma_plan = pairs[2].sigma_height = s
+        r = localize(pairs).residuals[2]
+        assert abs(r.dx) < prev[0] and abs(r.dH) < prev[1]
+        prev = (abs(r.dx), abs(r.dH))
+    assert prev[0] < 1e-4 and prev[1] < 1e-4
+
+
+def test_weighted_against_direct_lsq():
+    """Взвешенный МНК: параметры, Q = (AᵀPA)⁻¹, q_vv = 1/p − aᵀQa, w, s0 — против прямого расчёта."""
+    pairs = noisy_pairs()
+    pairs[4].use = "plan"
+    pairs[5].use = "none"
+    d = localize(pairs)
+    proj = d._proj()
+    E, N = proj.transform([p.L for p in pairs], [p.B for p in pairs])
+    N, E = np.array(N), np.array(E)
+    dN, dE = N - d.Nc, E - d.Ec
+    pp = np.array([(0.02 / p.sigma_plan) ** 2 if p.sigma_plan else 1.0 for p in pairs])
+    ph = np.array([(0.03 / p.sigma_height) ** 2 if p.sigma_height else 1.0 for p in pairs])
+    ip = np.array([p.in_plan for p in pairs])
+    ih = np.array([p.in_height for p in pairs])
+    n = len(pairs)
+    # План: прямой взвешенный МНК в осях исходного (невзвешенного) центра.
+    A = np.zeros((2 * n, 4))
+    A[0::2] = np.column_stack([np.ones(n), np.zeros(n), dN, -dE])
+    A[1::2] = np.column_stack([np.zeros(n), np.ones(n), dE, dN])
+    L = np.array([[p.x, p.y] for p in pairs]).ravel()
+    P = np.repeat(pp, 2)
+    m = np.repeat(ip, 2)
+    Q = np.linalg.inv(A[m].T @ (P[m, None] * A[m]))
+    X = Q @ A[m].T @ (P[m] * L[m])
+    assert np.allclose(X, [d.tx, d.ty, d.a, d.b], rtol=1e-12, atol=1e-7)
+    assert np.allclose(d.q_plan, Q, rtol=1e-9, atol=1e-18)
+    assert np.allclose(d.Nc, np.sum(pp[ip] * N[ip]) / pp[ip].sum())          # взвешенный центроид
+    V = L - A @ X
+    qvv = np.where(m, 1 / P - np.einsum("ij,jk,ik->i", A, Q, A), 1 / P + np.einsum("ij,jk,ik->i", A, Q, A))
+    w = V / (0.02 * np.sqrt(qvv))
+    assert np.allclose(w, [x for r in d.residuals for x in (r.wx, r.wy)], atol=1e-7)
+    assert np.allclose(qvv[0::2], [r.qvv_plan for r in d.residuals], atol=1e-12)
+    r_plan = 2 * ip.sum() - 4
+    assert np.sum(P[m] * qvv[m]) == pytest.approx(r_plan) == d.redundancy_plan          # Σ p·q_vv = r
+    assert d.s0_plan == pytest.approx(math.sqrt(V[m] @ (P[m] * V[m]) / r_plan), rel=1e-6)
+    # Высота.
+    Ah = np.column_stack([np.ones(n), dN, dE])
+    lh = np.array([p.H - p.h for p in pairs])
+    Qh = np.linalg.inv(Ah[ih].T @ (ph[ih, None] * Ah[ih]))
+    c = Qh @ Ah[ih].T @ (ph[ih] * lh[ih])
+    assert np.allclose(c, [d.c0, d.c1, d.c2], rtol=1e-9, atol=1e-12)
+    assert np.allclose(d.q_height, Qh, rtol=1e-8, atol=1e-18)
+    Vh = lh - Ah @ c
+    hh = np.einsum("ij,jk,ik->i", Ah, Qh, Ah)
+    qh = np.where(ih, 1 / ph - hh, 1 / ph + hh)
+    assert np.allclose(qh, [r.qvv_height for r in d.residuals], atol=1e-12)
+    assert np.allclose(Vh / (0.03 * np.sqrt(qh)), [r.wH for r in d.residuals], atol=1e-7)
+    assert np.sum(ph[ih] * qh[ih]) == pytest.approx(d.redundancy_height)
+    assert d.s0_height == pytest.approx(math.sqrt(Vh[ih] @ (ph[ih] * Vh[ih]) / d.redundancy_height), rel=1e-6)
+    # Ковариации и СКО прогноза: σ0²·Q, σ0·sqrt(aᵀQa).
+    assert np.allclose(d.covariance_plan(), 0.02 ** 2 * Q, rtol=1e-9, atol=1e-20)
+    assert np.allclose(d.covariance_height(posterior=True), d.s0_height ** 2 * Qh, rtol=1e-8, atol=1e-20)
+    mp, mh = d.prediction_sigma(pairs[0].B, pairs[0].L)
+    assert mh == pytest.approx(0.03 * math.sqrt(hh[0]))
+    assert mp == pytest.approx(0.02 * math.sqrt(2 * (1 / pp[0] - d.residuals[0].qvv_plan)))
+    # Использованные σ сохранены.
+    assert [r.sigma_plan for r in d.residuals] == [p.sigma_plan or 0.02 for p in pairs]
+    assert [r.p_height for r in d.residuals] == pytest.approx(list(ph))
+
+
+def test_weighted_leave_one_out():
+    """Ошибка без точки = v / (p·q_vv) и совпадает с прямым пересчётом датума без неё."""
+    pairs = noisy_pairs("RU-SPE")
+    pairs[2].use = "plan"
+    d = localize(pairs)
+    for i, r in enumerate(d.residuals):
+        m = localize([p for j, p in enumerate(pairs) if j != i], lat0=d.lat0, lon0=d.lon0)
+        x, y, H = m.to_local(pairs[i].B, pairs[i].L, pairs[i].h)
+        assert r.loo_dx == pytest.approx(pairs[i].x - x, abs=1e-9)
+        assert r.loo_dy == pytest.approx(pairs[i].y - y, abs=1e-9)
+        assert r.loo_dx == pytest.approx(r.dx / (r.p_plan * r.qvv_plan), abs=1e-9)
+        if pairs[i].in_height:
+            assert r.loo_dH == pytest.approx(pairs[i].H - H, abs=1e-9)
+            assert r.loo_dH == pytest.approx(r.dH / (r.p_height * r.qvv_height), abs=1e-9)
+    assert sum(2 * r.p_plan * r.qvv_plan for r in d.residuals) == pytest.approx(d.redundancy_plan)
+    assert sum(r.p_height * r.qvv_height for r, p in zip(d.residuals, pairs) if p.in_height) == \
+        pytest.approx(d.redundancy_height)
+
+
+def test_weighted_blunder_detection():
+    """Ошибка 10 см у точки с σ = 1 см обнаруживается, у точки с σ = 10 см — нет (в пределах её точности)."""
+    pairs = read_pairs(ROOT / "examples/pairs.csv")[:6]
+    pairs[3].x += 0.10
+    pairs[3].sigma_plan = 0.10
+    assert not any(r.suspect for r in localize(pairs).residuals)
+    pairs[3].sigma_plan = 0.01
+    d = localize(pairs)
+    assert int(np.argmax([r.w_plan for r in d.residuals])) == 3 and d.residuals[3].suspect
+    from mathdatum import suggest_exclusions
+    assert suggest_exclusions(pairs)[0][:2] == ("R4", "plan")
+
+
+def test_sigma_validation():
+    pairs = region_pairs()
+    pairs[0].sigma_plan = 0.0
+    with pytest.raises(LocalizationError, match="sigma_plan"):
+        localize(pairs)
+    pairs[0].sigma_plan, pairs[1].sigma_height = None, -1.0
+    with pytest.raises(LocalizationError, match="sigma_height"):
+        localize(pairs)
+
+
+def test_weights_csv_and_json(tmp_path, capsys):
+    """Новые столбцы sigma_plan / sigma_height необязательны; σ сохраняются в JSON; старые файлы читаются."""
+    old = read_pairs(ROOT / "examples/pairs.csv")
+    assert all(p.sigma_plan is None and p.sigma_height is None for p in old)
+    lines = (ROOT / "examples/pairs.csv").read_text().splitlines()
+    rows = [lines[0] + ";sigma_plan;sigma_height"] + [ln + (";0,005;" if i == 0 else ";;0.05" if i == 2 else ";;")
+                                                       for i, ln in enumerate(lines[1:])]
+    f = tmp_path / "w.csv"
+    f.write_text("\n".join(rows) + "\n")
+    pairs = read_pairs(f)
+    assert (pairs[0].sigma_plan, pairs[0].sigma_height) == (0.005, None)
+    assert (pairs[2].sigma_plan, pairs[2].sigma_height) == (None, 0.05)
+    assert all(p.sigma_plan is None for p in pairs[1:])
+    # Разделитель «,» и порядок столбцов произвольный.
+    g = tmp_path / "c.csv"
+    g.write_text("name,sigma_height,B,L,h,x,y,H\nA,0.02,55,37,1,2,3,4\n")
+    assert read_pairs(g)[0].sigma_height == 0.02
+    d = localize(pairs)
+    d.save(tmp_path / "d.json")
+    back = LocalizationDatum.load(tmp_path / "d.json")
+    assert back == d and back.residuals[0].sigma_plan == 0.005 and back.residuals[0].p_plan == pytest.approx(16)
+    data = json.loads((tmp_path / "d.json").read_text())
+    assert {"sigma_plan", "sigma_height", "p_plan", "p_height"} <= set(data["residuals"][0])
+    # Старый JSON без σ: поля None, датум не взвешенный.
+    o = LocalizationDatum.load(ROOT / "tests/data/datum_old_format.json")
+    assert o.residuals[0].sigma_plan is None and not o.weighted
+    # CLI: при весах в отчёте столбцы σ.
+    assert cli(["localize", str(f), "-o", str(tmp_path / "e.json")]) == 0
+    out = capsys.readouterr().out
+    assert "σ план" in out and "0.0050" in out
+    assert cli(["localize", str(ROOT / "examples/pairs.csv"), "-o", str(tmp_path / "e.json")]) == 0
+    assert "σ план" not in capsys.readouterr().out
