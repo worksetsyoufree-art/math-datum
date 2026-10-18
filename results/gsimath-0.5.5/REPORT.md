@@ -34,7 +34,7 @@
 ## Найденные проблемы
 
 1. **Поправка по высоте не применяется в пути приложения** (ошибка высот на контрольных пунктах 6–30 м, то есть вся аномалия высоты).
-   - `CommonMathRepositoryImpl.calculateToActualCoordinate` для датума с `isFromLocalization = true` делает `copy(paramVSKO = null)` (байткоде: маска `32255`, аргумент VSKO = `null`).
+   - `CommonMathRepositoryImpl.calculateToActualCoordinate` для датума с `isFromLocalization = true` делает `copy(paramVSKO = null)` (в байткоде: маска `32255`, аргумент VSKO = `null`).
    - При заданной сетке геоида высота заменяется на `h − N`, и ВСКО тоже не участвует.
    - Через `getTransformationTwoDatums` с тем же датумом высоты верны (6 мм).
    - Нужно проверить, не пересчитывается ли высота в другом месте приложения. Если нет, это ошибка.
