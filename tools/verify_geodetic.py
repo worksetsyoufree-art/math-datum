@@ -1,8 +1,10 @@
 """Независимая проверка геодезических датасетов data/geodetic/regions/*.json.
 
-- helmert_7p (exact): сравнение с реализацией PROJ (+proj=helmert convention=coordinate_frame);
+- параметры ГОСТ 32453-2017: файл data/geodetic/gost_32453_parameters.json = mathdatum.datums;
+- контрольный пример ГОСТ (прил. Е): все три шага библиотечными функциями (mathdatum.datums);
+- helmert_7p (exact): mathdatum.datums и независимо PROJ (+proj=helmert convention=coordinate_frame);
 - helmert_7p (noisy): решение МНК итерациями Гаусса–Ньютона с нуля, сравнение прогноза;
-- site_localization: пересчёт рабочей проекции через PROJ, подобие — в комплексной
+- site_localization: пересчёт рабочей проекции через PROJ и mathdatum.datums, подобие — в комплексной
   форме (z' = t + w·z), высоты — отдельный МНК.
 
 Запуск:  python tools/verify_geodetic.py
@@ -15,7 +17,11 @@ from pathlib import Path
 import numpy as np
 from pyproj import Transformer
 
-GEO = Path(__file__).resolve().parent.parent / "data" / "geodetic"
+ROOT = Path(__file__).resolve().parent.parent
+GEO = ROOT / "data" / "geodetic"
+sys.path.insert(0, str(ROOT))
+from mathdatum import datums  # noqa: E402
+
 ARCSEC = np.pi / (180 * 3600)
 
 
@@ -54,6 +60,11 @@ def check_helmert(task):
     x1, x2 = np.array(task["source_xyz"]), np.array(task["target_xyz"])
     p = task["expected"]["parameters"]
     pred = proj_helmert(x1, p)
+    # Библиотека: путь СК-42 → ПЗ-90.11 по графу параметров, те же параметры, что в задаче.
+    lib = datums.transform_xyz(x1, "SK-42", "PZ-90.11")
+    d_lib = float(np.abs(lib - pred).max())
+    gost = next(t for t in datums.TRANSFORMATIONS if t.src == "SK-42")
+    same = all(getattr(gost, k) == v for k, v in p.items())
     rms_given = float(np.sqrt(np.mean(np.sum((x2 - pred) ** 2, axis=1) / 3)))
     fit, q = solve_helmert(x1, x2)
     # Решение МНК должно давать те же координаты, что и параметры ГОСТ.
@@ -63,7 +74,8 @@ def check_helmert(task):
         ok = rms_given < 1e-4 and dpred < 1e-4 and dm < 1e-3
     else:
         ok = abs(rms_given - task["expected"]["rms_residual_m"]) < 2e-4 and dpred < 1e-3 and dm < 1e-2
-    return ok, f"{task['variant']}: rms={rms_given:.4f} |LSQ-ГОСТ|={dpred:.1e} dm={dm:.1e}ppm"
+    ok = ok and same and d_lib < 1e-6
+    return ok, f"{task['variant']}: rms={rms_given:.4f} |LSQ-ГОСТ|={dpred:.1e} dm={dm:.1e}ppm |lib-PROJ|={d_lib:.1e}"
 
 
 def check_site(task):
@@ -80,6 +92,10 @@ def check_site(task):
     src, h = ne(ctrl)
     stored = np.array([p["work_N_E"] for p in ctrl])
     d_proj = float(np.abs(src - stored).max())
+    kv = dict(x.lstrip("+").split("=", 1) for x in task["working_projection"].split() if "=" in x)
+    b = np.array([p["gnss_B_L_h"] for p in ctrl])
+    lib = np.column_stack(datums.TransverseMercator("pz90", float(kv["lon_0"])).forward(b[:, 0], b[:, 1]))
+    d_proj = max(d_proj, float(np.abs(lib - stored).max()))
     dst = np.array([p["local_x_y_H"] for p in ctrl])
     # Подобие в комплексной форме: z = N + iE, w = x + iy; w = t + k·(z - zc).
     z = stored[:, 0] + 1j * stored[:, 1]
@@ -105,18 +121,38 @@ def check_site(task):
     return ok, f"site: proj={d_proj:.1e} par={d_par:.1e} t={d_t:.1e} vert={d_v:.1e} pred={d_pred:.1e}"
 
 
+def check_parameters():
+    data = json.loads((GEO / "gost_32453_parameters.json").read_text(encoding="utf-8"))
+    keys = ("dX", "dY", "dZ", "wx", "wy", "wz", "m")
+    bad = [t["appendix"] for t, p in zip(data["transformations"], datums.TRANSFORMATIONS)
+           if [t[k] for k in keys] != [getattr(p, k) for k in keys] or t.get("epoch") != p.epoch]
+    ok = not bad and len(data["transformations"]) == len(datums.TRANSFORMATIONS)
+    return ok, f"{len(data['transformations'])} наборов = mathdatum.datums" + (f"; расходятся: {bad}" if bad else "")
+
+
 def check_gost_example():
     ex = json.loads((GEO / "gost_32453_control_example.json").read_text(encoding="utf-8"))
     s = ex["steps"]
     x0 = np.array(s["input_itrf2008_epoch_2005"]["xyz"])
     v = np.array(s["input_itrf2008_epoch_2005"]["velocity"])
-    x1 = x0 + v * (2010.0 - 2005.0)
+    x1 = datums.propagate_epoch(x0, v, 2005.0, 2010.0)
     d1 = float(np.abs(x1 - s["itrf2008_epoch_2010"]["xyz"]).max())
-    return d1 < 1e-3, f"шаг 1 (перенос эпохи 2005→2010): max|Δ|={d1:.1e} м"
+    # Шаг 2: ITRF-2008 → ПЗ-90.11 (обратный Д.1, эпоха 2010); шаг 3: перенос на 2013.9 той же скоростью.
+    x2 = datums.transform_xyz(x0, "ITRF-2008", "PZ-90.11", epoch=2005.0, velocity=v)
+    d2 = float(np.abs(x2 - s["pz9011_epoch_2010"]["xyz"]).max())
+    x3 = datums.transform_xyz(x0, "ITRF-2008", "PZ-90.11", epoch=2005.0, velocity=v, target_epoch=2013.9)
+    d3 = float(np.abs(x3 - s["pz9011_epoch_2013_9"]["xyz"]).max())
+    # Допуски — по разрядам значений в ГОСТ: 1 мм (шаги 1, 3), 0.1 мм (шаг 2).
+    ok = d1 < 1e-3 and d2 < 1e-4 and d3 < 1e-3
+    return ok, (f"шаг 1 (эпоха 2005→2010) max|Δ|={d1:.1e} м; шаг 2 (ITRF-2008→ПЗ-90.11) {d2:.1e} м; "
+                f"шаг 3 (эпоха 2010→2013.9) {d3:.1e} м")
 
 
 def main():
     ok_all = True
+    ok, msg = check_parameters()
+    ok_all &= ok
+    print(f"[{'OK' if ok else 'FAIL'}] ГОСТ 32453 параметры: {msg}")
     ok, msg = check_gost_example()
     ok_all &= ok
     print(f"[{'OK' if ok else 'FAIL'}] ГОСТ 32453 контрольный пример: {msg}")

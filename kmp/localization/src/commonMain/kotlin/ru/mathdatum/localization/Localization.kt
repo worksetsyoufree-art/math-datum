@@ -17,7 +17,8 @@ import kotlin.math.sqrt
 /*
  * Локализация ГНСС: пары точек WGS-84 ↔ местная система → датум → пересчёты.
  * Та же модель и тот же формат JSON, что у Python-эталона (mathdatum/localization.py):
- *  1. рабочая проекция — поперечный Меркатор с центром (lat0, lon0): (B, L) → (N, E);
+ *  1. рабочая проекция — поперечный Меркатор с центром (lat0, lon0) на эллипсоиде системы ГНСС-измерений
+ *     (gnssDatum, по умолчанию WGS-84; координаты в другую систему не переводятся): (B, L) → (N, E);
  *  2. план — подобие относительно центроида:  [x, y] = [tx, ty] + [[a, -b], [b, a]]·([N, E] - [Nc, Ec]);
  *  3. высота — плоскость:  H = h + c0 + c1·(N - Nc) + c2·(E - Ec).
  * Подгонки — взвешенный линейный МНК в замкнутой форме; при малом числе точек модель упрощается до сдвига.
@@ -129,6 +130,8 @@ data class LocalizationDatum(
     val c1: Double,
     val c2: Double,
     @EncodeDefault val ellipsoid: String = "+ellps=WGS84",
+    /** Система ГНСС-координат (код [Datums.SYSTEMS]); null — старый JSON. */
+    @SerialName("gnss_datum") val gnssDatum: String? = null,
     @SerialName("plan_model") val planModel: String = "similarity",
     @SerialName("height_model") val heightModel: String = "plane",
     val residuals: List<Residual> = emptyList(),
@@ -162,27 +165,52 @@ data class LocalizationDatum(
     val weighted: Boolean get() = residuals.any { r -> listOf(r.pPlan, r.pHeight).any { it != null && it != 1.0 } }
     val projection: String get() = "+proj=tmerc +lat_0=$lat0 +lon_0=$lon0 +k=1 +x_0=0 +y_0=0 $ellipsoid +units=m"
 
-    /** WGS-84 → местная система. */
-    fun toLocal(p: WgsPoint): LocalPoint {
-        val (n, e) = tm.forward(p.lat, p.lon)
+    /** Система ГНСС-координат датума; у старого JSON — WGS-84, если рабочая проекция на WGS-84. */
+    val gnssSystem: String? get() = gnssDatum ?: if (ellipsoid == "+ellps=WGS84") "WGS-84" else null
+
+    private fun sameSystem(datum: String?): Boolean {
+        if (datum == null) return true
+        val own = gnssSystem ?: throw IllegalArgumentException(
+            "В датуме не указана система ГНСС (gnss_datum) — пересчёт из другой системы невозможен.",
+        )
+        return Datums.system(datum).id == own
+    }
+
+    /** Точку ГНСС из системы [datum] — в систему датума (7 параметров ГОСТ 32453). */
+    fun fromSystem(p: WgsPoint, datum: String?): WgsPoint {
+        if (sameSystem(datum)) return p
+        val g = Datums.transformBlh(GeodeticPoint(p.lat, p.lon, p.h), datum!!, gnssSystem!!)
+        return WgsPoint(g.lat, g.lon, g.h)
+    }
+
+    /**
+     * ГНСС → местная система. [datum] — система точки, если не совпадает с [gnssDatum]
+     * (тогда она сначала пересчитывается по 7 параметрам ГОСТ 32453).
+     */
+    fun toLocal(p: WgsPoint, datum: String? = null): LocalPoint {
+        val q = fromSystem(p, datum)
+        val (n, e) = tm.forward(q.lat, q.lon)
         val dN = n - nc
         val dE = e - ec
         return LocalPoint(
             x = tx + a * dN - b * dE,
             y = ty + b * dN + a * dE,
-            height = p.h + c0 + c1 * dN + c2 * dE,
+            height = q.h + c0 + c1 * dN + c2 * dE,
         )
     }
 
-    /** Местная система → WGS-84. */
-    fun toWgs(p: LocalPoint): WgsPoint {
+    /** Местная система → ГНСС в системе датума или в [datum]. */
+    fun toWgs(p: LocalPoint, datum: String? = null): WgsPoint {
         val k2 = a * a + b * b
         val u = p.x - tx
         val v = p.y - ty
         val dN = (a * u + b * v) / k2
         val dE = (-b * u + a * v) / k2
         val (lat, lon) = tm.inverse(dN + nc, dE + ec)
-        return WgsPoint(lat, lon, p.height - (c0 + c1 * dN + c2 * dE))
+        val w = WgsPoint(lat, lon, p.height - (c0 + c1 * dN + c2 * dE))
+        if (sameSystem(datum)) return w
+        val g = Datums.transformBlh(GeodeticPoint(w.lat, w.lon, w.h), gnssSystem!!, datum!!)
+        return WgsPoint(g.lat, g.lon, g.h)
     }
 
     private fun sigmas(posterior: Boolean) = if (posterior) s0Plan to s0Height else sigma0Plan to sigma0Height
@@ -249,6 +277,8 @@ class LocalizationException(message: String) : IllegalArgumentException(message)
 /**
  * Вычисляет датум локализации по парам точек.
  * [lat0], [lon0] — центр рабочей проекции; по умолчанию — среднее по используемым точкам.
+ * [gnssDatum] — система ГНСС-координат пар (код или название из [Datums.SYSTEMS]), по умолчанию WGS-84;
+ * [ellipsoid] — эллипсоид рабочей проекции (PROJ), по умолчанию — эллипсоид [gnssDatum].
  * [sigmaPlan], [sigmaHeight] — априорные СКО (м) координаты плана и высоты (СКО единицы веса σ0); точки со своей
  * σi получают вес p = σ0² / σi²; [wLimit] — порог |w| теста Баарда;
  * [maxScalePpm], [maxRotationDeg] — пределы правдоподобия масштаба и разворота.
@@ -257,14 +287,18 @@ fun localize(
     pairs: List<LocalizationPair>,
     lat0: Double? = null,
     lon0: Double? = null,
-    ellipsoid: String = "+ellps=WGS84",
+    ellipsoid: String? = null,
     sigmaPlan: Double = 0.02,
     sigmaHeight: Double = 0.03,
     wLimit: Double = 3.29,
     maxScalePpm: Double = 200.0,
     maxRotationDeg: Double = 3.0,
-): LocalizationDatum =
-    diagnose(fit(pairs, lat0, lon0, ellipsoid, sigmaPlan, sigmaHeight), pairs, sigmaPlan, sigmaHeight, wLimit, maxScalePpm, maxRotationDeg)
+    gnssDatum: String = "WGS-84",
+): LocalizationDatum {
+    val system = Datums.system(gnssDatum)
+    val d = fit(pairs, lat0, lon0, ellipsoid ?: system.ellipsoid.proj, sigmaPlan, sigmaHeight).copy(gnssDatum = system.id)
+    return diagnose(d, pairs, sigmaPlan, sigmaHeight, wLimit, maxScalePpm, maxRotationDeg)
+}
 
 /** Вес p = σ0² / σi² (σi — sigmaPlan или sigmaHeight пары; null → p = 1). */
 private fun weight(p: LocalizationPair, sigma0: Double, plan: Boolean): Double {
@@ -612,9 +646,10 @@ fun suggestExclusions(
     sigmaPlan: Double = 0.02,
     sigmaHeight: Double = 0.03,
     wLimit: Double = 3.29,
-    ellipsoid: String = "+ellps=WGS84",
+    ellipsoid: String? = null,
+    gnssDatum: String = "WGS-84",
 ): List<Exclusion> {
-    var d = localize(pairs, ellipsoid = ellipsoid, sigmaPlan = sigmaPlan, sigmaHeight = sigmaHeight, wLimit = wLimit)
+    var d = localize(pairs, ellipsoid = ellipsoid, sigmaPlan = sigmaPlan, sigmaHeight = sigmaHeight, wLimit = wLimit, gnssDatum = gnssDatum)
     val lat0 = d.lat0
     val lon0 = d.lon0
     var cur = pairs
@@ -631,7 +666,7 @@ fun suggestExclusions(
         out += Exclusion(cur[i].name, part, w)
         cur = without(cur, i, part)
         d = try {
-            localize(cur, lat0, lon0, ellipsoid, sigmaPlan, sigmaHeight, wLimit)
+            localize(cur, lat0, lon0, ellipsoid, sigmaPlan, sigmaHeight, wLimit, gnssDatum = gnssDatum)
         } catch (e: LocalizationException) {
             return out
         }

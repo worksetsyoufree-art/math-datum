@@ -11,6 +11,7 @@
  "c1": 1.8626238970515127e-05,
  "c2": -3.893347517381845e-06,
  "ellipsoid": "+ellps=WGS84",
+ "gnss_datum": "WGS-84",
  "plan_model": "similarity",
  "height_model": "plane",
  "residuals": [

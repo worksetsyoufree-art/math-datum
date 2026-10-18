@@ -1,8 +1,12 @@
 """Локализация ГНСС: пары точек WGS-84 ↔ местная система → датум → пересчёты.
 
 Модель (как в полевом ПО):
-  1. Рабочая проекция — поперечный Меркатор на эллипсоиде WGS-84 с осевым
-     меридианом в центре точек: (B, L) → (N, E).
+  1. Рабочая проекция — поперечный Меркатор на эллипсоиде системы ГНСС-измерений (gnss_datum,
+     по умолчанию WGS-84) с осевым меридианом в центре точек: (B, L) → (N, E). Координаты
+     в другую систему не переводятся: на участке переход по 7 параметрам — это почти точно сдвиг,
+     разворот, масштаб и наклон высот, их поглощают подобие и плоскость высот (разница вариантов
+     на участке 5 км — ≤ 1 мм для СК-42 со сдвигом ~160 м, ~1 мкм для WGS-84 / ГСК-2011),
+     а лишний пересчёт добавил бы погрешность самих параметров (для СК-42 — метры).
   2. План — преобразование подобия (4 параметра) относительно центроида:
         [x, y] = [tx, ty] + [[a, -b], [b, a]] · ([N, E] - [Nc, Ec])
      масштаб = sqrt(a² + b²), разворот = atan2(b, a).
@@ -37,6 +41,8 @@ from pathlib import Path
 
 import numpy as np
 from pyproj import Transformer
+
+from . import datums
 
 WGS84 = "+ellps=WGS84"
 ARCSEC = math.pi / (180 * 3600)
@@ -132,6 +138,7 @@ class LocalizationDatum:
     c1: float
     c2: float
     ellipsoid: str = WGS84  # эллипсоид рабочей проекции в синтаксисе PROJ
+    gnss_datum: str | None = None  # система ГНСС-координат (код datums.SYSTEMS); None — старый JSON
     plan_model: str = "similarity"
     height_model: str = "plane"
     residuals: list[Residual] = field(default_factory=list)
@@ -176,9 +183,28 @@ class LocalizationDatum:
         return Transformer.from_pipeline(
             f"+proj=pipeline +step +proj=unitconvert +xy_in=deg +xy_out=rad +step {self.projection}")
 
+    @property
+    def gnss_system(self) -> str | None:
+        """Система ГНСС-координат датума; у старого JSON — WGS-84, если рабочая проекция на WGS-84."""
+        if self.gnss_datum is not None:
+            return self.gnss_datum
+        return "WGS-84" if self.ellipsoid == WGS84 else None
+
+    def _from_system(self, B, L, h, system):
+        """B, L, h в system → в систему датума (по 7 параметрам ГОСТ 32453)."""
+        own = self.gnss_system
+        if system is None or (own is not None and datums.get_system(system).id == own):
+            return B, L, h
+        if own is None:
+            raise ValueError("В датуме не указана система ГНСС (gnss_datum) — пересчёт из другой системы невозможен.")
+        return datums.transform_blh(B, L, h, system, own)
+
     # --- пересчёты ---
-    def to_local(self, B, L, h):
-        """WGS-84 (B, L градусы, h) → местные (x, y, H). Принимает числа или массивы."""
+    def to_local(self, B, L, h, datum: str | None = None):
+        """ГНСС (B, L градусы, h) → местные (x, y, H). Принимает числа или массивы.
+        datum — система входных координат, если она не совпадает с gnss_datum датума
+        (тогда они сначала пересчитываются по 7 параметрам ГОСТ 32453)."""
+        B, L, h = self._from_system(B, L, h, datum)
         B, L, h = np.asarray(B, float), np.asarray(L, float), np.asarray(h, float)
         E, N = self._proj().transform(L, B)
         dN, dE = N - self.Nc, E - self.Ec
@@ -187,8 +213,8 @@ class LocalizationDatum:
         H = h + self.c0 + self.c1 * dN + self.c2 * dE
         return x, y, H
 
-    def to_wgs(self, x, y, H):
-        """Местные (x, y, H) → WGS-84 (B, L градусы, h)."""
+    def to_wgs(self, x, y, H, datum: str | None = None):
+        """Местные (x, y, H) → ГНСС (B, L градусы, h) в системе датума или в datum."""
         x, y, H = np.asarray(x, float), np.asarray(y, float), np.asarray(H, float)
         k2 = self.a ** 2 + self.b ** 2
         u, v = x - self.tx, y - self.ty
@@ -196,7 +222,12 @@ class LocalizationDatum:
         dE = (-self.b * u + self.a * v) / k2
         L, B = self._proj().transform(dE + self.Ec, dN + self.Nc, direction="INVERSE")
         h = H - (self.c0 + self.c1 * dN + self.c2 * dE)
-        return B, L, h
+        own = self.gnss_system
+        if datum is None or (own is not None and datums.get_system(datum).id == own):
+            return B, L, h
+        if own is None:
+            raise ValueError("В датуме не указана система ГНСС (gnss_datum) — пересчёт в другую систему невозможен.")
+        return datums.transform_blh(B, L, h, own, datum)
 
     # --- точность и экстраполяция ---
     def _dne_wgs(self, B, L):
@@ -294,19 +325,22 @@ class LocalizationError(ValueError):
 
 
 def localize(pairs: list[Pair], lat0: float | None = None, lon0: float | None = None,
-             ellipsoid: str = WGS84, sigma_plan: float = 0.02, sigma_height: float = 0.03,
+             ellipsoid: str | None = None, sigma_plan: float = 0.02, sigma_height: float = 0.03,
              w_limit: float = 3.29, max_scale_ppm: float = 200.0,
-             max_rotation_deg: float = 3.0) -> LocalizationDatum:
+             max_rotation_deg: float = 3.0, gnss_datum: str = "WGS-84") -> LocalizationDatum:
     """Вычисляет датум локализации по парам точек.
 
     lat0, lon0 — центр рабочей проекции; по умолчанию — среднее по всем используемым точкам.
-    ellipsoid — эллипсоид рабочей проекции (PROJ), по умолчанию WGS-84.
+    gnss_datum — система ГНСС-координат пар (код или название из datums.SYSTEMS), по умолчанию WGS-84.
+    ellipsoid — эллипсоид рабочей проекции (PROJ); по умолчанию — эллипсоид gnss_datum.
     sigma_plan, sigma_height — априорные СКО (м) одной координаты плана и высоты (СКО единицы веса σ0)
     для теста Баарда и ковариаций; точки со своей σi получают вес p = σ0² / σi².
     w_limit — порог |w| (3.29 ≈ α = 0.001, двусторонний).
     max_scale_ppm, max_rotation_deg — пределы правдоподобия масштаба и разворота.
     """
-    datum = _fit(pairs, lat0, lon0, ellipsoid, sigma_plan, sigma_height)
+    system = datums.get_system(gnss_datum)
+    datum = _fit(pairs, lat0, lon0, ellipsoid or system.ellipsoid.proj, sigma_plan, sigma_height)
+    datum.gnss_datum = system.id
     _diagnose(datum, pairs, sigma_plan, sigma_height, w_limit, max_scale_ppm, max_rotation_deg)
     return datum
 

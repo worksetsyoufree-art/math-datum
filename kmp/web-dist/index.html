@@ -31,7 +31,7 @@
   button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
   button:disabled { opacity: .5; cursor: default; }
   input[type=file] { display: none; }
-  select { font: inherit; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--text); }
+  select { font: inherit; max-width: 100%; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--text); }
   .error { color: var(--bad); white-space: pre-wrap; margin-top: 10px; }
   .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 14px; }
   .stat { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
@@ -57,15 +57,19 @@
 <body>
 <main>
   <h1>Локализация ГНСС</h1>
-  <p class="lead">Пары точек WGS-84 ↔ местная система → датум → пересчёт координат. Все расчёты выполняются в браузере (Kotlin/JS, модуль <code>:localization</code>).</p>
+  <p class="lead">Пары точек ГНСС ↔ местная система → датум → пересчёт координат; пересчёты между СК-42, СК-95, ГСК-2011, ПЗ-90.x, WGS-84, ITRF-2008 по ГОСТ 32453-2017. Все расчёты выполняются в браузере (Kotlin/JS, модуль <code>:localization</code>).</p>
 
   <section>
     <h2>1. Пары точек</h2>
-    <p class="hint">Формат: <code>name;B;L;h;x;y;H;use</code>. B, L — градусы WGS-84, h — высота ГНСС;
+    <p class="hint">Формат: <code>name;B;L;h;x;y;H;use</code>. B, L — градусы в системе ГНСС-измерений (ниже), h — высота ГНСС;
       x — север, y — восток, H — местная высота. <code>use</code>: both, plan, height или none (контрольная точка).
       Необязательные столбцы <code>sigma_plan;sigma_height</code> — априорная СКО точки, м (каталог и ГНСС вместе:
       √(σ<sub>кат</sub>² + σ<sub>ГНСС</sub>²)); точка получает вес p = σ0² / σ², пусто — глобальная σ0.</p>
     <textarea id="pairs" spellcheck="false"></textarea>
+    <div class="row">
+      <label for="gnssDatum">Система ГНСС-координат:</label>
+      <select id="gnssDatum" title="рабочая проекция строится на эллипсоиде этой системы; координаты не пересчитываются"></select>
+    </div>
     <div class="row">
       <button class="primary" id="calc">Рассчитать локализацию</button>
       <button id="example">Пример</button>
@@ -87,7 +91,7 @@
       <button id="saveDatum">Скачать датум (JSON)</button>
       <button id="copyProj">Скопировать строку PROJ</button>
     </div>
-    <p class="hint" style="margin-top:12px">Строка PROJ (WGS-84 широта, долгота, h → x, y, H) для QGIS / cs2cs / pyproj:</p>
+    <p class="hint" style="margin-top:12px">Строка PROJ (ГНСС широта, долгота, h → x, y, H) для QGIS / cs2cs / pyproj:</p>
     <code class="proj" id="proj"></code>
   </section>
 
@@ -95,9 +99,11 @@
     <h2>3. Пересчёт точек</h2>
     <div class="row" style="margin-top:0;margin-bottom:10px">
       <select id="direction">
-        <option value="toLocal">WGS-84 (name;B;L;h) → местная (name;x;y;H)</option>
-        <option value="toWgs">Местная (name;x;y;H) → WGS-84 (name;B;L;h)</option>
+        <option value="toLocal">ГНСС (name;B;L;h) → местная (name;x;y;H)</option>
+        <option value="toWgs">Местная (name;x;y;H) → ГНСС (name;B;L;h)</option>
       </select>
+      <label for="pointsDatum">точки ГНСС в системе:</label>
+      <select id="pointsDatum" title="если не совпадает с системой датума — пересчёт по 7 параметрам ГОСТ 32453-2017"></select>
     </div>
     <div class="two">
       <textarea id="input" spellcheck="false"></textarea>
@@ -111,6 +117,28 @@
     </div>
     <div class="note" id="transformNote"></div>
     <div class="error" id="transformError"></div>
+  </section>
+
+  <section id="systemsSection">
+    <h2>4. Пересчёт между системами (ГОСТ 32453-2017)</h2>
+    <p class="hint">7 параметров ГОСТ (поворот системы координат), цепочка через ПЗ-90.11 подбирается автоматически,
+      обратный переход — точное обращение формулы. Форматы: BLH — <code>name;B;L;h</code> (градусы, геодезическая высота),
+      XYZ — <code>name;X;Y;Z</code>, ГК — <code>name;x;y;H</code> (Гаусс–Крюгер 6°, y с номером зоны). Эпоха не учитывается.</p>
+    <div class="row" style="margin-top:0;margin-bottom:10px">
+      <select id="sysFrom"></select><select id="fmtFrom"></select>
+      <span>→</span>
+      <select id="sysTo"></select><select id="fmtTo"></select>
+    </div>
+    <div class="two">
+      <textarea id="sysInput" spellcheck="false"></textarea>
+      <textarea id="sysOutput" spellcheck="false" readonly></textarea>
+    </div>
+    <div class="row">
+      <button class="primary" id="sysTransform">Пересчитать</button>
+      <button id="sysSwap">Обратно ←</button>
+    </div>
+    <div class="hint" id="sysNote" style="margin-top:10px"></div>
+    <div class="error" id="sysError"></div>
   </section>
 </main>
 <script src="webApp.js"></script>

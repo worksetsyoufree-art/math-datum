@@ -9,6 +9,7 @@ import kotlin.math.round
  * Первая строка — заголовок; разделитель «;» или «,» определяется по заголовку.
  * Пары:   name;B;L;h;x;y;H[;use][;sigma_plan][;sigma_height]     Точки WGS: name;B;L;h     Местные точки: name;x;y;H
  * sigma_plan, sigma_height — необязательные априорные СКО точки, м; пусто — глобальная σ.
+ * Пересчёт между системами: name;B;L;h | name;X;Y;Z | name;x;y;H ([parseColumns]).
  */
 object Csv {
     fun parsePairs(text: String): List<LocalizationPair> = rows(text).mapIndexed { i, (r, line) ->
@@ -41,6 +42,21 @@ object Csv {
             throw IllegalArgumentException("Строка $line: ${e.message}")
         }
     }
+
+    /** Произвольные числовые столбцы [columns] (например X;Y;Z) → (name, значения). */
+    fun parseColumns(text: String, columns: List<String>): List<Pair<String, DoubleArray>> = rows(text).mapIndexed { i, (r, line) ->
+        try {
+            (r["name"]?.takeIf { it.isNotEmpty() } ?: "P${i + 1}") to DoubleArray(columns.size) { num(r, columns[it]) }
+        } catch (e: IllegalArgumentException) {
+            throw IllegalArgumentException("Строка $line: ${e.message}")
+        }
+    }
+
+    /** name и столбцы [columns] с [digits] знаками после точки. */
+    fun formatColumns(points: List<Pair<String, DoubleArray>>, columns: List<String>, digits: List<Int>): String =
+        "name;${columns.joinToString(";")}\n" + points.joinToString("") { (n, v) ->
+            n + v.indices.joinToString("") { ";" + v[it].fixed(digits[it]) } + "\n"
+        }
 
     fun formatWgs(points: List<Pair<String, WgsPoint>>): String =
         "name;B;L;h\n" + points.joinToString("") { (n, p) -> "$n;${p.lat.fixed(10)};${p.lon.fixed(10)};${p.h.fixed(4)}\n" }
@@ -85,6 +101,9 @@ fun Double.fixed(digits: Int): String {
 
 /** Текстовый отчёт о локализации. */
 fun LocalizationDatum.report(): String = buildString {
+    gnssSystem?.takeIf { it != "WGS-84" }?.let { Datums.system(it) }?.let {
+        appendLine("ГНСС:   ${it.name}, рабочая проекция на эллипсоиде ${it.ellipsoid.name} ($ellipsoid)")
+    }
     appendLine("План:   модель $planModel; масштаб ${scale.fixed(9)} (${signed(scalePpm, 2)} ppm), разворот ${signed(rotationArcsec, 2)}″")
     appendLine("Высота: модель $heightModel; c0 = ${signed(c0, 4)} м, наклон N ${signed(c1 * 1e6, 2)} мм/км, E ${signed(c2 * 1e6, 2)} мм/км")
     appendLine("СКО:    план ${rmsPlan?.fixed(4) ?: "—"} м, высота ${rmsHeight?.fixed(4) ?: "—"} м")

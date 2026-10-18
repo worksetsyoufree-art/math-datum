@@ -12,6 +12,10 @@ import org.w3c.files.BlobPropertyBag
 import org.w3c.files.FileReader
 import org.w3c.files.get
 import ru.mathdatum.localization.Csv
+import ru.mathdatum.localization.Datums
+import ru.mathdatum.localization.GaussKruger
+import ru.mathdatum.localization.GeodeticPoint
+import ru.mathdatum.localization.Xyz
 import ru.mathdatum.localization.Exclusion
 import ru.mathdatum.localization.LocalizationDatum
 import ru.mathdatum.localization.PointQuality
@@ -41,7 +45,26 @@ T3;55.0730550690;39.3214767656;232.0133
 T4;55.1265970181;39.2501676394;239.2869
 """
 
+private const val EXAMPLE_SK42 = """name;B;L;h
+T1;55.7520000000;37.6175000000;150.0000
+T2;59.9390000000;30.3158000000;10.0000
+T3;43.1155000000;131.8855000000;30.0000
+"""
+
 private var datum: LocalizationDatum? = null
+
+/** Форматы пересчёта между системами: столбцы и знаки после точки. */
+private val FORMATS = mapOf(
+    "blh" to (listOf("B", "L", "h") to listOf(10, 10, 4)),
+    "xyz" to (listOf("X", "Y", "Z") to listOf(4, 4, 4)),
+    "gk" to (listOf("x", "y", "H") to listOf(4, 4, 4)),
+)
+
+private fun fillSystems(id: String, selected: String, extra: Pair<String, String>? = null) {
+    val s = el<HTMLSelectElement>(id)
+    s.innerHTML = (listOfNotNull(extra) + Datums.SYSTEMS.map { it.id to it.name })
+        .joinToString("") { (v, n) -> "<option value=\"$v\"${if (v == selected) " selected" else ""}>${escape(n)}</option>" }
+}
 
 private inline fun <reified T : HTMLElement> el(id: String): T = document.getElementById(id) as T
 
@@ -49,6 +72,18 @@ fun main() {
     val pairs = el<HTMLTextAreaElement>("pairs")
     pairs.value = EXAMPLE_PAIRS
     el<HTMLTextAreaElement>("input").value = EXAMPLE_WGS
+    fillSystems("gnssDatum", "WGS-84")
+    fillSystems("pointsDatum", "", "" to "как у датума")
+    fillSystems("sysFrom", "SK-42")
+    fillSystems("sysTo", "WGS-84")
+    for (id in listOf("fmtFrom", "fmtTo")) {
+        el<HTMLSelectElement>(id).innerHTML = listOf("blh" to "BLH", "xyz" to "XYZ", "gk" to "ГК 6°")
+            .joinToString("") { (v, n) -> "<option value=\"$v\">$n</option>" }
+    }
+    el<HTMLTextAreaElement>("sysInput").value = EXAMPLE_SK42
+    el<HTMLButtonElement>("sysTransform").onclick = { transformSystems(); null }
+    el<HTMLButtonElement>("sysSwap").onclick = { swapSystems(); null }
+    el<HTMLSelectElement>("gnssDatum").onchange = { calculate(); null }
 
     el<HTMLButtonElement>("example").onclick = { pairs.value = EXAMPLE_PAIRS; null }
     el<HTMLButtonElement>("calc").onclick = { calculate(); null }
@@ -81,8 +116,9 @@ private fun calculate() {
     val err = el<HTMLElement>("calcError")
     try {
         val pairs = Csv.parsePairs(el<HTMLTextAreaElement>("pairs").value)
-        val d = localize(pairs)
-        show(d, if (d.residuals.any { it.suspect }) suggestExclusions(pairs) else emptyList())
+        val gnss = el<HTMLSelectElement>("gnssDatum").value
+        val d = localize(pairs, gnssDatum = gnss)
+        show(d, if (d.residuals.any { it.suspect }) suggestExclusions(pairs, gnssDatum = gnss) else emptyList())
         err.textContent = ""
     } catch (e: Throwable) {
         err.textContent = e.message ?: e.toString()
@@ -93,6 +129,7 @@ private fun mm(v: Double?) = v?.let { (it * 1000).fixed(1) } ?: "—"
 
 private fun show(d: LocalizationDatum, exclusions: List<Exclusion> = emptyList()) {
     datum = d
+    d.gnssSystem?.let { el<HTMLSelectElement>("gnssDatum").value = it }
     el<HTMLElement>("resultSection").classList.remove("hidden")
     el<HTMLElement>("transformSection").classList.remove("hidden")
     fun stat(k: String, v: String) = "<div class=\"stat\"><div class=\"k\">$k</div><div class=\"v\">$v</div></div>"
@@ -104,6 +141,7 @@ private fun show(d: LocalizationDatum, exclusions: List<Exclusion> = emptyList()
         stat("Сдвиг высоты c0", "${d.c0.fixed(4)} м"),
         stat("Наклон N / E", "${(d.c1 * 1e6).fixed(2)} / ${(d.c2 * 1e6).fixed(2)} мм/км"),
         stat("Модель", "план: ${d.planModel}, высота: ${d.heightModel}"),
+        stat("Система ГНСС", d.gnssSystem?.let { Datums.system(it).name + " (" + Datums.system(it).ellipsoid.name + ")" } ?: "не указана"),
         stat("Избыточность план / высота", if (d.redundancyPlan == null) "—" else "${d.redundancyPlan} / ${d.redundancyHeight ?: "—"}"),
         stat("СКО ед. веса план / высота", "${mm(d.s0Plan)} / ${mm(d.s0Height)} мм" +
             (d.sigma0Plan?.let { " (априори ${mm(it)} / ${mm(d.sigma0Height)})" } ?: "")),
@@ -169,19 +207,25 @@ private fun transform() {
     try {
         val withQuality = el<HTMLInputElement>("qualityCols").checked
         val quality = mutableListOf<Pair<String, PointQuality>>()
+        // Система точек ГНСС: пусто — как у датума; иначе пересчёт по ГОСТ 32453-2017.
+        val sys = el<HTMLSelectElement>("pointsDatum").value.ifEmpty { null }
         val text = when (el<HTMLSelectElement>("direction").value) {
             "toLocal" -> Csv.parseWgsPoints(input).let { pts ->
-                pts.forEach { (n, p) -> quality += n to d.quality(p) }
-                Csv.formatLocal(pts.map { (n, p) -> n to d.toLocal(p) })
+                val own = pts.map { (n, p) -> n to d.fromSystem(p, sys) }
+                own.forEach { (n, p) -> quality += n to d.quality(p) }
+                Csv.formatLocal(own.map { (n, p) -> n to d.toLocal(p) })
             }
             else -> Csv.parseLocalPoints(input).let { pts ->
                 pts.forEach { (n, p) -> quality += n to d.quality(p) }
-                Csv.formatWgs(pts.map { (n, p) -> n to d.toWgs(p) })
+                Csv.formatWgs(pts.map { (n, p) -> n to d.toWgs(p, sys) })
             }
         }
         el<HTMLTextAreaElement>("output").value = if (!withQuality) text else addQualityColumns(text, quality)
         val far = quality.filter { (it.second.outside ?: 0.0) > 1e-3 }
-        el<HTMLElement>("transformNote").innerHTML = when {
+        val own = d.gnssSystem
+        val path = if (sys == null || own == null || Datums.system(sys).id == own) "" else
+            "Пересчёт по ГОСТ 32453-2017: " + escape(Datums.describePath(Datums.findPath(sys, own))) + ". "
+        el<HTMLElement>("transformNote").innerHTML = path + when {
             d.planHull == null -> "Датум в старом формате: экстраполяция не проверяется."
             far.isEmpty() -> ""
             else -> "⚠ ${far.size} из ${quality.size} точек вне выпуклой оболочки опорных пунктов (экстраполяция, точность падает): " +
@@ -191,6 +235,56 @@ private fun transform() {
     } catch (e: Throwable) {
         err.textContent = e.message ?: e.toString()
     }
+}
+
+/** Пересчёт точек между государственными системами (раздел 4). */
+private fun transformSystems() {
+    val err = el<HTMLElement>("sysError")
+    try {
+        val from = Datums.system(el<HTMLSelectElement>("sysFrom").value)
+        val to = Datums.system(el<HTMLSelectElement>("sysTo").value)
+        val fin = el<HTMLSelectElement>("fmtFrom").value
+        val fout = el<HTMLSelectElement>("fmtTo").value
+        val path = Datums.findPath(from.id, to.id)
+        val ef = from.ellipsoid.ellipsoid
+        val et = to.ellipsoid.ellipsoid
+        val pts = Csv.parseColumns(el<HTMLTextAreaElement>("sysInput").value, FORMATS.getValue(fin).first).map { (n, v) ->
+            val xyz = when (fin) {
+                "xyz" -> Xyz(v[0], v[1], v[2])
+                "gk" -> GaussKruger.inverse(v[0], v[1], ef).let { (b, l) -> Datums.blhToXyz(GeodeticPoint(b, l, v[2]), ef) }
+                else -> Datums.blhToXyz(GeodeticPoint(v[0], v[1], v[2]), ef)
+            }
+            val r = Datums.transformXyz(xyz, from.id, to.id, path = path)
+            n to when (fout) {
+                "xyz" -> doubleArrayOf(r.x, r.y, r.z)
+                "gk" -> Datums.xyzToBlh(r, et).let { g -> GaussKruger.forward(g.lat, g.lon, et).let { doubleArrayOf(it.x, it.y, g.h) } }
+                else -> Datums.xyzToBlh(r, et).let { doubleArrayOf(it.lat, it.lon, it.h) }
+            }
+        }
+        val (cols, digits) = FORMATS.getValue(fout)
+        el<HTMLTextAreaElement>("sysOutput").value = Csv.formatColumns(pts, cols, digits)
+        el<HTMLElement>("sysNote").textContent = "Точек: ${pts.size}; " + Datums.describePath(path) +
+            (if (fin == "gk" || fout == "gk") ". Высота H плоских координат — геодезическая." else ".")
+        err.textContent = ""
+    } catch (e: Throwable) {
+        err.textContent = e.message ?: e.toString()
+    }
+}
+
+/** Результат — во вход, системы и форматы меняются местами. */
+private fun swapSystems() {
+    val out = el<HTMLTextAreaElement>("sysOutput")
+    if (out.value.isBlank()) return
+    el<HTMLTextAreaElement>("sysInput").value = out.value
+    out.value = ""
+    for ((a, b) in listOf("sysFrom" to "sysTo", "fmtFrom" to "fmtTo")) {
+        val x = el<HTMLSelectElement>(a)
+        val y = el<HTMLSelectElement>(b)
+        val t = x.value
+        x.value = y.value
+        y.value = t
+    }
+    transformSystems()
 }
 
 /** Добавляет к CSV столбцы outside_m (расстояние до оболочки опорных пунктов), m_plan, m_H (СКО прогноза, априори). */

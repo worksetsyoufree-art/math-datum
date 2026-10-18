@@ -9,12 +9,15 @@
    use — both (по умолчанию) | plan | height | none (точка только для контроля);
    sigma_plan, sigma_height — априорные СКО точки, м (план — на координату); пусто — глобальная σ.
 Точки для пересчёта:    name;B;L;h  или  name;x;y;H
+Пересчёт между системами: name;B;L;h | name;X;Y;Z | name;x;y;H [;VX;VY;VZ — скорость, м/год]
 """
 
 from __future__ import annotations
 
 import csv
 from pathlib import Path
+
+import numpy as np
 
 from .localization import USE_BOTH, Pair
 
@@ -60,6 +63,29 @@ def read_points(path, columns: tuple[str, str, str]):
         b.append(_num(r[columns[1]], d))
         c.append(_num(r[columns[2]], d))
     return names, a, b, c
+
+
+def read_columns(path, columns, optional=()):
+    """name и столбцы columns (обязательные) и optional (None, если столбца нет) → (names, [массивы])."""
+    rows, d = _rows(path)
+    names, out = [], [[] for _ in (*columns, *optional)]
+    for i, r in enumerate(rows, 1):
+        r = {k.strip(): (v or "").strip() for k, v in r.items() if k}
+        names.append(r.get("name") or f"P{i}")
+        try:
+            for j, c in enumerate(columns):
+                out[j].append(_num(r[c], d))
+            for j, c in enumerate(optional, len(columns)):
+                out[j].append(_num(r[c], d) if r.get(c) else float("nan"))
+        except (KeyError, ValueError) as e:
+            raise ValueError(f"{path}: строка {i + 1}: {e}") from None
+    res = [np.array(c, float) for c in out]
+    for j in range(len(columns), len(res)):
+        if np.isnan(res[j]).all():
+            res[j] = None
+        elif np.isnan(res[j]).any():
+            raise ValueError(f"{path}: столбец {optional[j - len(columns)]} заполнен не во всех строках")
+    return names, res
 
 
 def write_points(path, names, columns, *values, digits=(4, 4, 4)) -> None:

@@ -8,8 +8,16 @@
     в контрольных точках и обратный пересчёт, диагностика надёжности;
   - DIAG_CASES: особые случаи надёжности (грубые ошибки, нулевая избыточность, вырождение без
     точки, флаги use, неправдоподобные масштаб и разворот) и веса точек (взвешенный МНК).
+
+и .../DatumReferenceData.kt (пересчёты между системами, mathdatum.datums — сам сверен с PROJ в tests/):
+  - BLH_XYZ_CASES: BLH ↔ XYZ на всех эллипсоидах;
+  - TRANSFORM_CASES: XYZ по всем упорядоченным парам систем (цепочки, обратные шаги);
+  - GK_CASES / TM_PROJ_CASES: Гаусс–Крюгер (зоны 6°, принудительная зона) и свой поперечный Меркатор;
+  - REGION_HELMERT: задачи helmert_7p 83 регионов (по 5 точек exact и noisy);
+  - GNSS_DATUM_CASES: локализация с gnss_datum (ПЗ-90.11, СК-42, ГСК-2011) и пересчёт точек из другой системы.
 """
 
+import itertools
 import json
 import sys
 from pathlib import Path
@@ -18,10 +26,11 @@ import numpy as np
 from pyproj import Transformer
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from mathdatum import Pair, localize, read_pairs, suggest_exclusions
+from mathdatum import Pair, datums, localize, read_pairs, suggest_exclusions
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "kmp/localization/src/commonTest/kotlin/ru/mathdatum/localization/ReferenceData.kt"
+OUT_DATUMS = OUT.with_name("DatumReferenceData.kt")
 
 
 def d(v):
@@ -158,6 +167,111 @@ def diag_cases():
     return out
 
 
+def datum_cases():
+    rng = np.random.default_rng(32453)
+    blh = np.column_stack([rng.uniform(41, 78, 12), rng.uniform(19, 190, 12), rng.uniform(-100, 3000, 12)])
+    out = {}
+    out["blh"] = []
+    for key, e in datums.ELLIPSOIDS.items():
+        pts = np.vstack([blh[:6], [[0.0, 0.0, 0.0], [89.9, 10.0, 5000.0], [-45.0, -170.0, -400.0]]])
+        X, Y, Z = datums.blh_to_xyz(*pts.T, e)
+        for b, x in zip(pts, np.column_stack([X, Y, Z])):
+            out["blh"].append(f'XyzCase("{key}", {d(b[0])}, {d(b[1])}, {d(b[2])}, {d(x[0])}, {d(x[1])}, {d(x[2])})')
+    out["tr"] = []
+    for a, b in itertools.permutations(datums.SYSTEMS, 2):
+        xyz = np.column_stack(datums.blh_to_xyz(*blh[:3].T, datums.SYSTEMS[a].ellipsoid))
+        res = datums.transform_xyz(xyz, a, b)
+        steps = len(datums.find_path(a, b))
+        for x, y in zip(xyz, res):
+            out["tr"].append(f'TransformCase("{a}", "{b}", {steps}, {", ".join(d(v) for v in (*x, *y))})')
+    out["gk"] = []
+    for key in ("krass", "gsk2011"):
+        for (b, l, h), zone in zip(blh, [None] * 9 + [7, 8, 31]):
+            l = l if zone is None else 6 * zone - 3 + 4.5
+            x, y = datums.gk_forward(b, l, key, zone)
+            out["gk"].append(f'GkCase("{key}", {zone or 0}, {d(b)}, {d(l)}, {d(x)}, {d(y)})')
+    out["tm"] = []
+    for key, lon0, lat0, k0, x0, y0 in (("krass", 38.48333, 0.0, 1.0, -5712900.566, 1250000.0),
+                                        ("pz90", 131.9, 43.1, 0.9996, 100.0, 500000.0),
+                                        ("wgs84", 39.0, 55.0, 1.0002, 0.0, 0.0)):
+        tm = datums.TransverseMercator(key, lon0, lat0, k0, x0, y0)
+        for _ in range(5):
+            b = (lat0 or 55.0) + rng.uniform(-2, 2)
+            l = lon0 + rng.uniform(-3, 3)
+            x, y = tm.forward(b, l)
+            out["tm"].append(f'TmProjCase("{key}", {", ".join(d(v) for v in (lon0, lat0, k0, x0, y0, b, l, x, y))})')
+    out["reg"] = []
+    for f in sorted((ROOT / "data/geodetic/regions").glob("*.json")):
+        case = json.loads(f.read_text(encoding="utf-8"))
+        rows = []
+        for task in (t for t in case["tasks"] if t["type"] == "helmert_7p"):
+            src = np.array(task["source_xyz"][:5])
+            pred = datums.transform_xyz(src, "SK-42", "PZ-90.11")
+            for b, x, t, pr in zip(task["source_geodetic_B_L_H"][:5], src, task["target_xyz"][:5], pred):
+                rows.append(f'doubleArrayOf({", ".join(d(v) for v in (*b, *x, *t, *pr))})')
+        out["reg"].append(f'RegionHelmert("{case["region"]["iso_3166_2"]}", listOf({", ".join(rows)}))')
+    out["gnss"] = []
+    regions = sorted((ROOT / "data/geodetic/regions").glob("*.json"))[::8]
+    for f, system in zip(regions, itertools.cycle(("PZ-90.11", "SK-42", "GSK-2011"))):
+        site = next(t for t in json.loads(f.read_text(encoding="utf-8"))["tasks"] if t["type"] == "site_localization")
+        c = np.array([p["gnss_B_L_h"] for p in site["control_points"]])
+        cc = np.column_stack(datums.transform_blh(*c.T, "PZ-90.11", system))
+        pairs = [Pair(p["id"], *b, *p["local_x_y_H"]) for p, b in zip(site["control_points"], cc)]
+        dt = localize(pairs, gnss_datum=system)
+        k = np.array([p["gnss_B_L_h"] for p in site["check_points"]])
+        loc = np.column_stack(dt.to_local(*k.T, datum="PZ-90.11"))
+        back = np.column_stack(dt.to_wgs(*loc.T, datum="WGS-84"))
+        pairs_kt = ", ".join(pair_kt(p) for p in pairs)
+        out["gnss"].append(
+            f'GnssDatumCase("{f.stem}", "{system}", "{dt.ellipsoid}", listOf({pairs_kt}),\n'
+            f'  doubleArrayOf({", ".join(d(v) for v in params(dt))}),\n  {arr(k)},\n  {arr(loc)},\n  {arr(back)})')
+    return out
+
+
+def write_datums():
+    c = datum_cases()
+    ex = json.loads((ROOT / "data/geodetic/gost_32453_control_example.json").read_text(encoding="utf-8"))["steps"]
+    gost = [ex["input_itrf2008_epoch_2005"]["xyz"], ex["input_itrf2008_epoch_2005"]["velocity"],
+            ex["itrf2008_epoch_2010"]["xyz"], ex["pz9011_epoch_2010"]["xyz"], ex["pz9011_epoch_2013_9"]["xyz"]]
+    pairs = read_pairs(ROOT / "examples/pairs.csv")
+    dt = localize(pairs[:6], gnss_datum="PZ-90.11")
+    OUT_DATUMS.write_text(
+        "// Сгенерировано tools/gen_kotlin_reference.py из Python-эталона (mathdatum.datums). Не редактировать вручную.\n"
+        "package ru.mathdatum.localization\n\n"
+        "class XyzCase(val ellipsoid: String, val lat: Double, val lon: Double, val h: Double,\n"
+        "              val x: Double, val y: Double, val z: Double)\n\n"
+        "class TransformCase(val from: String, val to: String, val steps: Int, val x: Double, val y: Double, val z: Double,\n"
+        "                    val ex: Double, val ey: Double, val ez: Double)\n\n"
+        "/** zone = 0 — зона по долготе. */\n"
+        "class GkCase(val ellipsoid: String, val zone: Int, val lat: Double, val lon: Double, val x: Double, val y: Double)\n\n"
+        "class TmProjCase(val ellipsoid: String, val lon0: Double, val lat0: Double, val k0: Double, val x0: Double,\n"
+        "                 val y0: Double, val lat: Double, val lon: Double, val x: Double, val y: Double)\n\n"
+        "/** Строки: B, L, H (СК-42), XYZ СК-42, XYZ ПЗ-90.11 из задачи, XYZ ПЗ-90.11 по Python; первые 5 — exact, затем noisy. */\n"
+        "class RegionHelmert(val iso: String, val rows: List<DoubleArray>)\n\n"
+        "/** expected — как у RegionCase; check — контрольные пункты в ПЗ-90.11, local — их to_local(datum = ПЗ-90.11),\n"
+        " *  back — to_wgs(local, datum = WGS-84). */\n"
+        "class GnssDatumCase(val iso: String, val system: String, val ellipsoid: String, val pairs: List<LocalizationPair>,\n"
+        "                    val expected: DoubleArray, val check: List<DoubleArray>, val local: List<DoubleArray>,\n"
+        "                    val back: List<DoubleArray>)\n\n"
+        "val BLH_XYZ_CASES = listOf(\n    " + ",\n    ".join(c["blh"]) + ",\n)\n\n"
+        "val TRANSFORM_CASES: List<TransformCase> by lazy { transformCases() }\n\n"
+        "private fun transformCases() = listOf(\n    " + ",\n    ".join(c["tr"]) + ",\n)\n\n"
+        "val GK_CASES = listOf(\n    " + ",\n    ".join(c["gk"]) + ",\n)\n\n"
+        "val TM_PROJ_CASES = listOf(\n    " + ",\n    ".join(c["tm"]) + ",\n)\n\n"
+        + "".join(f"private fun regionHelmert{i}() = {r}\n\n" for i, r in enumerate(c["reg"]))
+        + "val REGION_HELMERT: List<RegionHelmert> by lazy { listOf(" + ", ".join(f"regionHelmert{i}()" for i in range(len(c["reg"]))) + ") }\n\n"
+        + "".join(f"private fun gnssCase{i}() = {r}\n\n" for i, r in enumerate(c["gnss"]))
+        + "val GNSS_DATUM_CASES: List<GnssDatumCase> by lazy { listOf(" + ", ".join(f"gnssCase{i}()" for i in range(len(c["gnss"]))) + ") }\n\n"
+        + "/** ГОСТ 32453-2017, прил. Е: XYZ ITRF-2008 2005.0, скорость, ITRF-2008 2010.0, ПЗ-90.11 2010.0, ПЗ-90.11 2013.9. */\n"
+        + f"val GOST_EXAMPLE = {arr(gost)}\n\n"
+        + "/** Датум по examples/pairs.csv (6 точек) с gnss_datum = ПЗ-90.11, сохранённый Python-эталоном. */\n"
+        + "val PY_PZ_DATUM_JSON = " + json.dumps(json.dumps(dt.to_dict(), indent=1, ensure_ascii=False)).replace("$", "\\$") + "\n"
+        + f"val PY_PZ_DATUM_PARAMS = doubleArrayOf({', '.join(d(v) for v in params(dt))})\n",
+        encoding="utf-8")
+    print(f"{OUT_DATUMS}: {len(c['blh'])} BLH/XYZ, {len(c['tr'])} пересчётов, {len(c['gk'])} ГК, {len(c['tm'])} ТМ, "
+          f"{len(c['reg'])} регионов, {len(c['gnss'])} случаев gnss_datum")
+
+
 def arr(m):
     return "listOf(" + ", ".join("doubleArrayOf(" + ", ".join(d(v) for v in row) + ")" for row in m) + ")"
 
@@ -190,6 +304,7 @@ def main():
         + "val PY_DATUM_JSON = " + json.dumps((ROOT / "examples/datum.json").read_text(encoding="utf-8")).replace("$", "\\$") + "\n",
         encoding="utf-8")
     print(f"{OUT}: {len(tm)} TM, {len(rg)} регионов, {len(dc)} случаев надёжности")
+    write_datums()
 
 
 if __name__ == "__main__":

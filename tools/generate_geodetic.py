@@ -17,38 +17,40 @@ data/geodetic/regions/<ISO>.json с двумя задачами:
 
 Параметры псевдо-МСК СИНТЕТИЧЕСКИЕ и не являются ключами реальных МСК.
 
+Пересчёты (BLH ↔ XYZ, 7 параметров ГОСТ, поперечный Меркатор) — функции mathdatum.datums;
+переход на них с pyproj не изменил ни одного байта в data/geodetic (проверено).
+
 Запуск:  python tools/generate_geodetic.py
 """
 
 import json
+import sys
+from dataclasses import replace
 from pathlib import Path
 
 import numpy as np
-from pyproj import Transformer
 from shapely.geometry import Point, shape
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+from mathdatum import datums  # noqa: E402
+
 GEO = ROOT / "data" / "geodetic"
 SEED = 32453
 
 ARCSEC = np.pi / (180 * 3600)
-KRASS = "+ellps=krass"
-PZ90 = "+a=6378136 +rf=298.25784"
+KRASS = datums.ELLIPSOIDS["krass"].proj
+PZ90 = datums.ELLIPSOIDS["pz90"].proj
 
-# ГОСТ 32453-2017, приложение А.1: СК-42 → ПЗ-90.11.
-GOST_SK42_TO_PZ9011 = {
-    "dX": 23.557, "dY": -140.844, "dZ": -79.778,
-    "wx": -0.00230, "wy": -0.34646, "wz": -0.79421,
-    "m": -0.228,
-}
+# ГОСТ 32453-2017, приложение А.1: СК-42 → ПЗ-90.11 (параметры и формула — из mathdatum.datums).
+SK42_TO_PZ9011 = next(t for t in datums.TRANSFORMATIONS if (t.src, t.dst) == ("SK-42", "PZ-90.11"))
+GOST_SK42_TO_PZ9011 = {k: getattr(SK42_TO_PZ9011, k) for k in ("dX", "dY", "dZ", "wx", "wy", "wz", "m")}
 
 
 def helmert(xyz, p):
     """Формула ГОСТ 32453 (малые углы, поворот системы координат):
     X2 = (1 + m) * R * X1 + ΔX,  R = [[1, ωz, -ωy], [-ωz, 1, ωx], [ωy, -ωx, 1]]."""
-    wx, wy, wz = (p[k] * ARCSEC for k in ("wx", "wy", "wz"))
-    R = np.array([[1, wz, -wy], [-wz, 1, wx], [wy, -wx, 1]])
-    return (1 + p["m"] * 1e-6) * xyz @ R.T + np.array([p["dX"], p["dY"], p["dZ"]])
+    return datums.helmert_forward(xyz, replace(SK42_TO_PZ9011, **p))
 
 
 def helmert_jacobian(xyz, p):
@@ -83,8 +85,7 @@ def helmert_task(geom, rng, noisy):
     n = 15
     bl = sample_in(geom, n, rng)
     h = rng.uniform(0, 800, n)
-    to_cart = Transformer.from_pipeline(f"+proj=cart {KRASS}")
-    x1 = np.column_stack(to_cart.transform(bl[:, 1], bl[:, 0], h))
+    x1 = np.column_stack(datums.blh_to_xyz(bl[:, 0], bl[:, 1], h, "SK-42"))
     x2 = helmert(x1, GOST_SK42_TO_PZ9011)
     sigma = 0.0
     if noisy:
@@ -151,10 +152,8 @@ def site_task(geom, rng):
     H_sk = rng.uniform(50, 300) + rng.normal(0, 20, n_ctrl + n_chk)
 
     # СК-42 (B, L, H) → ПЗ-90.11 (B, L, h) по ГОСТ.
-    krass_cart = Transformer.from_pipeline(f"+proj=cart {KRASS}")
-    pz_cart = Transformer.from_pipeline(f"+proj=cart {PZ90}")
-    xyz = helmert(np.column_stack(krass_cart.transform(lon, lat, H_sk)), GOST_SK42_TO_PZ9011)
-    lon_g, lat_g, h_g = pz_cart.transform(*xyz.T, direction="INVERSE")
+    xyz = helmert(np.column_stack(datums.blh_to_xyz(lat, lon, H_sk, "SK-42")), GOST_SK42_TO_PZ9011)
+    lat_g, lon_g, h_g = datums.xyz_to_blh(*xyz.T, "PZ-90.11")
     # Шум ГНСС: 1 см в плане, 2 см по высоте.
     lat_g = lat_g + rng.normal(0, 0.01, len(lat)) / 111_000
     lon_g = lon_g + rng.normal(0, 0.01, len(lat)) / (111_000 * np.cos(np.radians(lat0)))
@@ -167,8 +166,7 @@ def site_task(geom, rng):
     msk_y0 = float(rng.choice([1, 2, 3])) * 1_000_000 + 250_000 + round(rng.uniform(0, 1000), 2)
     # В PROJ x_0 — ложное смещение на восток, y_0 — на север.
     msk = f"+proj=tmerc +lat_0=0 +lon_0={msk_lon0} +k=1 +x_0={msk_y0} +y_0={msk_x0} {KRASS} +units=m"
-    to_msk = Transformer.from_pipeline(f"+proj=pipeline +step +proj=unitconvert +xy_in=deg +xy_out=rad +step {msk}")
-    e_m, n_m = to_msk.transform(lon, lat)
+    n_m, e_m = datums.TransverseMercator("krass", msk_lon0, 0.0, 1.0, msk_x0, msk_y0).forward(lat, lon)
     # Аномалия высоты (синтетическая гладкая поверхность) и ошибки каталога 5 мм.
     zeta0, gx, gy = rng.uniform(5, 30), rng.normal(0, 2e-5), rng.normal(0, 2e-5)
     dn, de = (lat - lat0) * 111_000, (lon - lon0) * 111_000 * np.cos(np.radians(lat0))
@@ -180,8 +178,7 @@ def site_task(geom, rng):
     # Рабочая проекция для локализации (как в полевом ПО): ТМ на эллипсоиде ПЗ-90.11.
     work_lon0 = round(float(lon0), 2)
     work = f"+proj=tmerc +lat_0=0 +lon_0={work_lon0} +k=1 +x_0=0 +y_0=0 {PZ90} +units=m"
-    to_work = Transformer.from_pipeline(f"+proj=pipeline +step +proj=unitconvert +xy_in=deg +xy_out=rad +step {work}")
-    e_w, n_w = to_work.transform(lon_g, lat_g)
+    n_w, e_w = datums.TransverseMercator("pz90", work_lon0).forward(lat_g, lon_g)
     work_ne = np.round(np.column_stack([n_w, e_w]), 4)
 
     ctrl, chk = slice(0, n_ctrl), slice(n_ctrl, None)
