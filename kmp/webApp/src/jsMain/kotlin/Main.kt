@@ -11,6 +11,9 @@ import org.w3c.files.Blob
 import org.w3c.files.BlobPropertyBag
 import org.w3c.files.FileReader
 import org.w3c.files.get
+import org.khronos.webgl.ArrayBuffer
+import org.khronos.webgl.Int8Array
+import ru.mathdatum.localization.GeoidGrid
 import ru.mathdatum.localization.Csv
 import ru.mathdatum.localization.Datums
 import ru.mathdatum.localization.GaussKruger
@@ -52,6 +55,10 @@ T3;43.1155000000;131.8855000000;30.0000
 """
 
 private var datum: LocalizationDatum? = null
+/** Загруженная сетка геоида (файл читается в браузере, на сервер не отправляется). */
+private var geoidGrid: GeoidGrid? = null
+/** Датум со ссылкой на сетку, ожидающий загрузки этой сетки. */
+private var pendingDatumJson: String? = null
 
 /** Форматы пересчёта между системами: столбцы и знаки после точки. */
 private val FORMATS = mapOf(
@@ -84,6 +91,25 @@ fun main() {
     el<HTMLButtonElement>("sysTransform").onclick = { transformSystems(); null }
     el<HTMLButtonElement>("sysSwap").onclick = { swapSystems(); null }
     el<HTMLSelectElement>("gnssDatum").onchange = { calculate(); null }
+    el<HTMLSelectElement>("heightModel").onchange = { updateGeoidControls(); calculate(); null }
+    el<HTMLSelectElement>("geoidInterp").onchange = { calculate(); null }
+    readBinary("geoidFile") { name, bytes ->
+        try {
+            val g = GeoidGrid.parse(bytes, name)
+            geoidGrid = g
+            el<HTMLElement>("geoidInfo").textContent = g.describe() + "; sha256 " + g.sha256.take(16) + "…"
+            el<HTMLElement>("calcError").textContent = ""
+            val pending = pendingDatumJson
+            if (pending != null) loadDatum(pending) else {
+                if (el<HTMLSelectElement>("heightModel").value == "plane") el<HTMLSelectElement>("heightModel").value = "geoid_plane"
+                updateGeoidControls()
+                calculate()
+            }
+        } catch (e: Throwable) {
+            el<HTMLElement>("calcError").textContent = "Не удалось прочитать сетку геоида: ${e.message}"
+        }
+    }
+    updateGeoidControls()
 
     el<HTMLButtonElement>("example").onclick = { pairs.value = EXAMPLE_PAIRS; null }
     el<HTMLButtonElement>("calc").onclick = { calculate(); null }
@@ -101,15 +127,36 @@ fun main() {
     el<HTMLSelectElement>("direction").onchange = { el<HTMLTextAreaElement>("output").value = ""; null }
     el<HTMLInputElement>("qualityCols").onchange = { if (el<HTMLTextAreaElement>("output").value.isNotBlank()) transform(); null }
     readFile("pairsFile") { pairs.value = it; calculate() }
-    readFile("datumFile") { text ->
-        try {
-            show(LocalizationDatum.fromJson(text))
-            el<HTMLElement>("calcError").textContent = ""
-        } catch (e: Throwable) {
-            el<HTMLElement>("calcError").textContent = "Не удалось прочитать датум: ${e.message}"
-        }
-    }
+    readFile("datumFile") { text -> loadDatum(text) }
     calculate()
+}
+
+/** Датум из JSON; если он ссылается на сетку геоида — нужна та же сетка (по SHA-256). */
+private fun loadDatum(text: String) {
+    val err = el<HTMLElement>("calcError")
+    try {
+        val ref = LocalizationDatum.fromJson(text, requireGeoid = false).geoid
+        val d = if (ref == null) LocalizationDatum.fromJson(text) else {
+            val g = geoidGrid
+            if (g == null || g.sha256 != ref.sha256) {
+                pendingDatumJson = text
+                err.textContent = "Датум использует сетку геоида ${ref.file} (sha256 ${ref.sha256.take(16)}…): " +
+                    (if (g == null) "загрузите этот файл сетки." else "загруженная сетка ${g.name} — другая (SHA-256 не совпадает).")
+                return
+            }
+            LocalizationDatum.fromJson(text, g)
+        }
+        pendingDatumJson = null
+        show(d)
+        err.textContent = ""
+    } catch (e: Throwable) {
+        err.textContent = "Не удалось прочитать датум: ${e.message}"
+    }
+}
+
+private fun updateGeoidControls() {
+    val geoid = el<HTMLSelectElement>("heightModel").value != "plane"
+    el<HTMLElement>("geoidRow").classList.toggle("hidden", !geoid)
 }
 
 private fun calculate() {
@@ -117,8 +164,14 @@ private fun calculate() {
     try {
         val pairs = Csv.parsePairs(el<HTMLTextAreaElement>("pairs").value)
         val gnss = el<HTMLSelectElement>("gnssDatum").value
-        val d = localize(pairs, gnssDatum = gnss)
-        show(d, if (d.residuals.any { it.suspect }) suggestExclusions(pairs, gnssDatum = gnss) else emptyList())
+        val model = el<HTMLSelectElement>("heightModel").value
+        val grid = if (model == "plane") null else geoidGrid
+            ?: throw IllegalArgumentException("Модель высоты $model: загрузите сетку геоида (.ggf, .gtx или .isg).")
+        val interp = el<HTMLSelectElement>("geoidInterp").value
+        val d = localize(pairs, gnssDatum = gnss, heightModel = model, geoid = grid, geoidInterpolation = interp)
+        show(d, if (d.residuals.any { it.suspect }) {
+            suggestExclusions(pairs, gnssDatum = gnss, heightModel = model, geoid = grid, geoidInterpolation = interp)
+        } else emptyList())
         err.textContent = ""
     } catch (e: Throwable) {
         err.textContent = e.message ?: e.toString()
@@ -130,6 +183,12 @@ private fun mm(v: Double?) = v?.let { (it * 1000).fixed(1) } ?: "—"
 private fun show(d: LocalizationDatum, exclusions: List<Exclusion> = emptyList()) {
     datum = d
     d.gnssSystem?.let { el<HTMLSelectElement>("gnssDatum").value = it }
+    d.geoid?.let {
+        el<HTMLSelectElement>("heightModel").value = if (d.heightModel == "geoid_plane") "geoid_plane" else "geoid"
+        el<HTMLSelectElement>("geoidInterp").value = it.interpolation
+    }
+    if (d.geoid == null) el<HTMLSelectElement>("heightModel").value = "plane"
+    updateGeoidControls()
     el<HTMLElement>("resultSection").classList.remove("hidden")
     el<HTMLElement>("transformSection").classList.remove("hidden")
     fun stat(k: String, v: String) = "<div class=\"stat\"><div class=\"k\">$k</div><div class=\"v\">$v</div></div>"
@@ -141,6 +200,7 @@ private fun show(d: LocalizationDatum, exclusions: List<Exclusion> = emptyList()
         stat("Сдвиг высоты c0", "${d.c0.fixed(4)} м"),
         stat("Наклон N / E", "${(d.c1 * 1e6).fixed(2)} / ${(d.c2 * 1e6).fixed(2)} мм/км"),
         stat("Модель", "план: ${d.planModel}, высота: ${d.heightModel}"),
+        stat("Сетка геоида", d.geoid?.let { escape(it.file) + " (" + it.interpolation + ")" } ?: "нет (H = h + плоскость)"),
         stat("Система ГНСС", d.gnssSystem?.let { Datums.system(it).name + " (" + Datums.system(it).ellipsoid.name + ")" } ?: "не указана"),
         stat("Избыточность план / высота", if (d.redundancyPlan == null) "—" else "${d.redundancyPlan} / ${d.redundancyHeight ?: "—"}"),
         stat("СКО ед. веса план / высота", "${mm(d.s0Plan)} / ${mm(d.s0Height)} мм" +
@@ -315,6 +375,19 @@ private fun readFile(inputId: String, onText: (String) -> Unit) {
             val reader = FileReader()
             reader.onload = { onText(reader.result as String); null }
             reader.readAsText(file)
+        }
+        input.value = ""
+        null
+    }
+}
+
+private fun readBinary(inputId: String, onBytes: (String, ByteArray) -> Unit) {
+    val input = el<HTMLInputElement>(inputId)
+    input.onchange = {
+        input.files?.get(0)?.let { file ->
+            val reader = FileReader()
+            reader.onload = { onBytes(file.name, Int8Array(reader.result as ArrayBuffer).unsafeCast<ByteArray>()); null }
+            reader.readAsArrayBuffer(file)
         }
         input.value = ""
         null

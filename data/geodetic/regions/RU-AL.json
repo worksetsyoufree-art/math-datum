@@ -838,7 +838,11 @@
      "gN": 2.4503466169397557e-05,
      "gE": 3.52546621739746e-06,
      "curvature": 1e-10,
-     "formula": "ζ = ζ0 + gN·dN + gE·dE + 1e-10·(dN² - dE²), H = h - ζ"
+     "center_B_L_sk42": [
+      50.71664458140674,
+      86.6897872533939
+     ],
+     "formula": "ζ = ζ0 + gN·dN + gE·dE + 1e-10·(dN² - dE²), H = h - ζ; dN = (B - B0)·111000, dE = (L - L0)·111000·cos(B0), B, L — СК-42, (B0, L0) = center_B_L_sk42"
     },
     "noise_sigma_m": {
      "gnss_plan": 0.01,

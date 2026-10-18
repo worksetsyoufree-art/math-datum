@@ -20,7 +20,9 @@ import kotlin.math.sqrt
  *  1. рабочая проекция — поперечный Меркатор с центром (lat0, lon0) на эллипсоиде системы ГНСС-измерений
  *     (gnssDatum, по умолчанию WGS-84; координаты в другую систему не переводятся): (B, L) → (N, E);
  *  2. план — подобие относительно центроида:  [x, y] = [tx, ty] + [[a, -b], [b, a]]·([N, E] - [Nc, Ec]);
- *  3. высота — плоскость:  H = h + c0 + c1·(N - Nc) + c2·(E - Ec).
+ *  3. высота (heightModel): plane — H = h + c0 + c1·(N - Nc) + c2·(E - Ec); geoid — H = h − N(B, L) + c0;
+ *     geoid_plane — H = h − N(B, L) + c0 + c1·(N - Nc) + c2·(E - Ec). N — сетка геоида ([GeoidGrid]); в датуме
+ *     только ссылка ([GeoidRef]: имя файла, SHA-256, интерполяция). Вне сетки / NODATA — GeoidException.
  * Подгонки — взвешенный линейный МНК в замкнутой форме; при малом числе точек модель упрощается до сдвига.
  * Вес точки p = σ0² / σi² (σi — sigmaPlan / sigmaHeight пары, null → p = 1); центроид плана взвешенный.
  *
@@ -133,7 +135,10 @@ data class LocalizationDatum(
     /** Система ГНСС-координат (код [Datums.SYSTEMS]); null — старый JSON. */
     @SerialName("gnss_datum") val gnssDatum: String? = null,
     @SerialName("plan_model") val planModel: String = "similarity",
+    /** Итоговая модель высоты: plane | shift | geoid_plane | geoid | none. */
     @SerialName("height_model") val heightModel: String = "plane",
+    /** Ссылка на сетку геоида (модели geoid, geoid_plane); null — без геоида. */
+    val geoid: GeoidRef? = null,
     val residuals: List<Residual> = emptyList(),
     @SerialName("rms_plan") val rmsPlan: Double? = null,
     @SerialName("rms_height") val rmsHeight: Double? = null,
@@ -152,6 +157,8 @@ data class LocalizationDatum(
     /** Выпуклая оболочка опорных пунктов плана, [N, E] рабочей проекции. */
     @SerialName("plan_hull") val planHull: List<List<Double>>? = null,
     val warnings: List<DatumWarning> = emptyList(),
+    /** Загруженная сетка геоида (в JSON не попадает). */
+    @Transient val geoidGrid: GeoidGrid? = null,
 ) {
     @Transient
     private val tm = TransverseMercator(Ellipsoid.fromProj(ellipsoid), lat0, lon0)
@@ -164,6 +171,24 @@ data class LocalizationDatum(
     /** Есть точки со своей σ (вес ≠ 1). */
     val weighted: Boolean get() = residuals.any { r -> listOf(r.pPlan, r.pHeight).any { it != null && it != 1.0 } }
     val projection: String get() = "+proj=tmerc +lat_0=$lat0 +lon_0=$lon0 +k=1 +x_0=0 +y_0=0 $ellipsoid +units=m"
+
+    /** Подключает сетку геоида; SHA-256 должна совпасть со ссылкой датума. */
+    fun withGeoid(grid: GeoidGrid): LocalizationDatum {
+        val ref = geoid ?: throw GeoidException("Датум без модели геоида (height_model без geoid): сетка не нужна.")
+        if (grid.sha256 != ref.sha256) throw GeoidException(
+            "Сетка геоида ${grid.name}: SHA-256 ${grid.sha256} не совпадает с датумом (${ref.file}, ${ref.sha256}) — это другая сетка.",
+        )
+        return copy(geoidGrid = grid)
+    }
+
+    /** N(B, L) из сетки датума, м (0 — модель без геоида). */
+    fun geoidHeight(lat: Double, lon: Double): Double {
+        val ref = geoid ?: return 0.0
+        val grid = geoidGrid ?: throw GeoidException(
+            "Датум использует сетку геоида ${ref.file} (sha256 ${ref.sha256}), она не загружена: укажите файл сетки.",
+        )
+        return grid.value(lat, lon, ref.interpolation)
+    }
 
     /** Система ГНСС-координат датума; у старого JSON — WGS-84, если рабочая проекция на WGS-84. */
     val gnssSystem: String? get() = gnssDatum ?: if (ellipsoid == "+ellps=WGS84") "WGS-84" else null
@@ -195,7 +220,7 @@ data class LocalizationDatum(
         return LocalPoint(
             x = tx + a * dN - b * dE,
             y = ty + b * dN + a * dE,
-            height = q.h + c0 + c1 * dN + c2 * dE,
+            height = q.h - geoidHeight(q.lat, q.lon) + c0 + c1 * dN + c2 * dE,
         )
     }
 
@@ -207,7 +232,7 @@ data class LocalizationDatum(
         val dN = (a * u + b * v) / k2
         val dE = (-b * u + a * v) / k2
         val (lat, lon) = tm.inverse(dN + nc, dE + ec)
-        val w = WgsPoint(lat, lon, p.height - (c0 + c1 * dN + c2 * dE))
+        val w = WgsPoint(lat, lon, p.height + geoidHeight(lat, lon) - (c0 + c1 * dN + c2 * dE))
         if (sameSystem(datum)) return w
         val g = Datums.transformBlh(GeodeticPoint(w.lat, w.lon, w.h), gnssSystem!!, datum!!)
         return WgsPoint(g.lat, g.lon, g.h)
@@ -249,13 +274,14 @@ data class LocalizationDatum(
         return quality((a * u + b * v) / k2, (-b * u + a * v) / k2, posterior)
     }
 
-    /** Строка PROJ: вход (широта, долгота, h) → выход (x, y, H). */
+    /** Строка PROJ: вход (широта, долгота, h) → выход (x, y, H); с геоидом — шаг vgridshift (PROJ читает GTX, не GGF/ISG). */
     fun toProjPipeline(): String {
         val xoff = tx - a * nc + b * ec
         val yoff = ty - b * nc - a * ec
         val zoff = c0 - c1 * nc - c2 * ec
         return "+proj=pipeline +step +proj=axisswap +order=2,1 " +
             "+step +proj=unitconvert +xy_in=deg +xy_out=rad " +
+            (geoid?.let { "+step +proj=vgridshift +grids=${it.file} +multiplier=-1 " } ?: "") +
             "+step $projection " +
             "+step +proj=affine +xoff=$xoff +s11=${-b} +s12=$a +s13=0 " +
             "+yoff=$yoff +s21=$a +s22=$b +s23=0 " +
@@ -267,8 +293,24 @@ data class LocalizationDatum(
     companion object {
         internal val JSON = Json { prettyPrint = true; ignoreUnknownKeys = true; encodeDefaults = true }
 
-        /** Читает датум из JSON (в том числе сохранённый Python-эталоном; поле summary игнорируется). */
-        fun fromJson(text: String): LocalizationDatum = JSON.decodeFromString(serializer(), text)
+        /**
+         * Читает датум из JSON (в том числе сохранённый Python-эталоном; поле summary игнорируется).
+         * Датум со ссылкой на сетку геоида требует [geoid] с той же SHA-256 (иначе GeoidException);
+         * [requireGeoid] = false — читать без сетки (пересчёт высот тогда — ошибка).
+         */
+        fun fromJson(text: String, geoid: GeoidGrid? = null, requireGeoid: Boolean = true): LocalizationDatum {
+            val d = JSON.decodeFromString(serializer(), text)
+            val ref = d.geoid
+            if (ref == null) {
+                if (geoid != null) throw GeoidException("Датум без модели геоида: сетка не нужна.")
+                return d
+            }
+            if (geoid == null) {
+                if (!requireGeoid) return d
+                throw GeoidException("Датум использует сетку геоида ${ref.file} (sha256 ${ref.sha256}): загрузите этот файл.")
+            }
+            return d.withGeoid(geoid)
+        }
     }
 }
 
@@ -282,6 +324,8 @@ class LocalizationException(message: String) : IllegalArgumentException(message)
  * [sigmaPlan], [sigmaHeight] — априорные СКО (м) координаты плана и высоты (СКО единицы веса σ0); точки со своей
  * σi получают вес p = σ0² / σi²; [wLimit] — порог |w| теста Баарда;
  * [maxScalePpm], [maxRotationDeg] — пределы правдоподобия масштаба и разворота.
+ * [heightModel] — plane (по умолчанию, без геоида), geoid или geoid_plane; для двух последних [geoid] — сетка
+ * на эллипсоиде системы [gnssDatum], [geoidInterpolation] — bilinear или bicubic.
  */
 fun localize(
     pairs: List<LocalizationPair>,
@@ -294,10 +338,38 @@ fun localize(
     maxScalePpm: Double = 200.0,
     maxRotationDeg: Double = 3.0,
     gnssDatum: String = "WGS-84",
+    heightModel: String = "plane",
+    geoid: GeoidGrid? = null,
+    geoidInterpolation: String = "bilinear",
 ): LocalizationDatum {
     val system = Datums.system(gnssDatum)
-    val d = fit(pairs, lat0, lon0, ellipsoid ?: system.ellipsoid.proj, sigmaPlan, sigmaHeight).copy(gnssDatum = system.id)
+    checkHeightModel(heightModel, geoid, geoidInterpolation)
+    val d = fit(pairs, lat0, lon0, ellipsoid ?: system.ellipsoid.proj, sigmaPlan, sigmaHeight, heightModel, geoid, geoidInterpolation)
+        .copy(gnssDatum = system.id)
     return diagnose(d, pairs, sigmaPlan, sigmaHeight, wLimit, maxScalePpm, maxRotationDeg)
+}
+
+/** Модели высоты, которые можно запросить, и модели с плоскостью (3 параметра). */
+val HEIGHT_MODELS = listOf("plane", "geoid", "geoid_plane")
+private val PLANE_MODELS = setOf("plane", "geoid_plane")
+
+private fun checkHeightModel(model: String, geoid: GeoidGrid?, interpolation: String) {
+    if (model !in HEIGHT_MODELS) throw LocalizationException("Модель высоты «$model»: ожидается ${HEIGHT_MODELS.joinToString(", ")}.")
+    if (model == "plane") {
+        if (geoid != null) throw LocalizationException("Сетка геоида задана, а модель высоты plane: укажите geoid или geoid_plane.")
+        return
+    }
+    if (geoid == null) throw LocalizationException("Модель высоты $model: нужна сетка геоида.")
+    if (interpolation !in GeoidGrid.INTERPOLATIONS) {
+        throw LocalizationException("Интерполяция «$interpolation»: ожидается ${GeoidGrid.INTERPOLATIONS.joinToString(", ")}.")
+    }
+}
+
+/** Запрошенная модель высоты по итоговой (для пересчёта без точки). */
+private fun heightRequest(d: LocalizationDatum) = when {
+    d.geoid == null -> "plane"
+    d.heightModel == "geoid_plane" -> "geoid_plane"
+    else -> "geoid"
 }
 
 /** Вес p = σ0² / σi² (σi — sigmaPlan или sigmaHeight пары; null → p = 1). */
@@ -313,6 +385,7 @@ private fun weight(p: LocalizationPair, sigma0: Double, plan: Boolean): Double {
 /** Подгонка параметров (взвешенный МНК) и невязки, без диагностики. */
 private fun fit(
     pairs: List<LocalizationPair>, lat0: Double?, lon0: Double?, ellipsoid: String, sigmaPlan: Double, sigmaHeight: Double,
+    heightModel: String = "plane", grid: GeoidGrid? = null, interpolation: String = "bilinear",
 ): LocalizationDatum {
     val plan = pairs.filter { it.use.inPlan }
     val height = pairs.filter { it.use.inHeight }
@@ -321,6 +394,8 @@ private fun fit(
     val cLat = lat0 ?: used.map { it.lat }.average()
     val cLon = lon0 ?: used.map { it.lon }.average()
     val tm = TransverseMercator(Ellipsoid.fromProj(ellipsoid), cLat, cLon)
+    val ref = grid?.let { GeoidRef(it.name, it.sha256, interpolation) }
+    fun geoidN(p: LocalizationPair) = grid?.value(p.lat, p.lon, interpolation) ?: 0.0
 
     // План: подобие в комплексной форме w = t + k·(z - zc), z = N + iE, w = x + iy;
     // zc, wc — взвешенные центроиды, k = Σ p·conj(z - zc)·(w - wc) / Σ p·|z - zc|².
@@ -363,14 +438,15 @@ private fun fit(
     var c0 = 0.0
     var c1 = 0.0
     var c2 = 0.0
-    val heightModel: String
+    val fitted: String
     if (height.isEmpty()) {
-        heightModel = "none"
+        fitted = "none"
     } else {
         val zh = height.map { tm.forward(it.lat, it.lon) }
         val dn = zh.map { it.first - nc }
         val de = zh.map { it.second - ec }
-        val dh = height.map { it.height - it.h }
+        // После геоида подгоняются разности H − (h − N).
+        val dh = height.map { it.height - it.h + geoidN(it) }
         val ph = height.map { weight(it, sigmaHeight, false) }
         val sh = ph.sum()
         val mn = height.indices.sumOf { ph[it] * dn[it] } / sh
@@ -386,20 +462,21 @@ private fun fit(
         }
         val det = snn * see - sne * sne
         val trace = snn + see
-        if (height.size >= 3 && trace > 0 && det > 1e-12 * trace * trace) {
+        if (heightModel in PLANE_MODELS && height.size >= 3 && trace > 0 && det > 1e-12 * trace * trace) {
             c1 = (snh * see - seh * sne) / det
             c2 = (seh * snn - snh * sne) / det
             c0 = mh - c1 * mn - c2 * me
-            heightModel = "plane"
+            fitted = if (grid != null) "geoid_plane" else "plane"
         } else {
             c0 = mh
-            heightModel = "shift"
+            fitted = if (grid != null) "geoid" else "shift"
         }
     }
 
     val datum = LocalizationDatum(
         lat0 = cLat, lon0 = cLon, nc = nc, ec = ec, a = a, b = b, tx = xc, ty = yc,
-        c0 = c0, c1 = c1, c2 = c2, ellipsoid = ellipsoid, planModel = planModel, heightModel = heightModel,
+        c0 = c0, c1 = c1, c2 = c2, ellipsoid = ellipsoid, planModel = planModel, heightModel = fitted,
+        geoid = ref, geoidGrid = grid,
     )
     // Невязки (каталог − вычисленное) по всем точкам; точки use = none — контроль, в СКО не входят. СКО невзвешенные.
     val residuals = pairs.map { p ->
@@ -451,7 +528,7 @@ private fun cofactors(d: LocalizationDatum, pairs: List<LocalizationPair>): Pair
     if (height.isEmpty()) return qp to null
     val ph = height.map { weight(it, d.sigma0Height!!, false) }
     val nh = ph.sum()
-    if (d.heightModel != "plane") {
+    if (d.heightModel !in PLANE_MODELS) {
         return qp to listOf(listOf(1 / nh, 0.0, 0.0), listOf(0.0, 0.0, 0.0), listOf(0.0, 0.0, 0.0))
     }
     val ne = height.map { d.forwardNE(it.lat, it.lon) }
@@ -484,7 +561,10 @@ private fun without(pairs: List<LocalizationPair>, i: Int, part: String): List<L
 /** Датум без точки i (та же рабочая проекция); null — модель этой части вырождается или меняется. */
 private fun looFit(d: LocalizationDatum, pairs: List<LocalizationPair>, i: Int, part: String): Residual? {
     val r = try {
-        fit(without(pairs, i, part), d.lat0, d.lon0, d.ellipsoid, d.sigma0Plan!!, d.sigma0Height!!)
+        fit(
+            without(pairs, i, part), d.lat0, d.lon0, d.ellipsoid, d.sigma0Plan!!, d.sigma0Height!!,
+            heightRequest(d), d.geoidGrid, d.geoid?.interpolation ?: "bilinear",
+        )
     } catch (e: LocalizationException) {
         return null
     }
@@ -501,7 +581,7 @@ private fun diagnose(
     val plan = pairs.filter { it.use.inPlan }
     val nh = pairs.count { it.use.inHeight }
     val rp = 2 * plan.size - if (d.planModel == "similarity") 4 else 2
-    val rh = if (nh == 0) null else nh - if (d.heightModel == "plane") 3 else 1
+    val rh = if (nh == 0) null else nh - if (d.heightModel in PLANE_MODELS) 3 else 1
     val (qp, qh) = cofactors(d, pairs)
     val pp = pairs.map { weight(it, sigmaPlan, true) }
     val ph = pairs.map { weight(it, sigmaHeight, false) }
@@ -648,8 +728,14 @@ fun suggestExclusions(
     wLimit: Double = 3.29,
     ellipsoid: String? = null,
     gnssDatum: String = "WGS-84",
+    heightModel: String = "plane",
+    geoid: GeoidGrid? = null,
+    geoidInterpolation: String = "bilinear",
 ): List<Exclusion> {
-    var d = localize(pairs, ellipsoid = ellipsoid, sigmaPlan = sigmaPlan, sigmaHeight = sigmaHeight, wLimit = wLimit, gnssDatum = gnssDatum)
+    var d = localize(
+        pairs, ellipsoid = ellipsoid, sigmaPlan = sigmaPlan, sigmaHeight = sigmaHeight, wLimit = wLimit, gnssDatum = gnssDatum,
+        heightModel = heightModel, geoid = geoid, geoidInterpolation = geoidInterpolation,
+    )
     val lat0 = d.lat0
     val lon0 = d.lon0
     var cur = pairs
@@ -666,7 +752,10 @@ fun suggestExclusions(
         out += Exclusion(cur[i].name, part, w)
         cur = without(cur, i, part)
         d = try {
-            localize(cur, lat0, lon0, ellipsoid, sigmaPlan, sigmaHeight, wLimit, gnssDatum = gnssDatum)
+            localize(
+                cur, lat0, lon0, ellipsoid, sigmaPlan, sigmaHeight, wLimit, gnssDatum = gnssDatum,
+                heightModel = heightModel, geoid = geoid, geoidInterpolation = geoidInterpolation,
+            )
         } catch (e: LocalizationException) {
             return out
         }

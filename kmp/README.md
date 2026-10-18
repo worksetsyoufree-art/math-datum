@@ -16,6 +16,8 @@
 Готовая сборка лежит в `web-dist/`: откройте `web-dist/index.html` в браузере, сервер не нужен.
 
 На странице можно:
+- выбрать модель высоты (плоскость, геоид, геоид + плоскость) и загрузить сетку геоида (.ggf Trimble, .gtx, .isg) —
+  файл читается в браузере и никуда не отправляется; датум с геоидом при загрузке требует ту же сетку (SHA-256);
 - выбрать систему ГНСС-координат пар (WGS-84 по умолчанию, ПЗ-90.11, ГСК-2011, ITRF-2008, СК-42…) — рабочая
   проекция строится на её эллипсоиде;
 - вставить или открыть CSV с парами точек и рассчитать локализацию; необязательные столбцы
@@ -65,10 +67,14 @@
 - пересчёты между системами (`DatumsTest`): BLH ↔ XYZ на 5 эллипсоидах, XYZ по всем 56 парам систем и
   туда-обратно (< 1e-8 м), контрольный пример ГОСТ (все три шага), Гаусс–Крюгер (в том числе принудительная
   зона) и свой поперечный Меркатор, задачи `helmert_7p` 83 регионов, локализация с `gnssDatum`
-  (ПЗ-90.11, СК-42, ГСК-2011) и пересчёт точек из другой системы, датум из Python с `gnss_datum`.
+  (ПЗ-90.11, СК-42, ГСК-2011) и пересчёт точек из другой системы, датум из Python с `gnss_datum`;
+- сетки геоида (`GeoidTest`): чтение GGF, GTX, ISG (заголовок, SHA-256, NODATA), 476 значений билинейной и
+  бикубической интерполяции и ошибок (вне сетки, NODATA, край) — до 1e-12 м; 9 случаев локализации с моделями
+  `geoid` / `geoid_plane` (параметры, диагностика, leave-one-out, предупреждения, пересчёты туда и обратно);
+  датум из Python со ссылкой на сетку, проверка SHA-256, переход через 180°.
 
 Эталонные данные генерирует `python tools/gen_kotlin_reference.py`, запускать из корня репозитория
-(`ReferenceData.kt` и `DatumReferenceData.kt`). Python-эталон сам сверен с PROJ в `tests/`.
+(`ReferenceData.kt`, `DatumReferenceData.kt`, `GeoidReferenceData.kt`; тестовые сетки — `tests/data/geoid`). Python-эталон сам сверен с PROJ в `tests/`.
 
 ## API
 
@@ -86,6 +92,9 @@ val json = datum.toJson()                        // сохранить
 val restored = LocalizationDatum.fromJson(json)  // загрузить (в том числе датум из Python)
 val proj = datum.toProjPipeline()                // строка PROJ для QGIS / cs2cs
 
+val grid = GeoidGrid.parse(bytes, "region.ggf")  // содержимое файла сетки (.ggf, .gtx, .isg)
+localize(pairs, gnssDatum = "PZ-90.11", heightModel = "geoid_plane", geoid = grid, geoidInterpolation = "bilinear")
+LocalizationDatum.fromJson(json, geoid = grid)   // датум со ссылкой на сетку: та же SHA-256, иначе GeoidException
 localize(pairs, gnssDatum = "PZ-90.11")          // ГНСС-координаты в ПЗ-90.11: проекция на эллипсоиде ПЗ-90
 datum.toLocal(WgsPoint(55.08, 39.34, 230.9), datum = "WGS-84")   // точка в другой системе — пересчёт по ГОСТ
 datum.warnings                                   // List<DatumWarning(code, message, point)>
@@ -126,7 +135,10 @@ let p = datum.toLocal(p: WgsPoint(lat: 55.08, lon: 39.34, h: 230.9))
    на эллипсоиде системы ГНСС-измерений (`gnssDatum`, по умолчанию WGS-84) с центром в среднем по точкам;
    координаты в другую систему не переводятся (обоснование — в README в корне).
 2. **План** — подобие относительно (взвешенного) центроида: `[x, y] = [tx, ty] + [[a, −b], [b, a]]·([N, E] − [Nc, Ec])`.
-3. **Высота** — плоскость `H = h + c0 + c1·(N − Nc) + c2·(E − Ec)`.
+3. **Высота** — плоскость `H = h + c0 + c1·(N − Nc) + c2·(E − Ec)` (`heightModel = "plane"`, по умолчанию),
+   `geoid` — `H = h − N(B, L) + c0` или `geoid_plane` — `H = h − N(B, L) + c0 + c1·(N − Nc) + c2·(E − Ec)`;
+   N — сетка `GeoidGrid` (GGF, GTX, ISG; GeoTIFF — только в Python). Вне сетки, NODATA, нет сетки или другая
+   SHA-256 — `GeoidException`. Подробности — в README в корне.
 
 Обе подгонки — взвешенный линейный МНК в замкнутой форме, без итераций. Вес точки `p = σ0² / σi²`:
 σi — `LocalizationPair.sigmaPlan` / `sigmaHeight` (столбцы CSV `sigma_plan` / `sigma_height`, суммарная

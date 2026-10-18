@@ -10,15 +10,19 @@
   2. План — преобразование подобия (4 параметра) относительно центроида:
         [x, y] = [tx, ty] + [[a, -b], [b, a]] · ([N, E] - [Nc, Ec])
      масштаб = sqrt(a² + b²), разворот = atan2(b, a).
-  3. Высота — наклонная плоскость (3 параметра):
-        H = h + c0 + c1·(N - Nc) + c2·(E - Ec)
+  3. Высота (height_model):
+        plane        H = h + c0 + c1·(N - Nc) + c2·(E - Ec)              — наклонная плоскость (3 параметра);
+        geoid        H = h − N(B, L) + c0                                — модель геоида и сдвиг (1 параметр);
+        geoid_plane  H = h − N(B, L) + c0 + c1·(N - Nc) + c2·(E - Ec)    — остаточная плоскость после геоида (3).
+     N(B, L) — высота геоида / аномалия высоты из сетки (mathdatum.geoid). Датум хранит только ссылку
+     на сетку (имя файла, SHA-256, интерполяция); точка вне сетки или в ячейке NODATA — GeoidError.
 
 Все подгонки — взвешенный линейный МНК в замкнутой форме, без итераций. Вес точки
 p = σ0² / σi², σi — её априорная СКО (sigma_plan / sigma_height пары; пусто → σ0, p = 1),
 σ0 — глобальная СКО из параметров localize. Центроид плана — взвешенный.
 Если точек мало, модель упрощается автоматически:
   план:   1 точка → только сдвиг (масштаб 1, разворот 0); ≥ 2 → подобие;
-  высота: 1–2 точки → только сдвиг c0; ≥ 3 → плоскость.
+  высота: 1–2 точки (или на одной линии) → только сдвиг c0: plane → shift, geoid_plane → geoid.
 
 Надёжность (диагностика, точки автоматически не исключаются):
   избыточность  r_plan = 2n − 4 (сдвиг: 2n − 2),  r_height = n − 3 (сдвиг: n − 1);
@@ -43,11 +47,14 @@ import numpy as np
 from pyproj import Transformer
 
 from . import datums
+from .geoid import GeoidError, GeoidGrid, GeoidRef, INTERPOLATIONS, read_grid
 
 WGS84 = "+ellps=WGS84"
 ARCSEC = math.pi / (180 * 3600)
 
 USE_BOTH, USE_PLAN, USE_HEIGHT, USE_NONE = "both", "plan", "height", "none"
+HEIGHT_MODELS = ("plane", "geoid", "geoid_plane")   # что можно запросить у localize
+PLANE_MODELS = ("plane", "geoid_plane")              # модели высоты с 3 параметрами (c0, c1, c2)
 
 
 @dataclass
@@ -140,7 +147,8 @@ class LocalizationDatum:
     ellipsoid: str = WGS84  # эллипсоид рабочей проекции в синтаксисе PROJ
     gnss_datum: str | None = None  # система ГНСС-координат (код datums.SYSTEMS); None — старый JSON
     plan_model: str = "similarity"
-    height_model: str = "plane"
+    height_model: str = "plane"   # итоговая: plane | shift | geoid_plane | geoid | none
+    geoid: GeoidRef | None = None  # ссылка на сетку геоида (модели geoid, geoid_plane)
     residuals: list[Residual] = field(default_factory=list)
     rms_plan: float | None = None
     rms_height: float | None = None
@@ -156,6 +164,37 @@ class LocalizationDatum:
     q_height: list[list[float]] | None = None  # кофакторы (c0, c1, c2), 3×3
     plan_hull: list[list[float]] | None = None # выпуклая оболочка опорных пунктов плана, [N, E]
     warnings: list[DatumWarning] = field(default_factory=list)
+
+    _grid = None  # загруженная GeoidGrid (атрибут, не поле: в JSON не попадает)
+
+    def __post_init__(self):
+        if isinstance(self.geoid, dict):
+            self.geoid = GeoidRef(**self.geoid)
+
+    # --- сетка геоида ---
+    def attach_geoid(self, grid) -> "LocalizationDatum":
+        """Подключает сетку (GeoidGrid или путь к файлу); SHA-256 должна совпасть со ссылкой датума."""
+        if self.geoid is None:
+            raise GeoidError("Датум без модели геоида (height_model без geoid): сетка не нужна.")
+        g = grid if isinstance(grid, GeoidGrid) else read_grid(grid)
+        if g.sha256 != self.geoid.sha256:
+            raise GeoidError(f"Сетка геоида {g.name}: SHA-256 {g.sha256} не совпадает с датумом "
+                             f"({self.geoid.file}, {self.geoid.sha256}) — это другая сетка.")
+        self._grid = g
+        return self
+
+    @property
+    def geoid_grid(self) -> GeoidGrid | None:
+        return self._grid
+
+    def geoid_height(self, B, L):
+        """N(B, L) из сетки датума, м (0 — модель без геоида)."""
+        if self.geoid is None:
+            return np.zeros(np.shape(B)) if np.ndim(B) else 0.0
+        if self._grid is None:
+            raise GeoidError(f"Датум использует сетку геоида {self.geoid.file} (sha256 {self.geoid.sha256}), "
+                             "она не загружена: укажите файл сетки (--geoid).")
+        return self._grid.value(B, L, self.geoid.interpolation)
 
     # --- свойства для отчёта ---
     @property
@@ -210,7 +249,7 @@ class LocalizationDatum:
         dN, dE = N - self.Nc, E - self.Ec
         x = self.tx + self.a * dN - self.b * dE
         y = self.ty + self.b * dN + self.a * dE
-        H = h + self.c0 + self.c1 * dN + self.c2 * dE
+        H = h - self.geoid_height(B, L) + self.c0 + self.c1 * dN + self.c2 * dE
         return x, y, H
 
     def to_wgs(self, x, y, H, datum: str | None = None):
@@ -221,7 +260,7 @@ class LocalizationDatum:
         dN = (self.a * u + self.b * v) / k2
         dE = (-self.b * u + self.a * v) / k2
         L, B = self._proj().transform(dE + self.Ec, dN + self.Nc, direction="INVERSE")
-        h = H - (self.c0 + self.c1 * dN + self.c2 * dE)
+        h = H + self.geoid_height(B, L) - (self.c0 + self.c1 * dN + self.c2 * dE)
         own = self.gnss_system
         if datum is None or (own is not None and datums.get_system(datum).id == own):
             return B, L, h
@@ -283,7 +322,9 @@ class LocalizationDatum:
 
     def to_proj_pipeline(self) -> str:
         """Строка PROJ для пересчёта WGS-84 (широта, долгота, h) → местные (x, y, H).
-        Подходит для pyproj, cs2cs, QGIS. На выходе порядок: x (север), y (восток), H."""
+        Подходит для pyproj, cs2cs, QGIS. На выходе порядок: x (север), y (восток), H.
+        С моделью геоида добавляется шаг vgridshift (PROJ читает GTX и GeoTIFF, но не ISG; интерполяция
+        PROJ — билинейная)."""
         # После tmerc: X = E, Y = N. Аффинное преобразование (PROJ: x' = xoff + s11·x + s12·y + s13·z, ...).
         # Местные: x = tx + a·(N-Nc) - b·(E-Ec);  y = ty + b·(N-Nc) + a·(E-Ec);  H = h + c0 + c1·(N-Nc) + c2·(E-Ec).
         a, b = self.a, self.b
@@ -293,7 +334,8 @@ class LocalizationDatum:
         return (
             "+proj=pipeline +step +proj=axisswap +order=2,1 "
             "+step +proj=unitconvert +xy_in=deg +xy_out=rad "
-            f"+step {self.projection} "
+            + (f"+step +proj=vgridshift +grids={self.geoid.file} +multiplier=-1 " if self.geoid else "")
+            + f"+step {self.projection} "
             f"+step +proj=affine +xoff={xoff!r} +s11={-b!r} +s12={a!r} +s13=0 "
             f"+yoff={yoff!r} +s21={a!r} +s22={b!r} +s23=0 "
             f"+zoff={zoff!r} +s31={self.c2!r} +s32={self.c1!r} +s33=1"
@@ -312,12 +354,31 @@ class LocalizationDatum:
         Path(path).write_text(json.dumps(self.to_dict(), indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
 
     @classmethod
-    def load(cls, path: str | Path) -> "LocalizationDatum":
-        d = json.loads(Path(path).read_text(encoding="utf-8"))
+    def load(cls, path: str | Path, geoid=None, require_geoid: bool = True) -> "LocalizationDatum":
+        """Читает датум. Если он ссылается на сетку геоида — подключает её: geoid (путь или GeoidGrid),
+        иначе файл с именем из ссылки рядом с JSON или в текущем каталоге. Нет файла или другая
+        SHA-256 — GeoidError (require_geoid=False — читать без сетки; пересчёты высот тогда — ошибка)."""
+        path = Path(path)
+        d = json.loads(path.read_text(encoding="utf-8"))
         d.pop("summary", None)
         d["residuals"] = [Residual(**r) for r in d.get("residuals", [])]
         d["warnings"] = [DatumWarning(**w) for w in d.get("warnings", [])]
-        return cls(**d)
+        datum = cls(**d)
+        if datum.geoid is None:
+            if geoid is not None:
+                raise GeoidError("Датум без модели геоида: сетка (--geoid) не нужна.")
+            return datum
+        if geoid is None and not require_geoid:
+            return datum
+        if geoid is None:
+            for cand in (path.parent / datum.geoid.file, Path(datum.geoid.file)):
+                if cand.is_file():
+                    geoid = cand
+                    break
+            else:
+                raise GeoidError(f"Датум использует сетку геоида {datum.geoid.file} (sha256 {datum.geoid.sha256}): "
+                                 f"файл не найден ни рядом с {path.name}, ни в текущем каталоге — укажите --geoid.")
+        return datum.attach_geoid(geoid)
 
 
 class LocalizationError(ValueError):
@@ -327,7 +388,8 @@ class LocalizationError(ValueError):
 def localize(pairs: list[Pair], lat0: float | None = None, lon0: float | None = None,
              ellipsoid: str | None = None, sigma_plan: float = 0.02, sigma_height: float = 0.03,
              w_limit: float = 3.29, max_scale_ppm: float = 200.0,
-             max_rotation_deg: float = 3.0, gnss_datum: str = "WGS-84") -> LocalizationDatum:
+             max_rotation_deg: float = 3.0, gnss_datum: str = "WGS-84", height_model: str = "plane",
+             geoid=None, geoid_interpolation: str = "bilinear") -> LocalizationDatum:
     """Вычисляет датум локализации по парам точек.
 
     lat0, lon0 — центр рабочей проекции; по умолчанию — среднее по всем используемым точкам.
@@ -337,12 +399,38 @@ def localize(pairs: list[Pair], lat0: float | None = None, lon0: float | None = 
     для теста Баарда и ковариаций; точки со своей σi получают вес p = σ0² / σi².
     w_limit — порог |w| (3.29 ≈ α = 0.001, двусторонний).
     max_scale_ppm, max_rotation_deg — пределы правдоподобия масштаба и разворота.
+    height_model — plane (по умолчанию, без геоида), geoid (H = h − N + c0) или geoid_plane
+    (H = h − N + c0 + c1·dN + c2·dE); для двух последних geoid — сетка (GeoidGrid или путь к .gtx/.isg/.tif)
+    на эллипсоиде системы gnss_datum, geoid_interpolation — bilinear или bicubic.
     """
     system = datums.get_system(gnss_datum)
-    datum = _fit(pairs, lat0, lon0, ellipsoid or system.ellipsoid.proj, sigma_plan, sigma_height)
+    grid = _geoid_setup(height_model, geoid, geoid_interpolation)
+    datum = _fit(pairs, lat0, lon0, ellipsoid or system.ellipsoid.proj, sigma_plan, sigma_height,
+                 height_model, grid, geoid_interpolation)
     datum.gnss_datum = system.id
     _diagnose(datum, pairs, sigma_plan, sigma_height, w_limit, max_scale_ppm, max_rotation_deg)
     return datum
+
+
+def _geoid_setup(height_model, geoid, interpolation):
+    if height_model not in HEIGHT_MODELS:
+        raise LocalizationError(f"Модель высоты «{height_model}»: ожидается {', '.join(HEIGHT_MODELS)}.")
+    if height_model == "plane":
+        if geoid is not None:
+            raise LocalizationError("Сетка геоида задана, а модель высоты plane: укажите geoid или geoid_plane.")
+        return None
+    if geoid is None:
+        raise LocalizationError(f"Модель высоты {height_model}: нужна сетка геоида.")
+    if interpolation not in INTERPOLATIONS:
+        raise LocalizationError(f"Интерполяция «{interpolation}»: ожидается {', '.join(INTERPOLATIONS)}.")
+    return geoid if isinstance(geoid, GeoidGrid) else read_grid(geoid)
+
+
+def _height_request(datum: LocalizationDatum) -> str:
+    """Запрошенная модель высоты по итоговой (для пересчёта без точки)."""
+    if datum.geoid is None:
+        return "plane"
+    return "geoid_plane" if datum.height_model == "geoid_plane" else "geoid"
 
 
 def _weights(points, sigma0: float, part: str) -> np.ndarray:
@@ -359,7 +447,8 @@ def _weights(points, sigma0: float, part: str) -> np.ndarray:
     return np.array(out, float)
 
 
-def _fit(pairs, lat0, lon0, ellipsoid, sigma_plan, sigma_height) -> LocalizationDatum:
+def _fit(pairs, lat0, lon0, ellipsoid, sigma_plan, sigma_height, height_model="plane", grid=None,
+         interpolation="bilinear") -> LocalizationDatum:
     """Подгонка параметров (взвешенный МНК) и невязки, без диагностики."""
     plan = [p for p in pairs if p.in_plan]
     height = [p for p in pairs if p.in_height]
@@ -373,6 +462,10 @@ def _fit(pairs, lat0, lon0, ellipsoid, sigma_plan, sigma_height) -> Localization
 
     datum = LocalizationDatum(lat0=lat0, lon0=lon0, Nc=0, Ec=0, a=1, b=0, tx=0, ty=0, c0=0, c1=0, c2=0,
                               ellipsoid=ellipsoid)
+    if grid is not None:
+        datum.geoid = GeoidRef(grid.name, grid.sha256, interpolation)
+        datum._grid = grid
+    with_plane = height_model in PLANE_MODELS
     proj = datum._proj()
 
     def ne(points):
@@ -403,21 +496,23 @@ def _fit(pairs, lat0, lon0, ellipsoid, sigma_plan, sigma_height) -> Localization
     if height:
         Nh, Eh = ne(height)
         dN, dE = Nh - datum.Nc, Eh - datum.Ec
-        dh = np.array([p.H - p.h for p in height])
+        # После геоида подгоняются разности H − (h − N).
+        dh = np.array([p.H - p.h for p in height]) + datum.geoid_height(np.array([p.B for p in height]),
+                                                                        np.array([p.L for p in height]))
         ph = _weights(height, sigma_height, "height")
         # Плоскость определена, если точки не лежат на одной линии: det взвешенной ковариации
         # (dN, dE) не мал относительно её следа (тот же критерий, что в Kotlin-модуле).
         u, v = dN - ph @ dN / ph.sum(), dE - ph @ dE / ph.sum()
         snn, see, sne = ph @ (u * u), ph @ (v * v), ph @ (u * v)
         trace, det = snn + see, snn * see - sne * sne
-        if len(height) >= 3 and trace > 0 and det > 1e-12 * trace * trace:
+        if with_plane and len(height) >= 3 and trace > 0 and det > 1e-12 * trace * trace:
             sp = np.sqrt(ph)
             A = np.column_stack([np.ones(len(height)), dN, dE]) * sp[:, None]
             datum.c0, datum.c1, datum.c2 = (float(v) for v in np.linalg.lstsq(A, dh * sp, rcond=None)[0])
-            datum.height_model = "plane"
+            datum.height_model = "geoid_plane" if grid is not None else "plane"
         else:
             datum.c0, datum.c1, datum.c2 = float(ph @ dh / ph.sum()), 0.0, 0.0
-            datum.height_model = "shift"
+            datum.height_model = "geoid" if grid is not None else "shift"
     else:
         datum.height_model = "none"
 
@@ -471,7 +566,7 @@ def _cofactors(datum: LocalizationDatum, pairs: list[Pair]):
         hn, he = np.asarray(N, float) - datum.Nc, np.asarray(E, float) - datum.Ec
         ph = _weights(height, datum.sigma0_height, "height")
         nh = float(ph.sum())
-        if datum.height_model == "plane":
+        if datum.height_model in PLANE_MODELS:
             mn, me = float(ph @ hn / nh), float(ph @ he / nh)
             u, v = hn - mn, he - me
             snn, see, sne = float(ph @ (u * u)), float(ph @ (v * v)), float(ph @ (u * v))
@@ -499,7 +594,8 @@ def _loo(datum: LocalizationDatum, pairs: list[Pair], i: int, part: str):
     модель этой части вырождается или меняется (например, плоскость → сдвиг)."""
     try:
         d = _fit(_without(pairs, i, part), datum.lat0, datum.lon0, datum.ellipsoid,
-                 datum.sigma0_plan, datum.sigma0_height)
+                 datum.sigma0_plan, datum.sigma0_height, _height_request(datum), datum._grid,
+                 datum.geoid.interpolation if datum.geoid else "bilinear")
     except LocalizationError:
         return None
     r = d.residuals[i]
@@ -514,7 +610,7 @@ def _diagnose(datum: LocalizationDatum, pairs: list[Pair], sigma_plan, sigma_hei
     plan = [p for p in pairs if p.in_plan]
     n_h = sum(p.in_height for p in pairs)
     datum.redundancy_plan = 2 * len(plan) - (4 if datum.plan_model == "similarity" else 2)
-    datum.redundancy_height = None if not n_h else n_h - (3 if datum.height_model == "plane" else 1)
+    datum.redundancy_height = None if not n_h else n_h - (3 if datum.height_model in PLANE_MODELS else 1)
     datum.q_plan, datum.q_height = _cofactors(datum, pairs)
 
     proj = datum._proj()

@@ -9,6 +9,9 @@
       --suggest — дополнительно предложить, какие точки исключить (итеративно, по худшему |w|).
       --gnss-datum PZ-90.11 — система ГНСС-координат пар (по умолчанию WGS-84); рабочая проекция
       строится на её эллипсоиде, система сохраняется в датуме.
+      --height-model plane | geoid | geoid_plane, --geoid сетка.gtx|.isg|.tif [--geoid-interpolation bicubic]:
+      высота по модели геоида H = h − N(B, L) + c0 (geoid) или с остаточной плоскостью (geoid_plane;
+      по умолчанию при --geoid). В датуме — ссылка на сетку (имя файла и SHA-256), не сама сетка.
 
   python -m mathdatum to-local datum.json wgs.csv -o local.csv [--quality]
       Пересчитать точки name;B;L;h → name;x;y;H.
@@ -16,6 +19,9 @@
   python -m mathdatum to-wgs datum.json local.csv -o wgs.csv [--quality]
       Пересчитать точки name;x;y;H → name;B;L;h.
 
+  Датум с моделью геоида ищет сетку рядом с JSON или в текущем каталоге; --geoid файл — явно.
+  Нет файла или другая SHA-256, точка вне сетки или в ячейке NODATA — ошибка (без тихого отключения поправки).
+  --height-model — проверка: модель датума должна совпадать.
   --gnss-datum X — точки B;L;h заданы (to-local) или нужны (to-wgs) в системе X, а не в системе
   датума: пересчёт по 7 параметрам ГОСТ 32453-2017.
   Точки вне выпуклой оболочки опорных пунктов (экстраполяция) перечисляются в stderr.
@@ -36,6 +42,10 @@
 
   python -m mathdatum systems
       Системы координат и параметры ГОСТ 32453-2017.
+
+  python -m mathdatum geoid grid.tif [--at 55.75,37.62] [--points pts.csv -o out.csv]
+                                      [--crop 55,56,37,39 -o site.gtx]
+      Сведения о сетке геоида, N в точке (точках name;B;L → name;B;L;N), вырезка / перевод в .gtx или .isg.
 """
 
 import argparse
@@ -43,7 +53,7 @@ import sys
 
 import numpy as np
 
-from . import datums
+from . import datums, geoid as geoid_mod
 from .io import read_columns, read_pairs, read_points, write_points
 from .localization import LocalizationDatum, LocalizationError, localize, suggest_exclusions
 
@@ -55,11 +65,17 @@ def report(d: LocalizationDatum) -> str:
     if d.gnss_system not in (None, "WGS-84"):
         s = datums.get_system(d.gnss_system)
         lines.append(f"ГНСС:   {s.name}, рабочая проекция на эллипсоиде {s.ellipsoid.name} ({d.ellipsoid})")
+    g = d.geoid
     lines += [
         f"План:   модель {d.plan_model}; масштаб {d.scale:.9f} ({d.scale_ppm:+.2f} ppm), "
         f"разворот {d.rotation_arcsec:+.2f}″",
         f"Высота: модель {d.height_model}; c0 = {d.c0:+.4f} м, "
-        f"наклон N {d.c1 * 1e6:+.2f} мм/км, E {d.c2 * 1e6:+.2f} мм/км",
+        f"наклон N {d.c1 * 1e6:+.2f} мм/км, E {d.c2 * 1e6:+.2f} мм/км"
+        + ("" if g is None else " (после геоида: H = h − N + …)"),
+    ]
+    if g is not None:
+        lines.append(f"Геоид:  сетка {g.file}, интерполяция {g.interpolation}, sha256 {g.sha256}")
+    lines += [
         f"СКО:    план {fmt(d.rms_plan)} м, высота {fmt(d.rms_height)} м",
     ]
     if d.redundancy_plan is not None:
@@ -90,6 +106,40 @@ def report(d: LocalizationDatum) -> str:
 
 def fmt(v, spec=".4f"):
     return "—" if v is None else format(v, spec)
+
+
+def load_datum(a, require_geoid=True) -> LocalizationDatum:
+    d = LocalizationDatum.load(a.datum, geoid=getattr(a, "geoid", None), require_geoid=require_geoid)
+    want = getattr(a, "height_model", None)
+    if want is not None:
+        # geoid_plane при малом числе точек упрощается до geoid — это та же модель.
+        ok = (d.geoid is None if want == "plane" else
+              d.geoid is not None and (want == "geoid_plane" or d.height_model != "geoid_plane"))
+        if not ok:
+            raise ValueError(f"--height-model {want}: в датуме модель высоты {d.height_model}"
+                             + (f" (сетка {d.geoid.file})" if d.geoid else "") + ".")
+    return d
+
+
+def geoid_cmd(a) -> None:
+    g = geoid_mod.read_grid(a.grid)
+    print(g.describe())
+    interp = a.interpolation
+    if a.at:
+        B, L = (float(v) for v in a.at.split(","))
+        print(f"N({B:g}, {L:g}) = {g.value(B, L, interp):.4f} м ({interp})")
+    if a.points:
+        if not a.out:
+            raise ValueError("--points: нужен -o файл.csv")
+        names, (B, L) = read_columns(a.points, ("B", "L"))
+        write_points(a.out, names, ("B", "L", "N"), B, L, g.value(B, L, interp), digits=(10, 10, 4))
+        print(f"Точек: {len(names)} → {a.out}")
+    elif a.out:
+        if a.crop:
+            s, n, w, e = (float(v) for v in a.crop.split(","))
+            g = g.crop(s, n, w, e)
+        g.save(a.out)
+        print(f"Сетка {g.rows}×{g.cols} → {a.out} (sha256 {geoid_mod.sha256_file(a.out)})")
 
 
 def _transform(d: LocalizationDatum, a, src, dst, digits, forward: bool):
@@ -220,6 +270,10 @@ def main(argv=None):
     p.add_argument("--max-rotation-deg", type=float, default=3.0)
     p.add_argument("--suggest", action="store_true", help="предложить точки к исключению")
     p.add_argument("--gnss-datum", default="WGS-84", help="система ГНСС-координат пар (WGS-84, PZ-90.11, GSK-2011, …)")
+    p.add_argument("--height-model", choices=("plane", "geoid", "geoid_plane"),
+                   help="модель высоты (по умолчанию plane, с --geoid — geoid_plane)")
+    p.add_argument("--geoid", help="сетка высот геоида / аномалий высоты (.gtx, .isg, .tif)")
+    p.add_argument("--geoid-interpolation", choices=geoid_mod.INTERPOLATIONS, default="bilinear")
     for name, cols in (("to-local", "B L h → x y H"), ("to-wgs", "x y H → B L h")):
         p = sub.add_parser(name, help=f"пересчёт {cols}")
         p.add_argument("datum")
@@ -228,6 +282,9 @@ def main(argv=None):
         p.add_argument("--quality", action="store_true",
                        help="добавить столбцы outside_m, m_plan, m_H")
         p.add_argument("--gnss-datum", help="система точек B;L;h, если не совпадает с системой датума")
+        p.add_argument("--geoid", help="файл сетки геоида датума (если он не рядом с JSON)")
+        p.add_argument("--height-model", choices=("plane", "geoid", "geoid_plane"),
+                       help="проверить, что модель высоты датума такая")
     p = sub.add_parser("proj", help="строка PROJ для датума")
     p.add_argument("datum")
     p = sub.add_parser("transform", help="пересчёт точек между системами (ГОСТ 32453-2017)")
@@ -240,6 +297,13 @@ def main(argv=None):
     p.add_argument("--epoch", type=float, help="эпоха координат (год); нужны столбцы VX;VY;VZ")
     p.add_argument("--target-epoch", type=float, help="эпоха результата")
     sub.add_parser("systems", help="системы координат и параметры ГОСТ 32453-2017")
+    p = sub.add_parser("geoid", help="сетка геоида: сведения, N в точках, вырезка / перевод формата")
+    p.add_argument("grid")
+    p.add_argument("--at", help="B,L — значение N в точке")
+    p.add_argument("--points", help="CSV name;B;L → name;B;L;N (нужен -o)")
+    p.add_argument("--crop", help="S,N,W,E — вырезать охват (градусы, с запасом 2 узла)")
+    p.add_argument("-o", "--out", help="файл результата: .csv для --points, иначе .gtx или .isg")
+    p.add_argument("--interpolation", choices=geoid_mod.INTERPOLATIONS, default="bilinear")
     a = ap.parse_args(argv)
 
     try:
@@ -248,6 +312,11 @@ def main(argv=None):
             kw = dict(sigma_plan=a.sigma_plan, sigma_height=a.sigma_height, w_limit=a.w_limit,
                       max_scale_ppm=a.max_scale_ppm, max_rotation_deg=a.max_rotation_deg)
             kw["gnss_datum"] = a.gnss_datum
+            if a.geoid:
+                kw.update(height_model=a.height_model or "geoid_plane", geoid=geoid_mod.read_grid(a.geoid),
+                          geoid_interpolation=a.geoid_interpolation)
+            elif a.height_model not in (None, "plane"):
+                raise ValueError(f"--height-model {a.height_model}: нужна сетка --geoid.")
             d = localize(pairs, **kw)
             d.save(a.out)
             print(report(d))
@@ -257,16 +326,21 @@ def main(argv=None):
                     ", ".join(f"{n} ({'план' if part == 'plan' else 'высота'}, |w| = {w:.2f})" for n, part, w in ex)
                     if ex else "ничего — подозрительных точек нет."))
             print(f"\nДатум сохранён: {a.out}")
+            if d.geoid is not None:
+                print(f"Сетка геоида в датуме — только ссылкой ({d.geoid.file}): держите файл рядом с датумом "
+                      "или указывайте --geoid при пересчётах.")
         elif a.cmd == "to-local":
-            _transform(LocalizationDatum.load(a.datum), a, ("B", "L", "h"), ("x", "y", "H"), (4, 4, 4), True)
+            _transform(load_datum(a), a, ("B", "L", "h"), ("x", "y", "H"), (4, 4, 4), True)
         elif a.cmd == "to-wgs":
-            _transform(LocalizationDatum.load(a.datum), a, ("x", "y", "H"), ("B", "L", "h"), (10, 10, 4), False)
+            _transform(load_datum(a), a, ("x", "y", "H"), ("B", "L", "h"), (10, 10, 4), False)
         elif a.cmd == "proj":
-            print(LocalizationDatum.load(a.datum).to_proj_pipeline())
+            print(load_datum(a, require_geoid=False).to_proj_pipeline())
         elif a.cmd == "transform":
             transform_file(a)
         elif a.cmd == "systems":
             print(systems_report())
+        elif a.cmd == "geoid":
+            geoid_cmd(a)
     except (LocalizationError, ValueError, KeyError, FileNotFoundError) as e:
         print(f"Ошибка: {e}", file=sys.stderr)
         return 1

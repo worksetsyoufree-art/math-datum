@@ -1,0 +1,26 @@
+begin_of_head ================================================
+model name     : nodata test
+model type     : synthetic
+data type      : quasi-geoid
+data units     : meters
+data format    : grid
+data ordering  : N-to-S, W-to-E
+coord type     : geodetic
+coord units    : deg
+lat min        = 55.0000000000
+lat max        = 56.0000000000
+lon min        = 37.0000000000
+lon max        = 39.5000000000
+delta lat      = 0.2500000000
+delta lon      = 0.5000000000
+nrows          =          5
+ncols          =          6
+nodata         = -9999.0000
+creation date  = 
+ISG format     = 2.0
+end_of_head ==================================================
+14.791438 14.604043 14.458899 14.351544 14.242769 14.094672
+14.594175 14.418734 14.272038 14.151051 -9999.0000 13.880391
+14.400038 14.250203 14.100182 13.949993 13.799810 13.649802
+14.205880 14.081564 13.928227 13.748940 13.570626 13.419319
+14.008567 13.895986 13.741126 13.548454 13.357204 13.205300

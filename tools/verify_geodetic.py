@@ -5,7 +5,7 @@
 - helmert_7p (exact): mathdatum.datums и независимо PROJ (+proj=helmert convention=coordinate_frame);
 - helmert_7p (noisy): решение МНК итерациями Гаусса–Ньютона с нуля, сравнение прогноза;
 - site_localization: пересчёт рабочей проекции через PROJ и mathdatum.datums, подобие — в комплексной
-  форме (z' = t + w·z), высоты — отдельный МНК.
+  форме (z' = t + w·z), высоты — отдельный МНК; блок truth: H = h − ζ с точностью до шума.
 
 Запуск:  python tools/verify_geodetic.py
 """
@@ -116,9 +116,20 @@ def check_site(task):
     wk = t + k * (zk - zc)
     Hk = hk + np.column_stack([np.ones(len(zk)), (zk - zc).real, (zk - zc).imag]) @ cv
     d_pred = float(np.abs(np.column_stack([wk.real, wk.imag, Hk]) - e["predicted_check_x_y_H"]).max())
+    # Блок truth: H = h − ζ(B, L) с точностью до шума (ζ по формуле, B, L — СК-42 от центра участка);
+    # на этом основаны тестовые сетки геоида (tools/make_geoid_test_grids.py).
+    ha = task["truth"]["height_anomaly"]
+    pts = ctrl + chk
+    g = np.array([p["gnss_B_L_h"] for p in pts])
+    Bs, Ls, _ = datums.transform_blh(g[:, 0], g[:, 1], g[:, 2], "PZ-90.11", "SK-42")
+    b0, l0 = ha["center_B_L_sk42"]
+    dn, de = (Bs - b0) * 111_000, (Ls - l0) * 111_000 * np.cos(np.radians(b0))
+    zeta = ha["zeta0"] + ha["gN"] * dn + ha["gE"] * de + ha["curvature"] * (dn ** 2 - de ** 2)
+    d_zeta = float(np.abs(np.array([p["local_x_y_H"][2] for p in pts]) - (g[:, 2] - zeta)).max())
     tol = task["tolerance"]["coordinates_m"]
-    ok = d_proj < tol and d_par < 1e-9 and d_t < 1e-6 and d_v < 1e-9 and d_pred < tol
-    return ok, f"site: proj={d_proj:.1e} par={d_par:.1e} t={d_t:.1e} vert={d_v:.1e} pred={d_pred:.1e}"
+    ok = d_proj < tol and d_par < 1e-9 and d_t < 1e-6 and d_v < 1e-9 and d_pred < tol and d_zeta < 0.1
+    return ok, (f"site: proj={d_proj:.1e} par={d_par:.1e} t={d_t:.1e} vert={d_v:.1e} pred={d_pred:.1e} "
+                f"|H-(h-ζ)|={d_zeta:.3f}")
 
 
 def check_parameters():

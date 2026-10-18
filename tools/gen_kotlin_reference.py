@@ -15,6 +15,12 @@
   - GK_CASES / TM_PROJ_CASES: Гаусс–Крюгер (зоны 6°, принудительная зона) и свой поперечный Меркатор;
   - REGION_HELMERT: задачи helmert_7p 83 регионов (по 5 точек exact и noisy);
   - GNSS_DATUM_CASES: локализация с gnss_datum (ПЗ-90.11, СК-42, ГСК-2011) и пересчёт точек из другой системы.
+
+и .../GeoidReferenceData.kt (сетки геоида, mathdatum.geoid — сам сверен с PROJ vgridshift в tests/):
+  - GEOID_FILES: тестовые сетки tests/data/geoid (GGF, GTX, ISG) байтами и SHA-256;
+  - GEOID_VALUES: N в точках (билинейная и бикубическая; NaN — ожидается GeoidException);
+  - GEOID_LOC_CASES: локализация с моделями geoid / geoid_plane (параметры, диагностика, пересчёты);
+  - PY_GEOID_DATUM_JSON: датум с геоидом, сохранённый Python-эталоном.
 """
 
 import itertools
@@ -27,10 +33,15 @@ from pyproj import Transformer
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from mathdatum import Pair, datums, localize, read_pairs, suggest_exclusions
+from mathdatum.geoid import GeoidError, read_grid
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "kmp/localization/src/commonTest/kotlin/ru/mathdatum/localization/ReferenceData.kt"
 OUT_DATUMS = OUT.with_name("DatumReferenceData.kt")
+OUT_GEOID = OUT.with_name("GeoidReferenceData.kt")
+GEOID_DIR = ROOT / "tests/data/geoid"
+GEOID_FILES = ["RU-MOW_truth.ggf", "RU-MOW_truth.gtx", "RU-MOW_truth.isg", "RU-MOW_bump.ggf",
+               "nodata.ggf", "nodata.gtx", "nodata.isg"]
 
 
 def d(v):
@@ -272,6 +283,111 @@ def write_datums():
           f"{len(c['reg'])} регионов, {len(c['gnss'])} случаев gnss_datum")
 
 
+def geoid_value_cases():
+    rng = np.random.default_rng(605)
+    out = []
+    for f in GEOID_FILES:
+        g = read_grid(GEOID_DIR / f)
+        pts = [(g.lat0, g.lon0), (g.lat1, g.lon1), (g.lat0 + 2 * g.dlat, g.lon0 + 3 * g.dlon), (g.lat1, g.lon0),
+               (g.lat0 + 0.5 * g.dlat, g.lon0 + 2.5 * g.dlon), (g.lat1 - 1.5 * g.dlat, g.lon1 - 1.2 * g.dlon),
+               (g.lat1 + 1e-6, g.lon0), (g.lat0, g.lon1 + 1e-6), (g.lat0 - 1, g.lon0 - 1)]
+        pts += list(zip(rng.uniform(g.lat0, g.lat1, 25), rng.uniform(g.lon0, g.lon1, 25)))
+        for lat, lon in pts:
+            for interp in ("bilinear", "bicubic"):
+                try:
+                    v = g.value1(lat, lon, interp)
+                except GeoidError:
+                    v = None
+                out.append(f'GeoidValueCase("{f}", {d(lat)}, {d(lon)}, "{interp}", {d(v)})')
+    return out
+
+
+def geoid_loc_cases():
+    sys.path.insert(0, str(ROOT / "tools"))
+    import make_geoid_test_grids as mg
+    t = mg.site_task("RU-MOW")
+    ctrl = [Pair(p["id"], *p["gnss_B_L_h"], *p["local_x_y_H"]) for p in t["control_points"]]
+    ctl = [Pair(p["id"], *p["gnss_B_L_h"], *p["local_x_y_H"], use="none") for p in t["check_points"]]
+    chk = np.array([p["gnss_B_L_h"] for p in t["check_points"]])
+    bump = [Pair(p.name, p.B, p.L, p.h, p.x, p.y, p.H - float(mg.bump(t, p.B, p.L))) for p in ctrl]
+
+    def copy(pairs):
+        return [Pair(**vars(p)) for p in pairs]
+
+    weighted = copy(ctrl)
+    for q, sh in zip(weighted, (0.01, 0.05, None, 0.02, 0.08, 0.03)):
+        q.sigma_height = sh
+    weighted[1].sigma_plan = 0.04
+    blunder = copy(ctrl)
+    blunder[2].H += 0.3
+    cases = [
+        ("truth_geoid", "RU-MOW_truth.ggf", "geoid", "bilinear", ctrl + ctl),
+        ("truth_geoid_plane", "RU-MOW_truth.ggf", "geoid_plane", "bilinear", ctrl + ctl),
+        ("truth_geoid_plane_isg", "RU-MOW_truth.isg", "geoid_plane", "bicubic", copy(ctrl)),
+        ("bump_geoid_plane_bicubic", "RU-MOW_bump.ggf", "geoid_plane", "bicubic", bump),
+        ("wrong_grid_geoid", "RU-MOW_bump.ggf", "geoid", "bilinear", copy(ctrl)),
+        ("two_points", "RU-MOW_truth.gtx", "geoid_plane", "bilinear", copy(ctrl[:2])),
+        ("weighted", "RU-MOW_truth.ggf", "geoid_plane", "bilinear", weighted),
+        ("blunder_height", "RU-MOW_truth.ggf", "geoid", "bilinear", blunder),
+        ("plan_only", "RU-MOW_truth.ggf", "geoid", "bilinear", [Pair(**{**vars(p), "use": "plan"}) for p in ctrl]),
+    ]
+    out = []
+    for name, f, model, interp, pairs in cases:
+        g = read_grid(GEOID_DIR / f)
+        kw = dict(gnss_datum="PZ-90.11", height_model=model, geoid=g, geoid_interpolation=interp)
+        dt = localize(pairs, **kw)
+        loc = np.column_stack(dt.to_local(*chk.T))
+        back = np.column_stack(dt.to_wgs(*loc.T))
+        ex = [f"{n}:{part}" for n, part, _ in suggest_exclusions(pairs, **kw)]
+        out.append(
+            f'GeoidLocCase("{name}", "{f}", "{model}", "{interp}", "{dt.height_model}", listOf({", ".join(pair_kt(p) for p in pairs)}),\n'
+            f'  doubleArrayOf({", ".join(d(v) for v in params(dt))}),\n'
+            f'  doubleArrayOf({", ".join(d(v) for v in datum_diag(dt))}),\n  {arr(resid_diag(dt))},\n'
+            f'  listOf({", ".join(chr(34) + w.code + chr(34) for w in dt.warnings)}),\n'
+            f'  listOf({", ".join(chr(34) + e + chr(34) for e in ex)}),\n'
+            f'  {arr(chk)},\n  {arr(loc)},\n  {arr(back)},\n  {arr(quality(dt, chk))})')
+    dt = localize(ctrl, gnss_datum="PZ-90.11", height_model="geoid_plane", geoid=read_grid(GEOID_DIR / "RU-MOW_truth.ggf"))
+    js = json.dumps(dt.to_dict(), indent=1, ensure_ascii=False)
+    return out, js, np.column_stack(dt.to_local(*chk.T)), chk
+
+
+def write_geoid():
+    vals = geoid_value_cases()
+    loc, js, js_local, chk = geoid_loc_cases()
+    files = []
+    for f in GEOID_FILES:
+        raw = (GEOID_DIR / f).read_bytes()
+        g = read_grid(GEOID_DIR / f)
+        files.append(f'GeoidFile("{f}", "{raw.hex()}", "{g.sha256}", {g.rows}, {g.cols}, {d(g.lat0)}, {d(g.lon0)}, '
+                     f'{d(g.dlat)}, {d(g.dlon)}, {int(np.isnan(g.values).sum())})')
+    OUT_GEOID.write_text(
+        "// Сгенерировано tools/gen_kotlin_reference.py из Python-эталона (mathdatum.geoid). Не редактировать вручную.\n"
+        "package ru.mathdatum.localization\n\n"
+        "/** Тестовая сетка tests/data/geoid: содержимое файла (hex), SHA-256 и заголовок по Python. */\n"
+        "class GeoidFile(val name: String, val hex: String, val sha256: String, val rows: Int, val cols: Int,\n"
+        "                val lat0: Double, val lon0: Double, val dlat: Double, val dlon: Double, val nodata: Int)\n\n"
+        "/** expected = NaN — ожидается GeoidException (вне сетки, NODATA, край для бикубической). */\n"
+        "class GeoidValueCase(val file: String, val lat: Double, val lon: Double, val interpolation: String, val expected: Double)\n\n"
+        "/** expected, diag, residDiag, quality — как у DiagCase; check — контрольные пункты (ПЗ-90.11), local — их to_local,\n"
+        " *  back — to_wgs(local). */\n"
+        "class GeoidLocCase(val name: String, val file: String, val model: String, val interpolation: String,\n"
+        "                   val heightModel: String, val pairs: List<LocalizationPair>, val expected: DoubleArray,\n"
+        "                   val diag: DoubleArray, val residDiag: List<DoubleArray>, val warnings: List<String>,\n"
+        "                   val exclusions: List<String>, val check: List<DoubleArray>, val local: List<DoubleArray>,\n"
+        "                   val back: List<DoubleArray>, val quality: List<DoubleArray>)\n\n"
+        "val GEOID_FILES = listOf(\n    " + ",\n    ".join(files) + ",\n)\n\n"
+        "val GEOID_VALUES: List<GeoidValueCase> by lazy { geoidValues() }\n\n"
+        "private fun geoidValues() = listOf(\n    " + ",\n    ".join(vals) + ",\n)\n\n"
+        + "".join(f"private fun geoidLoc{i}() = {c}\n\n" for i, c in enumerate(loc))
+        + "val GEOID_LOC_CASES: List<GeoidLocCase> by lazy { listOf(" + ", ".join(f"geoidLoc{i}()" for i in range(len(loc))) + ") }\n\n"
+        + "/** Датум RU-MOW (6 опорных, ПЗ-90.11, geoid_plane, RU-MOW_truth.ggf), сохранённый Python-эталоном. */\n"
+        + "val PY_GEOID_DATUM_JSON = " + json.dumps(js).replace("$", "\\$") + "\n"
+        + f"val PY_GEOID_DATUM_CHECK = {arr(chk)}\n"
+        + f"val PY_GEOID_DATUM_LOCAL = {arr(js_local)}\n",
+        encoding="utf-8")
+    print(f"{OUT_GEOID}: {len(files)} сеток, {len(vals)} значений, {len(loc)} случаев локализации")
+
+
 def arr(m):
     return "listOf(" + ", ".join("doubleArrayOf(" + ", ".join(d(v) for v in row) + ")" for row in m) + ")"
 
@@ -305,6 +421,7 @@ def main():
         encoding="utf-8")
     print(f"{OUT}: {len(tm)} TM, {len(rg)} регионов, {len(dc)} случаев надёжности")
     write_datums()
+    write_geoid()
 
 
 if __name__ == "__main__":

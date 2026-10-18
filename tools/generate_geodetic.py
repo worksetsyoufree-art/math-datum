@@ -230,7 +230,10 @@ def site_task(geom, rng):
             "local_projection": msk,
             "gnss_to_sk42": "ГОСТ 32453-2017 прил. А.1 (обратный переход)",
             "height_anomaly": {"zeta0": zeta0, "gN": gx, "gE": gy, "curvature": 1e-10,
-                               "formula": "ζ = ζ0 + gN·dN + gE·dE + 1e-10·(dN² - dE²), H = h - ζ"},
+                               "center_B_L_sk42": [float(lat0), float(lon0)],
+                               "formula": "ζ = ζ0 + gN·dN + gE·dE + 1e-10·(dN² - dE²), H = h - ζ; "
+                                          "dN = (B - B0)·111000, dE = (L - L0)·111000·cos(B0), "
+                                          "B, L — СК-42, (B0, L0) = center_B_L_sk42"},
             "noise_sigma_m": {"gnss_plan": 0.01, "gnss_h": 0.02, "catalog_plan": 0.005, "catalog_H": 0.005},
         },
     }

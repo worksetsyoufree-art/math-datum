@@ -46,7 +46,8 @@ d.save("datum.json"); d = LocalizationDatum.load("datum.json")
 1. Рабочая проекция — поперечный Меркатор на эллипсоиде системы ГНСС-измерений (по умолчанию WGS-84)
    с центром в среднем по точкам.
 2. План — подобие (сдвиг, разворот, масштаб) относительно взвешенного центроида точек.
-3. Высота — наклонная плоскость `H = h + c0 + c1·dN + c2·dE`.
+3. Высота — наклонная плоскость `H = h + c0 + c1·dN + c2·dE` (по умолчанию) или модель геоида
+   (`geoid`, `geoid_plane` — см. «Модель геоида»).
 
 Обе подгонки — взвешенный линейный МНК в замкнутой форме. Вес точки `p = σ0² / σi²` (σ0 — глобальная
 σ, σi — своя σ точки; без неё `p = 1`). План: `zc = Σp·z / Σp`, `k = a + ib = Σp·conj(z − zc)·(w − wc) / Σp·|z − zc|²`
@@ -87,8 +88,9 @@ d.save("datum.json"); d = LocalizationDatum.load("datum.json")
 и диагностика невязок сохраняются в JSON датума. Старые JSON читаются: недостающие поля — `None`,
 пересчёты работают, точность и экстраполяция не определены.
 
-Тесты: `pip install pytest && python -m pytest tests` (387 тестов, включая 83 региона из `data/geodetic`):
-`tests/test_localization.py` — локализация и надёжность, `tests/test_datums.py` — пересчёты между системами
+Тесты: `pip install pytest && python -m pytest tests` (504 теста, включая 83 региона из `data/geodetic`):
+`tests/test_localization.py` — локализация и надёжность, `tests/test_geoid.py` — сетки геоида и модели высот,
+`tests/test_datums.py` — пересчёты между системами
 (контрольный пример ГОСТ, туда-обратно по всем 56 парам систем, сверка с PROJ по 7 параметрам, BLH ↔ XYZ,
 Гаусс–Крюгер и своему поперечному Меркатору, задачи `helmert_7p` 83 регионов, датум ГНСС в локализации и CLI).
 
@@ -116,6 +118,66 @@ x, y, H = d.to_local(B, L, h, datum="WGS-84")     # точка в другой �
 (`gnss_datum`); в старых JSON поля нет — при рабочей проекции на WGS-84 считается WGS-84, иначе пересчёт
 из других систем недоступен. `--gnss-datum` у `to-local` / `to-wgs` — система точек файла, если она не
 совпадает с системой датума (пересчёт по 7 параметрам, путь печатается в stderr).
+
+### Модель геоида (высоты)
+
+Модель высоты задаётся параметром; по умолчанию — прежняя `plane`, результаты не меняются.
+
+| Модель | Формула | Параметров | Избыточность |
+|---|---|---|---|
+| `plane` | `H = h + c0 + c1·dN + c2·dE` | 3 (мало точек → `shift`, 1) | `n − 3` |
+| `geoid` | `H = h − N(B, L) + c0` | 1 | `n − 1` |
+| `geoid_plane` | `H = h − N(B, L) + c0 + c1·dN + c2·dE` — остаточная плоскость по `H − (h − N)` | 3 (мало точек → `geoid`, 1) | `n − 3` |
+
+`N(B, L)` — высота геоида / аномалия высоты из сетки на эллипсоиде системы ГНСС (`gnss_datum`). Вся диагностика
+(Q, w, leave-one-out, ковариации, СКО прогноза, веса, `suggest_exclusions`) работает для всех моделей: после
+вычитания N подгоняются разности `H − (h − N)` той же формулой, меняется только число параметров.
+СКО прогноза не включает ошибку самой модели геоида.
+
+```
+python -m mathdatum localize pairs.csv -o datum.json --gnss-datum PZ-90.11 --geoid region.ggf          # geoid_plane
+python -m mathdatum localize pairs.csv -o datum.json --geoid region.ggf --height-model geoid --geoid-interpolation bicubic
+python -m mathdatum to-local datum.json wgs.csv -o local.csv --geoid region.ggf     # если сетка не рядом с datum.json
+python -m mathdatum geoid region.ggf --at 55.75,37.62                                # сведения о сетке и N в точке
+python -m mathdatum geoid us_nga_egm08_25.tif --crop 55,56.5,36.5,39 -o site.gtx    # вырезка / перевод формата
+```
+
+```python
+from mathdatum.geoid import read_grid
+d = localize(pairs, gnss_datum="PZ-90.11", height_model="geoid_plane", geoid=read_grid("region.ggf"))
+d = LocalizationDatum.load("datum.json", geoid="region.ggf")   # без geoid — ищет файл рядом с JSON и в текущем каталоге
+```
+
+- **Форматы сеток** (`mathdatum/geoid.py`, в Kotlin `Geoid.kt`):
+  - **GGF** (Trimble Grid Factory, основной формат полевого ПО Trimble) — little-endian, заголовок 146 байт:
+    подпись `TNL GRID FILE`, имя модели, `latMin, latMax, lonMin, lonMax, dlat, dlon` (float64), `rows, cols`
+    (int32), NODATA (смещение 120, 0 — не задано), масштаб (128), 10 байт флагов (136; смысл неизвестен — у
+    известных файлов `02 00 80 00 02 08 02 01 00 00`, иначе предупреждение); данные float32 (или int16 — по
+    размеру файла) **строками с севера на юг**, в конце — min/max. Открытого описания нет, раскладка
+    восстановлена по файлам (OSM wiki «Trimble GGF», разбор EGM08-R61.GGF) и сверена с EGM2008 (ниже).
+  - **GTX** (NOAA / PROJ, big-endian, строки с юга, NODATA −88.8888);
+  - **ISG** 1.0 / 2.0 (International Service for the Geoid, текст; углы в градусах или DMS, `node offset`);
+  - **GeoTIFF** сеток PROJ (cdn.proj.org; без сжатия / deflate, предиктор 1–3) — только Python; для Kotlin и веба
+    переводится в GGF/GTX командой `geoid … -o`.
+- **Интерполяция:** `bilinear` — явная формула по долям ячейки (узлы и края сетки — без вырождения),
+  `bicubic` — свёртка Кейса (a = −0.5) по 16 узлам (квадратичную поверхность воспроизводит точно; в крайней
+  ячейке — ошибка). Python и Kotlin дают одинаковые значения (до 1e-12 м, сверка эталонами).
+- **Ошибки, а не тихое отключение поправки** (баг gsimath, `results/gsimath-0.5.5/REPORT.md`, п. 1): точка вне
+  сетки, NODATA среди нужных узлов, нет файла сетки или другая SHA-256 — исключение `GeoidError` (Kotlin —
+  `GeoidException`). Прямой и обратный пересчёт симметричны: `h = H + N(B, L) − (c0 + c1·dN + c2·dE)`,
+  N берётся в той же точке (B, L плана), туда-обратно < 1e-6 м.
+- **Датум хранит ссылку, не сетку:** `"geoid": {"file": "region.ggf", "sha256": "…", "interpolation": "bilinear"}`.
+  Старые JSON (без поля) читаются как прежде; строка PROJ получает шаг `vgridshift` (PROJ читает GTX/GeoTIFF).
+- **Проверка на реальных сетках** (разово, файлы не в репозитории): ридер GeoTIFF/GTX против PROJ `vgridshift`
+  на `us_nga_egm96_15.tif`, `egm96_15.gtx`, `us_nga_egm08_25.tif` (5005 точек по миру, с переходом через 180°) —
+  расхождение ≤ 8e-13 м. GGF EGM2008 1′×1′ (регион R61: 41–79° с. ш., 103–120° в. д.): в общих узлах 5′ совпадает
+  с `us_nga_egm08_25.tif` точно (float32), в 20 000 случайных точек — СКО 1.9 мм, максимум 2.9 см (разное разрешение
+  сеток); с EGM96 — СКО 0.56 м (разница моделей); при обратном порядке строк было бы 17 м.
+- **Тестовые сетки** `tests/data/geoid/` (≤ 9 КБ, `python tools/make_geoid_test_grids.py`): аномалия высоты участка
+  RU-MOW из блока `truth` генератора `data/geodetic` (GGF, GTX, ISG), она же с «бугром» 0.5 м (неплоская часть), и
+  сетка 5×6 с NODATA. На них: с «бугром» `plane` даёт ошибку на контрольных 4.9 см, `geoid_plane` с верной сеткой —
+  0.8 см; `geoid` с неверной сеткой — остатки 4.7 см и подозрительные точки; по всем 83 регионам сетка по `truth`
+  (строится в тесте) даёт в модели `geoid` ошибки на контрольных в пределах шума и `c0 ≈ 0`.
 
 ## Пересчёты между системами (ГОСТ 32453-2017)
 
@@ -201,3 +263,7 @@ python tools/verify_geodetic.py   # регионы РФ
 
 - `tools/kotlin_check/` — прогон локализации gsimath (Kotlin/JVM) на `data/geodetic`: `tools/kotlin_check/run.sh <gsimath.jar> <model.jar>`.
 - `results/gsimath-0.5.5/REPORT.md` — результаты для gsimath-desktop 0.5.5 / model 1.2.54.
+  По интерполяции геоида в gsimath (`GetGeoidHeight4PointsUseCase`, по описанию кода): система 4×4 по узлам
+  floor/ceil вырождается, когда точка точно на узле; для долготы берётся шаг по широте; нет проверки выхода
+  за сетку (индекс за последним столбцом попадает в соседнюю строку); порядок строк должен быть северным, как в
+  файле GGF. У нас — явная формула по долям ячейки и ошибка вне сетки (`test_ggf_variants_and_errors`).
