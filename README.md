@@ -13,3 +13,8 @@ pip install -r requirements.txt
 python tools/verify_cases.py      # NIST + synthetic
 python tools/verify_geodetic.py   # регионы РФ
 ```
+
+## Проверка сторонних реализаций
+
+- `tools/kotlin_check/` — прогон локализации gsimath (Kotlin/JVM) на `data/geodetic`: `tools/kotlin_check/run.sh <gsimath.jar> <model.jar>`.
+- `results/gsimath-0.5.5/REPORT.md` — результаты для gsimath-desktop 0.5.5 / model 1.2.54.

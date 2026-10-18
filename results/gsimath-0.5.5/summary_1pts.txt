@@ -1,0 +1,65 @@
+регионов: 83, успешно: 32, ошибок: 51
+  RU-AD: ERROR plane=Success height=Error
+  RU-AL: ERROR plane=Success height=Error
+  RU-ALT: ERROR plane=Success height=Error
+  RU-AMU: ERROR plane=Success height=Error
+  RU-ARK: ERROR plane=Success height=Error
+  RU-BA: ERROR plane=Success height=Error
+  RU-BEL: ERROR plane=Success height=Error
+  RU-BRY: ERROR plane=Success height=Error
+  RU-CHU: ERROR plane=Success height=Error
+  RU-CU: ERROR plane=Success height=Error
+  RU-DA: ERROR plane=Success height=Error
+  RU-IN: ERROR plane=Success height=Error
+  RU-IRK: ERROR plane=Success height=Error
+  RU-KAM: ERROR plane=Success height=Error
+  RU-KC: ERROR plane=Success height=Error
+  RU-KDA: ERROR plane=Success height=Error
+  RU-KEM: ERROR plane=Success height=Error
+  RU-KGN: ERROR plane=Success height=Error
+  RU-KHA: ERROR plane=Success height=Error
+  RU-KO: ERROR plane=Success height=Error
+  RU-KR: ERROR plane=Success height=Error
+  RU-LEN: ERROR plane=Success height=Error
+  RU-LIP: ERROR plane=Success height=Error
+  RU-MAG: ERROR plane=Success height=Error
+  RU-ME: ERROR plane=Success height=Error
+  RU-MO: ERROR plane=Success height=Error
+  RU-MOS: ERROR plane=Success height=Error
+  RU-MUR: ERROR plane=Success height=Error
+  RU-NEN: ERROR plane=Success height=Error
+  RU-NGR: ERROR plane=Success height=Error
+  RU-NIZ: ERROR plane=Success height=Error
+  RU-OMS: ERROR plane=Success height=Error
+  RU-ORL: ERROR plane=Success height=Error
+  RU-PNZ: ERROR plane=Success height=Error
+  RU-PSK: ERROR plane=Success height=Error
+  RU-RYA: ERROR plane=Success height=Error
+  RU-SA: ERROR plane=Success height=Error
+  RU-SAM: ERROR plane=Success height=Error
+  RU-SMO: ERROR plane=Success height=Error
+  RU-SPE: ERROR plane=Success height=Error
+  RU-STA: ERROR plane=Success height=Error
+  RU-SVE: ERROR plane=Success height=Error
+  RU-TAM: ERROR plane=Success height=Error
+  RU-TOM: ERROR plane=Success height=Error
+  RU-TVE: ERROR plane=Success height=Error
+  RU-TY: ERROR plane=Success height=Error
+  RU-TYU: ERROR plane=Success height=Error
+  RU-ULY: ERROR plane=Success height=Error
+  RU-VLA: ERROR plane=Success height=Error
+  RU-YAR: ERROR plane=Success height=Error
+  RU-YEV: ERROR plane=Success height=Error
+метрика (м)              медиана    максимум
+lib_res_plan              0.0000      0.0000
+lib_res_H                 0.0000     19.8431
+ref_res_plan              0.0000      0.0000
+ref_res_H                 0.0000      0.0000
+ctrl_plan                 0.0000      0.0000
+chk_plan                 22.2843     83.3138
+ref_chk_plan             23.1226     85.9617
+chk_vs_ref_plan           1.7392     10.1173
+chk_H_app                17.9005     28.8015
+chk_H_two                 0.1010     19.8802
+ref_chk_H                 0.0686      0.1732
+chk_vs_ref_H_two          0.0427     19.8327
