@@ -84,8 +84,14 @@ public class LocalizationCheck {
                     }
                     Coordinate a = common.calculateToActualCoordinate(p.wgs, loc, null);
                     Coordinate b = transform.getTransformationTwoDatums(p.wgs, Datum.Companion.getNull(), locNoFlag);
-                    System.out.println(String.format(Locale.ROOT, "%s OK %s %s %s %s %.6f %.6f %.6f %.6f %.6f %.6f",
-                        iso, p.kind, rl, ro, rh, a.getLatBN(), a.getLonLE(), a.getAltHZ(), b.getLatBN(), b.getLonLE(), b.getAltHZ()));
+                    // Как ProjectPointRepositoryImpl.createPoint: точка введена в системе локализации →
+                    // wgsCoordinate (calculateFromOriginalCoordinate) → actualCoordinate (calculateToActualCoordinate).
+                    Coordinate w = common.calculateFromOriginalCoordinate(p.local, loc, null);
+                    Coordinate back = common.calculateToActualCoordinate(w, loc, null);
+                    System.out.println(String.format(Locale.ROOT,
+                        "%s OK %s %s %s %s %.6f %.6f %.6f %.6f %.6f %.6f %.10f %.10f %.6f %.6f %.6f %.6f",
+                        iso, p.kind, rl, ro, rh, a.getLatBN(), a.getLonLE(), a.getAltHZ(), b.getLatBN(), b.getLonLE(), b.getAltHZ(),
+                        w.getLatBN(), w.getLonLE(), w.getAltHZ(), back.getLatBN(), back.getLonLE(), back.getAltHZ()));
                 }
             } catch (Throwable ex) {
                 System.out.println(iso + " EXCEPTION " + ex);
