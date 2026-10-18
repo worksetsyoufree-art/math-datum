@@ -20,6 +20,7 @@ import ru.mathdatum.localization.GaussKruger
 import ru.mathdatum.localization.GeodeticPoint
 import ru.mathdatum.localization.Xyz
 import ru.mathdatum.localization.Exclusion
+import ru.mathdatum.localization.Export
 import ru.mathdatum.localization.Ldp
 import ru.mathdatum.localization.LdpContour
 import ru.mathdatum.localization.LdpHeights
@@ -156,6 +157,9 @@ fun main() {
     }
     el<HTMLButtonElement>("saveOutput").onclick = {
         download("points.csv", el<HTMLTextAreaElement>("output").value, "text/csv"); null
+    }
+    for (f in listOf("wkt2", "projjson", "jxl", "landxml")) {
+        el<HTMLButtonElement>("export-$f").onclick = { exportDatum(f); null }
     }
     el<HTMLButtonElement>("copyProj").onclick = {
         datum?.let { window.navigator.clipboard.writeText(it.toProjPipeline()) }; null
@@ -304,6 +308,7 @@ private fun show(d: LocalizationDatum, exclusions: List<Exclusion> = emptyList()
             }
     }
     el<HTMLElement>("proj").textContent = d.toProjPipeline()
+    el<HTMLElement>("exportNotes").innerHTML = ""
 }
 
 private fun transform() {
@@ -666,6 +671,28 @@ private fun drawLdpMap(r: LdpResult) {
         "<span>${ppm(lim)} ppm</span><span>синий — план короче местности, красный — длиннее; " +
         (if (lim <= tol) "вся карта в допуске ±${tol.fixed(1)}, шкала растянута; " else "бледнее — в допуске ±${tol.fixed(1)}, насыщенно — вне; ") +
         "на карте ${ppm(lo)} … ${ppm(hi)}</span>"
+}
+
+/** Экспорт датума: файл и под кнопками — ограничения формата, оценки по объекту, контрольные точки для JobXML. */
+private fun exportDatum(format: String) {
+    val d = datum ?: return
+    val box = el<HTMLElement>("exportNotes")
+    try {
+        val ts = js("new Date().toISOString().substring(0, 19)") as String
+        val r = Export.export(d, format, timestamp = ts)
+        download("datum" + r.extension, r.text, if (format == "projjson") "application/json" else if (format == "wkt2") "text/plain" else "application/xml")
+        val items = r.warnings.map { escape(it) }.toMutableList()
+        if (format == "jxl" && d.b != 0.0) {
+            val flipped = Export.checkPoints(d, -1)
+            items += "Контрольные точки (ввести B, L на контроллере, сравнить x, y; x′, y′ — при обратном знаке разворота):<br>" +
+                Export.checkPoints(d).zip(flipped).joinToString("<br>") { (p, q) ->
+                    "${p.name}: B ${p.lat.fixed(9)}, L ${p.lon.fixed(9)} → x ${p.x.fixed(3)}, y ${p.y.fixed(3)} (x′ ${q.x.fixed(3)}, y′ ${q.y.fixed(3)})"
+                }
+        }
+        box.innerHTML = "<ul><li><b>Скачан datum${r.extension}</b></li>" + items.joinToString("") { "<li>$it</li>" } + "</ul>"
+    } catch (e: Throwable) {
+        box.innerHTML = "<ul><li>Экспорт ${escape(format)}: ${escape(e.message ?: e.toString())}</li></ul>"
+    }
 }
 
 private fun escape(s: String) = s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")

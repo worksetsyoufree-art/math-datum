@@ -13,6 +13,7 @@ python -m mathdatum localize examples/pairs.csv -o datum.json      # расчё�
 python -m mathdatum to-local datum.json examples/wgs_points.csv -o local.csv   # B L h → x y H
 python -m mathdatum to-wgs   datum.json local.csv -o wgs.csv                   # x y H → B L h
 python -m mathdatum proj datum.json                                 # строка PROJ для QGIS / cs2cs
+python -m mathdatum export datum.json --format wkt2 -o datum.wkt    # WKT2 / projjson / jxl (Trimble) / landxml
 
 python -m mathdatum localize examples/pairs.csv --suggest           # + какие точки исключить (по худшему |w|)
 python -m mathdatum to-local datum.json examples/wgs_points.csv -o local.csv --quality   # + outside_m;m_plan;m_H
@@ -88,9 +89,9 @@ d.save("datum.json"); d = LocalizationDatum.load("datum.json")
 и диагностика невязок сохраняются в JSON датума. Старые JSON читаются: недостающие поля — `None`,
 пересчёты работают, точность и экстраполяция не определены.
 
-Тесты: `pip install pytest && python -m pytest tests` (528 тестов, включая 83 региона из `data/geodetic`):
+Тесты: `pip install pytest && python -m pytest tests` (634 теста, включая 83 региона из `data/geodetic`):
 `tests/test_localization.py` — локализация и надёжность, `tests/test_geoid.py` — сетки геоида и модели высот,
-`tests/test_ldp.py` — малоискажающая проекция,
+`tests/test_ldp.py` — малоискажающая проекция, `tests/test_export.py` — экспорт (pyproj по 83 регионам, схемы JobXML и LandXML),
 `tests/test_datums.py` — пересчёты между системами
 (контрольный пример ГОСТ, туда-обратно по всем 56 парам систем, сверка с PROJ по 7 параметрам, BLH ↔ XYZ,
 Гаусс–Крюгер и своему поперечному Меркатору, задачи `helmert_7p` 83 регионов, датум ГНСС в локализации и CLI).
@@ -179,6 +180,31 @@ d = LocalizationDatum.load("datum.json", geoid="region.ggf")   # без geoid �
   сетка 5×6 с NODATA. На них: с «бугром» `plane` даёт ошибку на контрольных 4.9 см, `geoid_plane` с верной сеткой —
   0.8 см; `geoid` с неверной сеткой — остатки 4.7 см и подозрительные точки; по всем 83 регионам сетка по `truth`
   (строится в тесте) даёт в модели `geoid` ошибки на контрольных в пределах шума и `c0 ≈ 0`.
+
+## Экспорт датума (WKT2, PROJJSON, Trimble JobXML, LandXML)
+
+```
+python -m mathdatum export datum.json --format wkt2 -o datum.wkt       # QGIS / GDAL / pyproj
+python -m mathdatum export datum.json --format projjson -o datum.json
+python -m mathdatum export datum.json --format jxl -o site.jxl          # Trimble JobXML 6.30 (+ контрольные точки в stderr)
+python -m mathdatum export datum.json --format landxml -o site.xml       # LandXML 1.2, WKT2 в ogcWktCode
+```
+
+Подробно — `docs/export.md` (`mathdatum/export.py`, в Kotlin `Export.kt`, в вебе — кнопки в разделе 2):
+
+- **WKT2 / PROJJSON:** план — `DERIVEDPROJCRS` из стандартных методов EPSG (TM 9807 + Similarity transformation 9621),
+  при развороте < 0.1 мм на объекте — свёрнут в обычный `PROJCRS` (k0·масштаб); высота — `BOUNDCRS` с методом
+  «PROJ-based operation method» (плоскость, `vgridshift` для геоида; GGF/ISG → предупреждение и имя `.gtx`), т. к. для
+  плоскости от эллипсоидальной высоты метода EPSG нет. Оси — восток (y), север (x). pyproj на всех 83 регионах
+  воспроизводит `to_local` и `to_wgs` до 1e-8 м.
+- **Trimble JobXML:** TM с k0·масштаб (масштаб сворачивается точно), горизонтальная корректировка — поворот вокруг
+  (tx, ty) без сдвига и масштаба, вертикальная — InclinedPlane / GeoidModelAndInclinedPlane (GGF по имени).
+  Знак разворота взят по Trimble Access Calculations Reference, но однозначно там не задан: при обратной трактовке
+  ошибка `2·R·sin|θ|` — она печатается вместе с контрольными точками (x, y и x′, y′ при обратном знаке) для проверки
+  на контроллере. Схема 6.30 — валидна.
+- **LandXML 1.2** параметров локализации не имеет — WKT2 передаётся в `ogcWktCode` (с предупреждением).
+- **Закрытые форматы** (Trimble .cal/.dc, Topcon .gc3/.tp3, Carlson .loc, Leica, gsimath) не пишутся — ошибка со
+  ссылкой на раздел «Что нужно для поддержки» в `docs/export.md` (какие образцы файлов и отчёты нужны).
 
 ## Малоискажающая проекция (LDP) под объект строительства
 

@@ -24,7 +24,8 @@
   `sigma_plan;sigma_height` задают σ точки (вес `p = σ0²/σ²`), использованные σ видны в таблице;
 - посмотреть невязки, нормированные поправки |w| (подсвечиваются |w| > 3.29 — вероятные грубые ошибки),
   ошибки «без точки» (leave-one-out), избыточность и предупреждения датума;
-- скачать датум в JSON и скопировать строку PROJ;
+- скачать датум в JSON и скопировать строку PROJ; экспортировать его в WKT2, PROJJSON, Trimble JobXML и LandXML
+  (под кнопками — ограничения формата, оценки по объекту и для JobXML контрольные точки);
 - пересчитать точки ГНСС → местная и обратно (кнопка «Обратно ←» проверяет пересчёт туда и обратно);
   если точки ГНСС в другой системе, чем датум, её выбирают в списке — пересчёт по 7 параметрам ГОСТ.
   Точки вне выпуклой оболочки опорных пунктов перечисляются под результатом; флажок «столбцы качества»
@@ -83,8 +84,13 @@
   `geoid` / `geoid_plane` (параметры, диагностика, leave-one-out, предупреждения, пересчёты туда и обратно);
   датум из Python со ссылкой на сетку, проверка SHA-256, переход через 180°.
 
+- экспорт (`ExportTest`): тексты WKT2, PROJJSON, JobXML, LandXML и предупреждения для 9 датумов (WGS-84 и ПЗ-90.11,
+  LDP, геоид GGF бикубический и GTX, свёртка разворота, сдвиг, без высоты, ручной пример) совпадают с Python
+  (числа — до 1e-13 относительно: atan2/hypot в libm, JVM и JS отличаются в последнем бите), контрольные точки,
+  запись чисел как `repr` в Python, ошибки закрытых форматов.
+
 Эталонные данные генерирует `python tools/gen_kotlin_reference.py`, запускать из корня репозитория
-(`ReferenceData.kt`, `DatumReferenceData.kt`, `GeoidReferenceData.kt`, `LdpReferenceData.kt`; тестовые сетки — `tests/data/geoid`). Python-эталон сам сверен с PROJ в `tests/`.
+(`ReferenceData.kt`, `DatumReferenceData.kt`, `GeoidReferenceData.kt`, `LdpReferenceData.kt`, `ExportReferenceData.kt`; тестовые сетки — `tests/data/geoid`). Python-эталон сам сверен с PROJ в `tests/`.
 
 ## API
 
@@ -101,6 +107,8 @@ val wgs = datum.toWgs(LocalPoint(x = -196396.5, y = 3263150.3, height = 224.8))
 val json = datum.toJson()                        // сохранить
 val restored = LocalizationDatum.fromJson(json)  // загрузить (в том числе датум из Python)
 val proj = datum.toProjPipeline()                // строка PROJ для QGIS / cs2cs
+val wkt = Export.export(datum, "wkt2")           // ExportResult(text, warnings): wkt2, projjson, jxl, landxml, proj
+Export.checkPoints(datum)                        // B, L → x, y для проверки JobXML на контроллере
 
 val grid = GeoidGrid.parse(bytes, "region.ggf")  // содержимое файла сетки (.ggf, .gtx, .isg)
 localize(pairs, gnssDatum = "PZ-90.11", heightModel = "geoid_plane", geoid = grid, geoidInterpolation = "bilinear")

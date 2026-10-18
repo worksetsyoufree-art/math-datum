@@ -27,6 +27,9 @@
   - LDP_CASES: подбор TM под объекты (полигоны, трассы, высоты вершин / сетка рельефа, зоны, критерии),
     статистика, сравнение с ГК и UTM, узлы карты искажений;
   - PY_LDP_JSON / PY_LDP_LOCALIZE: JSON ldp и локализация в спроектированной проекции.
+
+и .../ExportReferenceData.kt (экспорт датума, mathdatum.export — сам сверен с pyproj и схемами в tests/):
+  - EXPORT_CASES: датумы (JSON) и тексты WKT2, PROJJSON, JobXML, LandXML с предупреждениями, контрольные точки.
 """
 
 import itertools
@@ -46,6 +49,7 @@ OUT = ROOT / "kmp/localization/src/commonTest/kotlin/ru/mathdatum/localization/R
 OUT_DATUMS = OUT.with_name("DatumReferenceData.kt")
 OUT_GEOID = OUT.with_name("GeoidReferenceData.kt")
 OUT_LDP = OUT.with_name("LdpReferenceData.kt")
+OUT_EXPORT = OUT.with_name("ExportReferenceData.kt")
 GEOID_DIR = ROOT / "tests/data/geoid"
 GEOID_FILES = ["RU-MOW_truth.ggf", "RU-MOW_truth.gtx", "RU-MOW_truth.isg", "RU-MOW_bump.ggf",
                "nodata.ggf", "nodata.gtx", "nodata.isg"]
@@ -545,6 +549,73 @@ def write_ldp():
     print(f"{OUT_LDP}: {len(scale)} TM-масштабов, {len(cases)} случаев LDP")
 
 
+def kstr(text):
+    return json.dumps(text, ensure_ascii=False).replace("$", "\\$")
+
+
+def export_cases():
+    """Датумы для сверки экспорта: (имя, датум, файл сетки или None, имя системы в файле)."""
+    import copy
+    import math
+    from mathdatum.localization import LocalizationDatum
+    path = ROOT / "data/geodetic/regions/RU-MOW.json"
+    task = next(t for t in json.loads(path.read_text(encoding="utf-8"))["tasks"] if t["type"] == "site_localization")
+    pairs = [Pair(q["id"], *q["gnss_B_L_h"], *q["local_x_y_H"]) for q in task["control_points"]]
+    out = [("RU-MOW", localize(pairs), None, "Localization")]
+    out.append(("RU-MOW PZ-90.11 LDP", localize(pairs, gnss_datum="PZ-90.11", lat0=55.1, lon0=39.0, k0=1.000035,
+                                                x0=20000.0, y0=100000.0), None, "Участок \"Север\" & <1>"))
+    g = read_grid(GEOID_DIR / "RU-MOW_truth.ggf")
+    out.append(("RU-MOW geoid_plane bicubic", localize(pairs, height_model="geoid_plane", geoid=g,
+                                                       geoid_interpolation="bicubic", gnss_datum="PZ-90.11"),
+                "RU-MOW_truth.ggf", "Site"))
+    out.append(("RU-MOW geoid GTX", localize(pairs, height_model="geoid", geoid=read_grid(GEOID_DIR / "RU-MOW_truth.gtx")),
+                "RU-MOW_truth.gtx", "Site"))
+    folded = copy.deepcopy(localize(pairs))
+    folded.b = 0.0
+    out.append(("b = 0 (свёртка)", folded, None, "Localization"))
+    tiny = copy.deepcopy(localize(pairs))
+    tiny.b = tiny.a * math.tan(0.001 / 206264.806)
+    out.append(("0.001″ (свёртка с оценкой)", tiny, None, "Localization"))
+    out.append(("2 точки (shift)", localize(pairs[:2]), None, "Localization"))
+    out.append(("без высоты", localize([Pair(p.name, p.B, p.L, p.h, p.x, p.y, p.H, use="plan") for p in pairs]), None,
+                "Localization"))
+    m, th = 1.00002, math.radians(30 / 3600)
+    manual = LocalizationDatum(lat0=55.0, lon0=38.0, Nc=1000.0, Ec=-500.0, a=m * math.cos(th), b=m * math.sin(th),
+                               tx=10000.0, ty=20000.0, c0=-14.2, c1=2e-5, c2=-3e-5, k0=1.000078, x0=20000.0,
+                               y0=100000.0, gnss_datum="WGS-84",
+                               plan_hull=[[0.0, -1500.0], [2000.0, -1500.0], [2000.0, 500.0], [0.0, 500.0]])
+    out.append(("ручной пример", manual, None, "Localization"))
+    return out
+
+
+def write_export():
+    from mathdatum import export as ex
+    cases = []
+    for name, dt, grid, crs_name in export_cases():
+        texts, warns = [], []
+        for f in ("wkt2", "projjson", "jxl", "landxml"):
+            r = ex.export(dt, f, name=crs_name, timestamp="2026-10-18T12:00:00")
+            texts.append(f'"{f}" to {kstr(r.text)}')
+            warns.append(f'"{f}" to listOf({", ".join(kstr(w) for w in r.warnings)})')
+        chk = [[B, L, x, y] for _, B, L, x, y in ex.check_points(dt)]
+        chk2 = [[B, L, x, y] for _, B, L, x, y in ex.check_points(dt, -1)]
+        cases.append(f"ExportCase({kstr(name)}, {kstr(json.dumps(dt.to_dict(), ensure_ascii=False))}, "
+                     f"{kstr(grid) if grid else 'null'}, {kstr(crs_name)},\n        mapOf({', '.join(texts)}),\n"
+                     f"        mapOf({', '.join(warns)}),\n        {arr(chk)}, {arr(chk2)})")
+    OUT_EXPORT.write_text(
+        "// Сгенерировано tools/gen_kotlin_reference.py из Python-эталона (mathdatum.export). Не редактировать вручную.\n"
+        "package ru.mathdatum.localization\n\n"
+        "/** Датум (JSON Python), сетка геоида из GEOID_FILES, имя системы; тексты и предупреждения по форматам (метка\n"
+        " *  времени 2026-10-18T12:00:00); контрольные точки (B, L, x, y) и при обратном знаке разворота. */\n"
+        "class ExportCase(val name: String, val datumJson: String, val grid: String?, val crsName: String,\n"
+        "                 val texts: Map<String, String>, val warnings: Map<String, List<String>>,\n"
+        "                 val checks: List<DoubleArray>, val checksFlipped: List<DoubleArray>)\n\n"
+        + "".join(f"private fun export{i}() = {c}\n\n" for i, c in enumerate(cases))
+        + "val EXPORT_CASES: List<ExportCase> by lazy { listOf(" + ", ".join(f"export{i}()" for i in range(len(cases))) + ") }\n",
+        encoding="utf-8")
+    print(f"{OUT_EXPORT}: {len(cases)} случаев экспорта")
+
+
 def arr(m):
     return "listOf(" + ", ".join("doubleArrayOf(" + ", ".join(d(v) for v in row) + ")" for row in m) + ")"
 
@@ -580,6 +651,7 @@ def main():
     write_datums()
     write_geoid()
     write_ldp()
+    write_export()
 
 
 if __name__ == "__main__":

@@ -49,6 +49,8 @@
   tr.suspect td:first-child { color: var(--bad); font-weight: 600; }
   .warnings ul { margin: 0 0 14px; padding: 10px 14px 10px 30px; border: 1px solid var(--bad); border-radius: 8px; color: var(--text); }
   .warnings li { margin: 2px 0; }
+  .notes ul { border-color: var(--line); font-size: 14px; }
+  .notes li { overflow-wrap: anywhere; }
   .note { color: var(--bad); margin-top: 10px; font-size: 14px; }
   code.proj { display: block; white-space: pre-wrap; word-break: break-all; background: var(--mono-bg); padding: 10px; border-radius: 8px; font-size: 12.5px; }
   .hidden { display: none !important; }
@@ -129,6 +131,14 @@
       <button id="saveDatum">Скачать датум (JSON)</button>
       <button id="copyProj">Скопировать строку PROJ</button>
     </div>
+    <div class="row" id="exportRow">
+      <span class="hint">Экспорт:</span>
+      <button id="export-wkt2" title="ISO 19162:2019 — QGIS, GDAL, pyproj">WKT2</button>
+      <button id="export-projjson" title="PROJJSON — QGIS, GDAL, pyproj">PROJJSON</button>
+      <button id="export-jxl" title="Trimble JobXML 6.30: TM + горизонтальная и вертикальная корректировки">JobXML (Trimble)</button>
+      <button id="export-landxml" title="LandXML 1.2: WKT2 в ogcWktCode">LandXML</button>
+    </div>
+    <div class="warnings notes" id="exportNotes"></div>
     <p class="hint" style="margin-top:12px">Строка PROJ (ГНСС широта, долгота, h → x, y, H) для QGIS / cs2cs / pyproj:</p>
     <code class="proj" id="proj"></code>
   </section>

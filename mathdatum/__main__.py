@@ -33,6 +33,12 @@
   python -m mathdatum proj datum.json
       Напечатать строку PROJ (WGS-84 → местная) для QGIS / cs2cs / pyproj.
 
+  python -m mathdatum export datum.json --format wkt2|projjson|jxl|landxml|proj [-o файл] [--name Имя]
+      Экспорт датума: WKT2 / PROJJSON (QGIS, GDAL, pyproj), Trimble JobXML, LandXML 1.2, строка PROJ.
+      Ограничения и оценки погрешности по объекту — в stderr; для jxl — контрольные точки (B, L → x, y)
+      для проверки на контроллере. --geoid-file — имя сетки в файле (по умолчанию из датума; GGF/ISG →
+      .gtx для PROJ). Закрытые форматы (cal, dc, gc3, tp3, loc, hexml) — ошибка со ссылкой на docs/export.md.
+
   python -m mathdatum transform points.csv -o out.csv --from SK-42 --to WGS-84 [--in gk] [--out-format blh]
       Пересчёт между системами по ГОСТ 32453-2017 (цепочка по графу параметров).
       Форматы (--in, --out-format): blh — name;B;L;h (градусы, геодезическая высота),
@@ -65,7 +71,7 @@ import sys
 
 import numpy as np
 
-from . import datums, geoid as geoid_mod, ldp as ldp_mod
+from . import datums, export as export_mod, geoid as geoid_mod, ldp as ldp_mod
 from .io import read_columns, read_pairs, read_points, write_points
 from .localization import LocalizationDatum, LocalizationError, localize, suggest_exclusions
 
@@ -133,6 +139,30 @@ def load_datum(a, require_geoid=True) -> LocalizationDatum:
             raise ValueError(f"--height-model {want}: в датуме модель высоты {d.height_model}"
                              + (f" (сетка {d.geoid.file})" if d.geoid else "") + ".")
     return d
+
+
+def export_cmd(a) -> None:
+    try:
+        d = load_datum(a)
+    except geoid_mod.GeoidError:
+        d = load_datum(a, require_geoid=False)   # без сетки: файл пишется, оценки по сетке не считаются
+    from datetime import datetime, timezone
+    ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
+    r = export_mod.export(d, a.format, name=a.name, geoid_file=a.geoid_file, timestamp=ts)
+    if a.out:
+        with open(a.out, "w", encoding="utf-8", newline="\n") as f:
+            f.write(r.text)
+        print(f"Записано: {a.out} ({a.format})", file=sys.stderr)
+    else:
+        sys.stdout.write(r.text)
+    for w in r.warnings:
+        print(f"Внимание: {w}", file=sys.stderr)
+    if a.format == "jxl" and d.b != 0:
+        print("Контрольные точки (ввести B, L на контроллере и сравнить x, y; x′, y′ — при обратном знаке разворота):",
+              file=sys.stderr)
+        for (n, B, L, x, y), (*_, x2, y2) in zip(export_mod.check_points(d), export_mod.check_points(d, -1)):
+            print(f"  {n}: B = {B:.9f}, L = {L:.9f} → x = {x:.3f}, y = {y:.3f}   (x′ = {x2:.3f}, y′ = {y2:.3f})",
+                  file=sys.stderr)
 
 
 def geoid_cmd(a) -> None:
@@ -329,6 +359,14 @@ def main(argv=None):
                        help="проверить, что модель высоты датума такая")
     p = sub.add_parser("proj", help="строка PROJ для датума")
     p.add_argument("datum")
+    p = sub.add_parser("export", help="экспорт датума: wkt2, projjson, jxl, landxml, proj")
+    p.add_argument("datum")
+    p.add_argument("--format", "-f", required=True,
+                   help=f"{', '.join(export_mod.FORMATS)} (закрытые: {', '.join(export_mod.CLOSED)} — ошибка)")
+    p.add_argument("-o", "--out", help="файл (по умолчанию — stdout)")
+    p.add_argument("--name", default="Localization", help="имя системы в файле")
+    p.add_argument("--geoid", help="файл сетки геоида датума (для оценок; если он не рядом с JSON)")
+    p.add_argument("--geoid-file", help="имя сетки в экспорте (по умолчанию — из датума; GGF/ISG → .gtx)")
     p = sub.add_parser("transform", help="пересчёт точек между системами (ГОСТ 32453-2017)")
     p.add_argument("points")
     p.add_argument("-o", "--out", required=True)
@@ -401,6 +439,8 @@ def main(argv=None):
             _transform(load_datum(a), a, ("x", "y", "H"), ("B", "L", "h"), (10, 10, 4), False)
         elif a.cmd == "proj":
             print(load_datum(a, require_geoid=False).to_proj_pipeline())
+        elif a.cmd == "export":
+            export_cmd(a)
         elif a.cmd == "transform":
             transform_file(a)
         elif a.cmd == "systems":
