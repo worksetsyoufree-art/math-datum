@@ -38,6 +38,12 @@ d.save("datum.json"); d = LocalizationDatum.load("datum.json")
 
 Тесты: `pip install pytest && python -m pytest tests` (176 тестов, включая 83 региона из `data/geodetic`).
 
+## Kotlin Multiplatform
+
+`kmp/` — та же локализация на Kotlin для Android, iOS, Web и Desktop, с тестами против
+Python-эталона. Готовое веб-приложение: откройте `kmp/web-dist/index.html` в браузере.
+Подробности — в `kmp/README.md`.
+
 ## Данные
 
 - `data/nist_l2/` — эталонные МНК-подгонки NIST (прямая, плоскость, окружность, сфера, цилиндр, конус).

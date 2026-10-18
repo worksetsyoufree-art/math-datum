@@ -220,8 +220,13 @@ def localize(pairs: list[Pair], lat0: float | None = None, lon0: float | None = 
         Nh, Eh = ne(height)
         dN, dE = Nh - datum.Nc, Eh - datum.Ec
         dh = np.array([p.H - p.h for p in height])
-        A = np.column_stack([np.ones(len(height)), dN, dE])
-        if len(height) >= 3 and np.linalg.matrix_rank(A, tol=1e-3) == 3:
+        # Плоскость определена, если точки не лежат на одной линии: det ковариации (dN, dE)
+        # не мал относительно её следа (тот же критерий, что в Kotlin-модуле).
+        u, v = dN - dN.mean(), dE - dE.mean()
+        snn, see, sne = u @ u, v @ v, u @ v
+        trace, det = snn + see, snn * see - sne * sne
+        if len(height) >= 3 and trace > 0 and det > 1e-12 * trace * trace:
+            A = np.column_stack([np.ones(len(height)), dN, dE])
             datum.c0, datum.c1, datum.c2 = (float(v) for v in np.linalg.lstsq(A, dh, rcond=None)[0])
             datum.height_model = "plane"
         else:

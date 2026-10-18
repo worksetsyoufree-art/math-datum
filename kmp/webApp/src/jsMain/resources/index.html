@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Локализация ГНСС</title>
+<style>
+  :root {
+    --bg: #f7f7f5; --panel: #ffffff; --text: #1d1d1b; --muted: #6b6b66; --line: #deddd8;
+    --accent: #2f5fd0; --accent-text: #ffffff; --bad: #b3261e; --ok: #1e7a3c; --mono-bg: #f1f0ec;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161615; --panel: #1f1f1d; --text: #ecebe6; --muted: #a09f99; --line: #34332f;
+      --accent: #7a9cff; --accent-text: #10131c; --bad: #ff8a80; --ok: #7fd49a; --mono-bg: #282825;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .lead { color: var(--muted); margin: 0 0 24px; }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px; margin-bottom: 18px; }
+  h2 { font-size: 17px; margin: 0 0 10px; }
+  p.hint { color: var(--muted); margin: 0 0 10px; font-size: 13.5px; }
+  textarea { width: 100%; min-height: 190px; font: 13px/1.45 ui-monospace, Menlo, Consolas, monospace; padding: 10px;
+             border: 1px solid var(--line); border-radius: 8px; background: var(--mono-bg); color: var(--text); resize: vertical; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
+  button, label.btn { font: inherit; padding: 7px 14px; border-radius: 8px; border: 1px solid var(--line);
+                      background: var(--panel); color: var(--text); cursor: pointer; }
+  button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+  button:disabled { opacity: .5; cursor: default; }
+  input[type=file] { display: none; }
+  select { font: inherit; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--text); }
+  .error { color: var(--bad); white-space: pre-wrap; margin-top: 10px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 14px; }
+  .stat { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+  .stat .k { color: var(--muted); font-size: 12.5px; }
+  .stat .v { font-size: 17px; font-variant-numeric: tabular-nums; }
+  .table-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; font-size: 14px; }
+  th, td { text-align: right; padding: 5px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th:first-child, td:first-child, th:nth-child(2), td:nth-child(2) { text-align: left; }
+  tr.control td { color: var(--muted); }
+  td.big { color: var(--bad); font-weight: 600; }
+  code.proj { display: block; white-space: pre-wrap; word-break: break-all; background: var(--mono-bg); padding: 10px; border-radius: 8px; font-size: 12.5px; }
+  .hidden { display: none; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 760px) { .two { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Локализация ГНСС</h1>
+  <p class="lead">Пары точек WGS-84 ↔ местная система → датум → пересчёт координат. Все расчёты выполняются в браузере (Kotlin/JS, модуль <code>:localization</code>).</p>
+
+  <section>
+    <h2>1. Пары точек</h2>
+    <p class="hint">Формат: <code>name;B;L;h;x;y;H;use</code>. B, L — градусы WGS-84, h — высота ГНСС;
+      x — север, y — восток, H — местная высота. <code>use</code>: both, plan, height или none (контрольная точка).</p>
+    <textarea id="pairs" spellcheck="false"></textarea>
+    <div class="row">
+      <button class="primary" id="calc">Рассчитать локализацию</button>
+      <button id="example">Пример</button>
+      <label class="btn" for="pairsFile">Открыть CSV…</label><input type="file" id="pairsFile" accept=".csv,.txt">
+      <label class="btn" for="datumFile">Загрузить датум (JSON)…</label><input type="file" id="datumFile" accept=".json">
+    </div>
+    <div class="error" id="calcError"></div>
+  </section>
+
+  <section id="resultSection" class="hidden">
+    <h2>2. Датум</h2>
+    <div class="grid" id="stats"></div>
+    <div class="table-wrap"><table id="residuals"></table></div>
+    <div class="row">
+      <button id="saveDatum">Скачать датум (JSON)</button>
+      <button id="copyProj">Скопировать строку PROJ</button>
+    </div>
+    <p class="hint" style="margin-top:12px">Строка PROJ (WGS-84 широта, долгота, h → x, y, H) для QGIS / cs2cs / pyproj:</p>
+    <code class="proj" id="proj"></code>
+  </section>
+
+  <section id="transformSection" class="hidden">
+    <h2>3. Пересчёт точек</h2>
+    <div class="row" style="margin-top:0;margin-bottom:10px">
+      <select id="direction">
+        <option value="toLocal">WGS-84 (name;B;L;h) → местная (name;x;y;H)</option>
+        <option value="toWgs">Местная (name;x;y;H) → WGS-84 (name;B;L;h)</option>
+      </select>
+    </div>
+    <div class="two">
+      <textarea id="input" spellcheck="false"></textarea>
+      <textarea id="output" spellcheck="false" readonly></textarea>
+    </div>
+    <div class="row">
+      <button class="primary" id="transform">Пересчитать</button>
+      <button id="swap">Обратно ←</button>
+      <button id="saveOutput">Скачать результат (CSV)</button>
+    </div>
+    <div class="error" id="transformError"></div>
+  </section>
+</main>
+<script src="webApp.js"></script>
+</body>
+</html>
