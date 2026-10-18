@@ -7,6 +7,9 @@
      разворот, масштаб и наклон высот, их поглощают подобие и плоскость высот (разница вариантов
      на участке 5 км — ≤ 1 мм для СК-42 со сдвигом ~160 м, ~1 мкм для WGS-84 / ГСК-2011),
      а лишний пересчёт добавил бы погрешность самих параметров (для СК-42 — метры).
+     Рабочую проекцию можно задать (projection: спроектированная LDP из mathdatum.ldp или
+     datums.TransverseMercator; либо lat0, lon0, k0, x0, y0, ellipsoid): с LDP «плоскость = местность»
+     масштаб подобия остаётся ≈ 1 и не зависит от высоты участка.
   2. План — преобразование подобия (4 параметра) относительно центроида:
         [x, y] = [tx, ty] + [[a, -b], [b, a]] · ([N, E] - [Nc, Ec])
      масштаб = sqrt(a² + b²), разворот = atan2(b, a).
@@ -145,6 +148,9 @@ class LocalizationDatum:
     c1: float
     c2: float
     ellipsoid: str = WGS84  # эллипсоид рабочей проекции в синтаксисе PROJ
+    k0: float = 1.0         # масштаб рабочей проекции на осевом меридиане (LDP; в старых JSON нет → 1)
+    x0: float = 0.0         # ложные смещения рабочей проекции: на север и на восток, м
+    y0: float = 0.0
     gnss_datum: str | None = None  # система ГНСС-координат (код datums.SYSTEMS); None — старый JSON
     plan_model: str = "similarity"
     height_model: str = "plane"   # итоговая: plane | shift | geoid_plane | geoid | none
@@ -216,7 +222,9 @@ class LocalizationDatum:
 
     @property
     def projection(self) -> str:
-        return f"+proj=tmerc +lat_0={self.lat0!r} +lon_0={self.lon0!r} +k=1 +x_0=0 +y_0=0 {self.ellipsoid} +units=m"
+        k, x0, y0 = ("1", "0", "0") if (self.k0, self.x0, self.y0) == (1.0, 0.0, 0.0) else \
+            (_num(self.k0), _num(self.y0), _num(self.x0))
+        return f"+proj=tmerc +lat_0={self.lat0!r} +lon_0={self.lon0!r} +k={k} +x_0={x0} +y_0={y0} {self.ellipsoid} +units=m"
 
     def _proj(self) -> Transformer:
         return Transformer.from_pipeline(
@@ -385,11 +393,17 @@ class LocalizationError(ValueError):
     pass
 
 
+def _num(v: float) -> str:
+    v = float(v)
+    return str(int(v)) if v == math.floor(v) and abs(v) < 1e15 else repr(v)
+
+
 def localize(pairs: list[Pair], lat0: float | None = None, lon0: float | None = None,
              ellipsoid: str | None = None, sigma_plan: float = 0.02, sigma_height: float = 0.03,
              w_limit: float = 3.29, max_scale_ppm: float = 200.0,
              max_rotation_deg: float = 3.0, gnss_datum: str = "WGS-84", height_model: str = "plane",
-             geoid=None, geoid_interpolation: str = "bilinear") -> LocalizationDatum:
+             geoid=None, geoid_interpolation: str = "bilinear", projection=None, k0: float = 1.0,
+             x0: float = 0.0, y0: float = 0.0) -> LocalizationDatum:
     """Вычисляет датум локализации по парам точек.
 
     lat0, lon0 — центр рабочей проекции; по умолчанию — среднее по всем используемым точкам.
@@ -402,11 +416,17 @@ def localize(pairs: list[Pair], lat0: float | None = None, lon0: float | None = 
     height_model — plane (по умолчанию, без геоида), geoid (H = h − N + c0) или geoid_plane
     (H = h − N + c0 + c1·dN + c2·dE); для двух последних geoid — сетка (GeoidGrid или путь к .gtx/.isg/.tif)
     на эллипсоиде системы gnss_datum, geoid_interpolation — bilinear или bicubic.
+    projection — рабочая проекция целиком (ldp.LdpProjection типа tmerc или datums.TransverseMercator):
+    заменяет lat0, lon0, k0, x0, y0 и ellipsoid; k0, x0 (север), y0 (восток) — её масштаб и смещения.
     """
     system = datums.get_system(gnss_datum)
+    if projection is not None:
+        tm = projection.tm() if hasattr(projection, "tm") else projection
+        lat0, lon0, k0, x0, y0 = tm.lat0, tm.lon0, tm.k0, tm.x0, tm.y0
+        ellipsoid = tm.ellipsoid.proj
     grid = _geoid_setup(height_model, geoid, geoid_interpolation)
     datum = _fit(pairs, lat0, lon0, ellipsoid or system.ellipsoid.proj, sigma_plan, sigma_height,
-                 height_model, grid, geoid_interpolation)
+                 height_model, grid, geoid_interpolation, (k0, x0, y0))
     datum.gnss_datum = system.id
     _diagnose(datum, pairs, sigma_plan, sigma_height, w_limit, max_scale_ppm, max_rotation_deg)
     return datum
@@ -448,7 +468,7 @@ def _weights(points, sigma0: float, part: str) -> np.ndarray:
 
 
 def _fit(pairs, lat0, lon0, ellipsoid, sigma_plan, sigma_height, height_model="plane", grid=None,
-         interpolation="bilinear") -> LocalizationDatum:
+         interpolation="bilinear", offsets=(1.0, 0.0, 0.0)) -> LocalizationDatum:
     """Подгонка параметров (взвешенный МНК) и невязки, без диагностики."""
     plan = [p for p in pairs if p.in_plan]
     height = [p for p in pairs if p.in_height]
@@ -460,8 +480,11 @@ def _fit(pairs, lat0, lon0, ellipsoid, sigma_plan, sigma_height, height_model="p
     if lon0 is None:
         lon0 = float(np.mean([p.L for p in used]))
 
+    k0, x0, y0 = (float(v) for v in offsets)
+    if not k0 > 0:
+        raise LocalizationError(f"Масштаб рабочей проекции k0 = {k0}: ожидается > 0.")
     datum = LocalizationDatum(lat0=lat0, lon0=lon0, Nc=0, Ec=0, a=1, b=0, tx=0, ty=0, c0=0, c1=0, c2=0,
-                              ellipsoid=ellipsoid)
+                              ellipsoid=ellipsoid, k0=k0, x0=x0, y0=y0)
     if grid is not None:
         datum.geoid = GeoidRef(grid.name, grid.sha256, interpolation)
         datum._grid = grid
@@ -595,7 +618,7 @@ def _loo(datum: LocalizationDatum, pairs: list[Pair], i: int, part: str):
     try:
         d = _fit(_without(pairs, i, part), datum.lat0, datum.lon0, datum.ellipsoid,
                  datum.sigma0_plan, datum.sigma0_height, _height_request(datum), datum._grid,
-                 datum.geoid.interpolation if datum.geoid else "bilinear")
+                 datum.geoid.interpolation if datum.geoid else "bilinear", (datum.k0, datum.x0, datum.y0))
     except LocalizationError:
         return None
     r = d.residuals[i]

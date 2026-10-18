@@ -8,11 +8,13 @@
   :root {
     --bg: #f7f7f5; --panel: #ffffff; --text: #1d1d1b; --muted: #6b6b66; --line: #deddd8;
     --accent: #2f5fd0; --accent-text: #ffffff; --bad: #b3261e; --ok: #1e7a3c; --mono-bg: #f1f0ec;
+    --map-neg: #2a78d6; --map-pos: #e34948; --map-mid: #f0efec;
   }
   @media (prefers-color-scheme: dark) {
     :root {
       --bg: #161615; --panel: #1f1f1d; --text: #ecebe6; --muted: #a09f99; --line: #34332f;
       --accent: #7a9cff; --accent-text: #10131c; --bad: #ff8a80; --ok: #7fd49a; --mono-bg: #282825;
+      --map-neg: #3987e5; --map-pos: #e66767; --map-mid: #383835;
     }
   }
   * { box-sizing: border-box; }
@@ -53,6 +55,19 @@
   #geoidInfo { overflow-wrap: anywhere; min-width: 0; flex: 1 1 220px; font-size: 13px; color: var(--muted); }
   .two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
   @media (max-width: 760px) { .two { grid-template-columns: 1fr; } }
+  input[type=number] { font: inherit; width: 7.5em; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--text); }
+  .map-wrap { position: relative; margin: 6px 0 4px; }
+  #ldpMap { display: block; width: 100%; height: auto; max-height: 560px; border: 1px solid var(--line); border-radius: 8px; background: var(--map-mid); touch-action: none; }
+  #ldpMap .outline { fill: none; stroke: var(--text); stroke-width: 2; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
+  #ldpMap .zb { stroke: var(--text); stroke-width: 1.5; stroke-dasharray: 6 4; vector-effect: non-scaling-stroke; }
+  #ldpMap .zbp { fill: var(--panel); stroke: var(--text); stroke-width: 2; vector-effect: non-scaling-stroke; }
+  #ldpTip { position: absolute; pointer-events: none; background: var(--panel); color: var(--text); border: 1px solid var(--line);
+            border-radius: 6px; padding: 4px 8px; font-size: 12.5px; white-space: nowrap; font-variant-numeric: tabular-nums; display: none; }
+  .legend { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .legend .bar { flex: 1 1 180px; height: 12px; border-radius: 3px; min-width: 140px; }
+  #ldpCompare th:first-child, #ldpCompare td:first-child { text-align: left; }
+  #ldpCompare th:nth-child(2), #ldpCompare td:nth-child(2) { text-align: right; }
+  td.fit { color: var(--ok); font-weight: 600; }
 </style>
 </head>
 <body>
@@ -86,6 +101,12 @@
         <option value="bicubic">бикубическая</option>
       </select>
       <span class="hint" id="geoidInfo">сетка не загружена; файл читается в браузере и никуда не отправляется</span>
+    </div>
+    <div class="row">
+      <label for="workProj">Рабочая проекция:</label>
+      <select id="workProj" title="своя проекция (LDP, раздел 5) — масштаб подобия остаётся ≈ 1">
+        <option value="">TM по центру точек, k = 1</option>
+      </select>
     </div>
     <div class="row">
       <button class="primary" id="calc">Рассчитать локализацию</button>
@@ -156,6 +177,50 @@
     </div>
     <div class="hint" id="sysNote" style="margin-top:10px"></div>
     <div class="error" id="sysError"></div>
+  </section>
+  <section id="ldpSection">
+    <h2>5. Проектирование системы координат (малоискажающая проекция, LDP)</h2>
+    <p class="hint">Подбор поперечного Меркатора под объект так, чтобы расстояние на плане равнялось расстоянию на местности:
+      искажение δ = k·R/(R + h) − 1 (k — масштаб проекции, R — средний радиус кривизны, h — эллипсоидальная высота) → 0;
+      1 ppm = 1 мм/км. Контур: <code>name;B;L[;h | ;H]</code> — полигон, если первая вершина повторена в конце, иначе трасса;
+      столбец h — эллипсоидальные высоты вершин, H — нормальные (без геоида приняты за эллипсоидальные). Без столбца — средняя высота.</p>
+    <textarea id="ldpContour" spellcheck="false"></textarea>
+    <div class="row">
+      <label for="ldpKind">Объект:</label>
+      <select id="ldpKind"><option value="">по файлу</option><option value="polygon">полигон (площадка)</option><option value="polyline">полилиния (трасса)</option></select>
+      <label for="ldpHeight">средняя высота, м:</label><input type="number" id="ldpHeight" step="any" placeholder="из h/H">
+      <label for="ldpTol">допуск, ppm:</label><input type="number" id="ldpTol" value="20" min="0.1" step="any">
+    </div>
+    <div class="row">
+      <label for="ldpDatum">Система (эллипсоид):</label><select id="ldpDatum"></select>
+      <label for="ldpCriterion">критерий:</label>
+      <select id="ldpCriterion"><option value="minimax">минимакс — min max|δ|</option><option value="rms">СКО — min RMS δ</option></select>
+    </div>
+    <div class="row">
+      <button class="primary" id="ldpCalc">Подобрать проекцию</button>
+      <button id="ldpExSite">Пример: площадка</button>
+      <button id="ldpExRoute">Пример: трасса 150 км</button>
+      <label class="btn" for="ldpFile">Открыть CSV…</label><input type="file" id="ldpFile" accept=".csv,.txt">
+    </div>
+    <div class="error" id="ldpError"></div>
+    <div id="ldpResult" class="hidden">
+      <div class="grid" id="ldpStats" style="margin-top:14px"></div>
+      <div class="warnings" id="ldpWarnings"></div>
+      <div class="table-wrap"><table id="ldpCompare"></table></div>
+      <div id="ldpZones"></div>
+      <p class="hint" style="margin-top:12px">Карта искажений δ, ppm (наведите или коснитесь — значение в точке); линия — контур объекта, штрих — границы зон:</p>
+      <div class="map-wrap"><svg id="ldpMap" role="img" aria-label="Карта искажений длины"></svg><div id="ldpTip"></div></div>
+      <div class="legend" id="ldpLegend"></div>
+      <p class="hint" style="margin-top:12px">Строка PROJ (B, L → x север, y восток; в PROJ x_0 — восток):</p>
+      <code class="proj" id="ldpProj"></code>
+      <div class="row">
+        <button id="ldpSave">Скачать проекцию (JSON)</button>
+        <button id="ldpCopy">Скопировать строку PROJ</button>
+        <button id="ldpUse">Использовать в локализации (раздел 1)</button>
+        <select id="ldpUseZone" class="hidden" title="зона для рабочей проекции"></select>
+      </div>
+      <div class="note" id="ldpUseNote" style="color:var(--muted)"></div>
+    </div>
   </section>
 </main>
 <script src="webApp.js"></script>

@@ -107,6 +107,87 @@ class TransverseMercator(val ellipsoid: Ellipsoid, val lat0: Double, val lon0: D
         return phi.toDegrees() to (lon0 + dLon.toDegrees())
     }
 
+    /**
+     * Масштаб в точке при k0 = 1 (Karney 2011, (25)): k = (A/a)·√(1 + (1 − e²)·tg²B) / √(τ'² + cos²l) · √(p² + q²),
+     * p = 1 + Σ 2j·αj·cos 2jξ'·ch 2jη', q = Σ 2j·αj·sin 2jξ'·sh 2jη'; у осевого меридиана k ≈ 1 + y²/(2R²).
+     */
+    fun scale(lat: Double, lon: Double): Double = factors(lat, lon).first
+
+    /** Сближение меридианов γ, градусы (как meridian_convergence в PROJ): γ = atan2(q, p) + atan2(τ'·tg l, √(1 + τ'²)). */
+    fun convergence(lat: Double, lon: Double): Double = factors(lat, lon).second
+
+    /**
+     * Масштаб (k0 = 1) во многих точках при одном осевом меридиане — для подбора LDP: части, зависящие только от
+     * широты, считаются заранее ([ScaleKernel]), кратные углы — рекуррентно; отличие от [scale] ~1e-16.
+     */
+    internal fun scales(kernel: ScaleKernel, lon: DoubleArray, out: DoubleArray) {
+        val ka = bigA / ellipsoid.a
+        val al = alpha
+        for (i in lon.indices) {
+            val t = kernel.t[i]
+            val lam = (lon[i] - lon0).toRadians()
+            val c = cos(lam)
+            val r2 = t * t + c * c
+            val xiP = atan2(t, c)
+            val etaP = asinh(sin(lam) / sqrt(r2))
+            val c2 = cos(2 * xiP)
+            val s2 = sin(2 * xiP)
+            val ex = kotlin.math.exp(2 * etaP)
+            var cj = 1.0; var sj = 0.0; var ej = 1.0
+            var p = 1.0
+            var q = 0.0
+            for (j in 1..6) {
+                val cn = cj * c2 - sj * s2
+                sj = sj * c2 + cj * s2
+                cj = cn
+                ej *= ex
+                val ch = (ej + 1 / ej) / 2
+                val sh = (ej - 1 / ej) / 2
+                p += 2 * j * al[j - 1] * cj * ch
+                q += 2 * j * al[j - 1] * sj * sh
+            }
+            out[i] = ka * kernel.q1[i] / sqrt(r2) * sqrt(p * p + q * q)
+        }
+    }
+
+    /** Заранее вычисленное для широт: τ' и √(1 + (1 − e²)·tg²B). */
+    internal class ScaleKernel(tm: TransverseMercator, lat: DoubleArray) {
+        val t = DoubleArray(lat.size)
+        val q1 = DoubleArray(lat.size)
+
+        init {
+            val e = tm.e
+            val e2 = tm.ellipsoid.f * (2 - tm.ellipsoid.f)
+            for (i in lat.indices) {
+                val phi = lat[i].toRadians()
+                t[i] = sinh(atanh(sin(phi)) - e * atanh(e * sin(phi)))
+                val tp = tan(phi)
+                q1[i] = sqrt(1 + (1 - e2) * tp * tp)
+            }
+        }
+    }
+
+    private fun factors(lat: Double, lon: Double): Pair<Double, Double> {
+        val phi = lat.toRadians()
+        val lam = (lon - lon0).toRadians()
+        val t = sinh(atanh(sin(phi)) - e * atanh(e * sin(phi)))
+        val c = cos(lam)
+        val xiP = atan2(t, c)
+        val etaP = asinh(sin(lam) / sqrt(t * t + c * c))
+        var p = 1.0
+        var q = 0.0
+        for (j in 1..6) {
+            val a = alpha[j - 1]
+            p += 2 * j * a * cos(2 * j * xiP) * cosh(2 * j * etaP)
+            q += 2 * j * a * sin(2 * j * xiP) * sinh(2 * j * etaP)
+        }
+        val e2 = ellipsoid.f * (2 - ellipsoid.f)
+        val tp = tan(phi)
+        val k = bigA / ellipsoid.a * sqrt(1 + (1 - e2) * tp * tp) / sqrt(t * t + c * c) * sqrt(p * p + q * q)
+        val gamma = atan2(q, p) + atan2(t * tan(lam), sqrt(1 + t * t))
+        return k to gamma.toDegrees()
+    }
+
     private fun forwardRaw(lat: Double, lon: Double): Pair<Double, Double> {
         val phi = lat.toRadians()
         val lam = (lon - lon0).toRadians()

@@ -20,6 +20,12 @@ import ru.mathdatum.localization.GaussKruger
 import ru.mathdatum.localization.GeodeticPoint
 import ru.mathdatum.localization.Xyz
 import ru.mathdatum.localization.Exclusion
+import ru.mathdatum.localization.Ldp
+import ru.mathdatum.localization.LdpContour
+import ru.mathdatum.localization.LdpHeights
+import ru.mathdatum.localization.LdpProjection
+import ru.mathdatum.localization.LdpResult
+import ru.mathdatum.localization.LdpStats
 import ru.mathdatum.localization.LocalizationDatum
 import ru.mathdatum.localization.PointQuality
 import ru.mathdatum.localization.Use
@@ -27,6 +33,10 @@ import ru.mathdatum.localization.fixed
 import ru.mathdatum.localization.localize
 import ru.mathdatum.localization.suggestExclusions
 import kotlin.math.abs
+import kotlin.math.floor
+import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.roundToInt
 
 private const val EXAMPLE_PAIRS = """name;B;L;h;x;y;H;use
 R1;55.0527657163;39.2668049556;215.5380;-200498.0340;3258049.8198;209.3761;both
@@ -54,7 +64,32 @@ T2;59.9390000000;30.3158000000;10.0000
 T3;43.1155000000;131.8855000000;30.0000
 """
 
+private const val EXAMPLE_LDP_SITE = """name;B;L;h
+S1;54.99009100;39.12939669;212.0
+S2;54.99456334;39.42624329;248.0
+S3;55.09785436;39.43447817;236.0
+S4;55.16976180;39.39554212;205.0
+S5;55.16074290;39.11310774;196.0
+S6;55.07090637;39.10563237;221.0
+S1;54.99009100;39.12939669;212.0
+"""
+
+private const val EXAMPLE_LDP_ROUTE = """name;B;L;H
+PK1;55.30327395;37.21906419;160.0
+PK2;55.32440814;37.61230151;185.0
+PK3;55.31306751;38.08501346;230.0
+PK4;55.29099225;38.47870279;210.0
+PK5;55.30357789;38.87236807;175.0
+PK6;55.31938433;39.26636078;150.0
+PK7;55.30327395;39.58093581;140.0
+"""
+
 private var datum: LocalizationDatum? = null
+/** Последняя спроектированная LDP (раздел 5) и проекции, доступные как рабочие в локализации. */
+private var ldpResult: LdpResult? = null
+private var workProjections: List<Pair<String, LdpProjection>> = emptyList()
+/** Обработчик подсказки карты искажений (обновляется при перерисовке). */
+private var mapHover: ((org.w3c.dom.events.Event) -> Unit)? = null
 /** Загруженная сетка геоида (файл читается в браузере, на сервер не отправляется). */
 private var geoidGrid: GeoidGrid? = null
 /** Датум со ссылкой на сетку, ожидающий загрузки этой сетки. */
@@ -88,6 +123,7 @@ fun main() {
             .joinToString("") { (v, n) -> "<option value=\"$v\">$n</option>" }
     }
     el<HTMLTextAreaElement>("sysInput").value = EXAMPLE_SK42
+    initLdp()
     el<HTMLButtonElement>("sysTransform").onclick = { transformSystems(); null }
     el<HTMLButtonElement>("sysSwap").onclick = { swapSystems(); null }
     el<HTMLSelectElement>("gnssDatum").onchange = { calculate(); null }
@@ -168,9 +204,17 @@ private fun calculate() {
         val grid = if (model == "plane") null else geoidGrid
             ?: throw IllegalArgumentException("Модель высоты $model: загрузите сетку геоида (.ggf, .gtx или .isg).")
         val interp = el<HTMLSelectElement>("geoidInterp").value
-        val d = localize(pairs, gnssDatum = gnss, heightModel = model, geoid = grid, geoidInterpolation = interp)
+        // Рабочая проекция: по умолчанию TM в центре точек (k = 1), либо спроектированная LDP (раздел 5).
+        val wp = el<HTMLSelectElement>("workProj").value.toIntOrNull()?.let { workProjections.getOrNull(it)?.second }
+        val d = localize(
+            pairs, wp?.lat0, wp?.lon0, wp?.system?.ellipsoid?.proj, gnssDatum = gnss, heightModel = model, geoid = grid,
+            geoidInterpolation = interp, k0 = wp?.k0 ?: 1.0, x0 = wp?.x0 ?: 0.0, y0 = wp?.y0 ?: 0.0,
+        )
         show(d, if (d.residuals.any { it.suspect }) {
-            suggestExclusions(pairs, gnssDatum = gnss, heightModel = model, geoid = grid, geoidInterpolation = interp)
+            suggestExclusions(
+                pairs, gnssDatum = gnss, heightModel = model, geoid = grid, geoidInterpolation = interp, ellipsoid = wp?.system?.ellipsoid?.proj,
+                lat0 = wp?.lat0, lon0 = wp?.lon0, k0 = wp?.k0 ?: 1.0, x0 = wp?.x0 ?: 0.0, y0 = wp?.y0 ?: 0.0,
+            )
         } else emptyList())
         err.textContent = ""
     } catch (e: Throwable) {
@@ -196,6 +240,8 @@ private fun show(d: LocalizationDatum, exclusions: List<Exclusion> = emptyList()
         stat("СКО в плане", d.rmsPlan?.let { "${(it * 1000).fixed(1)} мм" } ?: "—"),
         stat("СКО по высоте", d.rmsHeight?.let { "${(it * 1000).fixed(1)} мм" } ?: "—"),
         stat("Масштаб", "${d.scalePpm.fixed(2)} ppm"),
+        stat("Рабочая проекция", if (d.k0 == 1.0 && d.x0 == 0.0 && d.y0 == 0.0) "TM по центру точек, k = 1"
+            else "TM: L0 = ${d.lon0}°, k0 = ${d.k0}, x0 = ${d.x0.fixed(0)}, y0 = ${d.y0.fixed(0)}"),
         stat("Разворот", "${d.rotationArcsec.fixed(2)}″"),
         stat("Сдвиг высоты c0", "${d.c0.fixed(4)} м"),
         stat("Наклон N / E", "${(d.c1 * 1e6).fixed(2)} / ${(d.c2 * 1e6).fixed(2)} мм/км"),
@@ -403,6 +449,223 @@ private fun download(name: String, text: String, type: String) {
     a.click()
     a.remove()
     URL.revokeObjectURL(url)
+}
+
+// --- 5. Проектирование малоискажающей проекции (LDP) ---
+
+private fun initLdp() {
+    el<HTMLTextAreaElement>("ldpContour").value = EXAMPLE_LDP_SITE
+    fillSystems("ldpDatum", Ldp.DEFAULT_DATUM)
+    el<HTMLButtonElement>("ldpCalc").onclick = { designLdp(); null }
+    el<HTMLButtonElement>("ldpExSite").onclick = {
+        el<HTMLTextAreaElement>("ldpContour").value = EXAMPLE_LDP_SITE; el<HTMLInputElement>("ldpHeight").value = ""; designLdp(); null
+    }
+    el<HTMLButtonElement>("ldpExRoute").onclick = {
+        el<HTMLTextAreaElement>("ldpContour").value = EXAMPLE_LDP_ROUTE; el<HTMLInputElement>("ldpHeight").value = ""; designLdp(); null
+    }
+    readFile("ldpFile") { el<HTMLTextAreaElement>("ldpContour").value = it; designLdp() }
+    el<HTMLButtonElement>("ldpSave").onclick = { ldpResult?.let { download("ldp.json", it.toJson(), "application/json") }; null }
+    el<HTMLButtonElement>("ldpCopy").onclick = {
+        ldpResult?.let { r -> window.navigator.clipboard.writeText(selectedLdp(r).proj) }; null
+    }
+    el<HTMLButtonElement>("ldpUse").onclick = { useLdp(); null }
+    el<HTMLSelectElement>("ldpUseZone").onchange = { ldpResult?.let { el<HTMLElement>("ldpProj").textContent = selectedLdp(it).proj }; null }
+    // Тёмная тема: цвета карты берутся из CSS-переменных — перерисовать при смене схемы.
+    window.matchMedia("(prefers-color-scheme: dark)").addListener { ldpResult?.let { drawLdpMap(it) } }
+}
+
+/** Проекция для копирования / локализации: основная, а если она не укладывается — выбранная зона. */
+private fun selectedLdp(r: LdpResult): LdpProjection {
+    if (r.zones.isEmpty() || r.fits) return r.projection
+    val i = el<HTMLSelectElement>("ldpUseZone").value.toIntOrNull() ?: 0
+    return r.zones.getOrNull(i)?.projection ?: r.zones[0].projection
+}
+
+private fun designLdp() {
+    val err = el<HTMLElement>("ldpError")
+    try {
+        val kind = el<HTMLSelectElement>("ldpKind").value.ifEmpty { null }
+        val contour = LdpContour.parseCsv(el<HTMLTextAreaElement>("ldpContour").value, kind)
+        val hText = el<HTMLInputElement>("ldpHeight").value.trim().replace(',', '.')
+        val h = if (hText.isEmpty()) null else hText.toDoubleOrNull() ?: throw IllegalArgumentException("Средняя высота «$hText» — не число.")
+        val tol = el<HTMLInputElement>("ldpTol").value.replace(',', '.').toDoubleOrNull() ?: throw IllegalArgumentException("Допуск — не число.")
+        // Высоты вершин из файла важнее средней; средняя — если столбца нет.
+        val heights = LdpHeights(constant = h)
+        val src = if (contour.hasHeights) contour else LdpContour(contour.kind, contour.vertices.map { it.copy(h = null) })
+        val r = Ldp.design(src, heights, el<HTMLSelectElement>("ldpDatum").value, tol, el<HTMLSelectElement>("ldpCriterion").value)
+        ldpResult = r
+        showLdp(r)
+        err.textContent = ""
+    } catch (e: Throwable) {
+        err.textContent = e.message ?: e.toString()
+    }
+}
+
+private fun dms(v: Double): String {
+    val s = if (v < 0) "−" else ""
+    val t = (abs(v) * 360000).roundToInt()
+    val d = t / 360000
+    val m = (t % 360000) / 6000
+    val sec = (t % 6000) / 100.0
+    return "$s$d°${m.toString().padStart(2, '0')}′${sec.fixed(2).padStart(5, '0')}″"
+}
+
+private fun ppm(v: Double) = (if (v > 0) "+" else "") + v.fixed(2)
+
+private fun showLdp(r: LdpResult) {
+    el<HTMLElement>("ldpResult").classList.remove("hidden")
+    val p = r.projection
+    val o = r.objectInfo
+    fun stat(k: String, v: String) = "<div class=\"stat\"><div class=\"k\">$k</div><div class=\"v\">$v</div></div>"
+    val size = if (r.contour.kind == "polygon") "${((o["area_m2"] as Double) / 1e6).fixed(2)} км²" else "${((o["length_m"] as Double) / 1e3).fixed(2)} км"
+    el<HTMLElement>("ldpStats").innerHTML = listOf(
+        stat("Итог", if (r.fits) "укладывается в ±${r.tolerance.fixed(1)} ppm" else "одна проекция не укладывается — ${r.zones.size} зон(ы)"),
+        stat("Осевой меридиан L0", "${p.lon0.fixed(6)}° (${dms(p.lon0)})"),
+        stat("Широта начала B0", "${p.lat0.fixed(6)}° (${dms(p.lat0)})"),
+        stat("Масштаб k0", "${p.k0} (${ppm((p.k0 - 1) * 1e6).replace(".00", ".0")} ppm)"),
+        stat("Ложные x0 (север) / y0 (восток)", "${p.x0.fixed(0)} / ${p.y0.fixed(0)} м"),
+        stat("max|δ| / RMS", "${r.stats.maxAbsPpm.fixed(2)} / ${r.stats.rmsPpm.fixed(2)} ppm"),
+        stat("Доля ${if (r.stats.measure == "area") "площади" else "длины"} в допуске", "${(r.stats.shareInTolerance * 100).fixed(1)} %"),
+        stat("Объект", "${if (r.contour.kind == "polygon") "площадка" else "трасса"}, $size, h ${(o["h_min"] as Double).fixed(0)}…${(o["h_max"] as Double).fixed(0)} м"),
+        stat("Система", Datums.system(r.datum).name + " (" + Datums.system(r.datum).ellipsoid.name + ")"),
+    ).joinToString("")
+    el<HTMLElement>("ldpWarnings").innerHTML =
+        if (r.warnings.isEmpty()) "" else "<ul>" + r.warnings.joinToString("") { "<li>${escape(it)}</li>" } + "</ul>"
+    fun row(name: String, s: LdpStats) = "<tr><td>${escape(name)}</td><td>${ppm(s.minPpm)}</td><td>${ppm(s.maxPpm)}</td><td>${ppm(s.meanPpm)}</td>" +
+        "<td>${s.rmsPpm.fixed(2)}</td><td${if (s.maxAbsPpm <= r.tolerance) " class=\"fit\"" else " class=\"big\""}>${s.maxAbsPpm.fixed(2)}</td>" +
+        "<td>${(s.shareInTolerance * 100).fixed(1)} %</td></tr>"
+    el<HTMLTableElement>("ldpCompare").innerHTML = "<tr><th>Проекция</th><th>min</th><th>max</th><th>mean</th><th>RMS</th><th>max|δ|</th><th>в допуске</th></tr>" +
+        row("LDP" + if (r.fits) "" else " (одна зона)", r.stats) +
+        r.zones.joinToString("") { row("LDP: ${it.name}", it.stats) } +
+        row("ГК 6°, зона " + r.gk.zones.joinToString(","), r.gk.stats) +
+        row("UTM, зона " + r.utm.zones.joinToString(","), r.utm.stats)
+    el<HTMLElement>("ldpZones").innerHTML = if (r.zones.isEmpty()) "" else {
+        val unit = if (r.zoneKey == "chainage") "пикетаж" else "восток (вспом.)"
+        "<p class=\"hint\" style=\"margin-top:10px\">Предлагаемые зоны (минимакс, каждая ≤ ±${r.tolerance.fixed(1)} ppm):</p><ul>" +
+            r.zones.joinToString("") { z ->
+                val q = z.projection
+                "<li>${z.name}: $unit ${(z.start / 1e3).fixed(2)}…${(z.end / 1e3).fixed(2)} км; L0 = ${q.lon0.fixed(6)}°, k0 = ${q.k0}, " +
+                    "x0 = ${q.x0.fixed(0)}, y0 = ${q.y0.fixed(0)}; δ ${ppm(z.stats.minPpm)}…${ppm(z.stats.maxPpm)} ppm" +
+                    (z.boundary?.let { b -> "; граница: " + b.joinToString("; ") { "B ${it.first.fixed(6)}, L ${it.second.fixed(6)}" } } ?: "") + "</li>"
+            } + "</ul>"
+    }
+    val zs = el<HTMLSelectElement>("ldpUseZone")
+    zs.innerHTML = r.zones.mapIndexed { i, z -> "<option value=\"$i\">${z.name}</option>" }.joinToString("")
+    zs.classList.toggle("hidden", r.zones.isEmpty() || r.fits)
+    el<HTMLElement>("ldpProj").textContent = selectedLdp(r).proj
+    el<HTMLElement>("ldpUseNote").textContent = ""
+    drawLdpMap(r)
+}
+
+/** Рабочая проекция для раздела 1: основная LDP или выбранная зона. */
+private fun useLdp() {
+    val r = ldpResult ?: return
+    val p = selectedLdp(r)
+    val label = if (r.zones.isEmpty() || r.fits) "LDP" else "LDP, " + r.zones[el<HTMLSelectElement>("ldpUseZone").value.toIntOrNull() ?: 0].name
+    workProjections = workProjections.filter { it.first != label } + (label to p)
+    val s = el<HTMLSelectElement>("workProj")
+    s.innerHTML = "<option value=\"\">TM по центру точек, k = 1</option>" + workProjections.mapIndexed { i, (n, q) ->
+        "<option value=\"$i\">${escape(n)}: L0 = ${q.lon0.fixed(4)}°, k0 = ${q.k0}</option>"
+    }.joinToString("")
+    s.value = (workProjections.size - 1).toString()
+    el<HTMLElement>("ldpUseNote").textContent = "Выбрана рабочей проекцией в разделе 1 ($label); датум пересчитан."
+    calculate()
+}
+
+private fun cssColor(name: String): IntArray {
+    val v = window.getComputedStyle(document.documentElement!!).getPropertyValue(name).trim().removePrefix("#")
+    if (v.length != 6) return intArrayOf(128, 128, 128)
+    return IntArray(3) { v.substring(2 * it, 2 * it + 2).toInt(16) }
+}
+
+/**
+ * Цвет δ: серый в нуле → синий (план короче местности) / красный (длиннее). Если вся карта в допуске (lim ≤ tol),
+ * шкала растягивается на ±lim и не доходит до полной насыщенности (75 %); иначе в допуске — до 55 %, к 2·допуска — полная.
+ */
+private fun mapColor(v: Double, tol: Double, neg: IntArray, pos: IntArray, mid: IntArray, lim: Double = 2 * tol): String {
+    val f = if (lim <= tol) 0.75 * min(abs(v) / lim, 1.0) else {
+        val t = min(abs(v) / tol, 2.0)
+        if (t <= 1) 0.55 * t else 0.55 + 0.45 * (t - 1)
+    }
+    val pole = if (v < 0) neg else pos
+    val c = IntArray(3) { (mid[it] + (pole[it] - mid[it]) * f).roundToInt() }
+    return "#" + c.joinToString("") { it.toString(16).padStart(2, '0') }
+}
+
+private fun drawLdpMap(r: LdpResult) {
+    val m = r.distortionMap(if (r.contour.kind == "polygon") 56 else 90)
+    val neg = cssColor("--map-neg"); val pos = cssColor("--map-pos"); val mid = cssColor("--map-mid")
+    val tol = r.tolerance
+    val lim = max(m.ppm.maxOf { abs(it) }, 0.5).let { if (it <= tol) it else 2 * tol }
+    val dn = (m.north[0] - m.north[m.rows - 1]) / (m.rows - 1)
+    val de = (m.east[m.cols - 1] - m.east[0]) / (m.cols - 1)
+    val e0 = m.east[0] - de / 2
+    val n1 = m.north[0] + dn / 2
+    val w = m.cols * de
+    val h = m.rows * dn
+    val sb = StringBuilder()
+    for (j in 0 until m.rows) for (i in 0 until m.cols) {
+        val q = j * m.cols + i
+        // Ячейки с небольшим перекрытием — без щелей при масштабировании.
+        sb.append("<rect x=\"${(i * de).fixed(1)}\" y=\"${(j * dn).fixed(1)}\" width=\"${(de * 1.02).fixed(1)}\" height=\"${(dn * 1.02).fixed(1)}\" fill=\"${mapColor(m.ppm[q], tol, neg, pos, mid, lim)}\"/>")
+    }
+    fun pt(n: Double, e: Double) = "${(e - e0).fixed(1)},${(n1 - n).fixed(1)}"
+    val outline = r.outline.joinToString(" ") { pt(it.first, it.second) }
+    sb.append(if (r.contour.kind == "polygon") "<polygon class=\"outline\" points=\"$outline\"/>" else "<polyline class=\"outline\" points=\"$outline\"/>")
+    if (!r.fits) for (z in r.zones) {
+        val b = z.boundary ?: continue
+        val pts = b.map { r.toMapPlane(it.first, it.second) }
+        if (pts.size == 2) {
+            sb.append("<line class=\"zb\" x1=\"${(pts[0].second - e0).fixed(1)}\" y1=\"${(n1 - pts[0].first).fixed(1)}\" " +
+                "x2=\"${(pts[1].second - e0).fixed(1)}\" y2=\"${(n1 - pts[1].first).fixed(1)}\"/>")
+        } else {
+            // Граница на трассе — поперечная черта через всю карту.
+            val x = (pts[0].second - e0).fixed(1)
+            sb.append("<line class=\"zb\" x1=\"$x\" y1=\"0\" x2=\"$x\" y2=\"${h.fixed(1)}\"/>")
+            sb.append("<circle class=\"zbp\" cx=\"$x\" cy=\"${(n1 - pts[0].first).fixed(1)}\" r=\"${(min(w, h) / 60).fixed(1)}\"/>")
+        }
+    }
+    val svg = document.getElementById("ldpMap")!!
+    svg.setAttribute("viewBox", "0 0 ${w.fixed(1)} ${h.fixed(1)}")
+    svg.setAttribute("preserveAspectRatio", "xMidYMid meet")
+    svg.innerHTML = sb.toString()
+    // Подсказка: δ в ближайшем узле.
+    val tip = el<HTMLElement>("ldpTip")
+    val move: (org.w3c.dom.events.Event) -> Unit = { ev ->
+        val me = ev.asDynamic()
+        val rect = svg.getBoundingClientRect()
+        val sc = min(rect.width / w, rect.height / h)
+        val ox = (rect.width - w * sc) / 2
+        val oy = (rect.height - h * sc) / 2
+        val cx = (me.clientX as Double) - rect.left
+        val cy = (me.clientY as Double) - rect.top
+        val i = floor(((cx - ox) / sc) / de).toInt()
+        val j = floor(((cy - oy) / sc) / dn).toInt()
+        if (i in 0 until m.cols && j in 0 until m.rows) {
+            val q = j * m.cols + i
+            tip.innerHTML = "δ = <b>${ppm(m.ppm[q])} ppm</b> (мм/км)<br>h = ${m.h[q].fixed(1)} м" +
+                (if (m.zone[q] > 0) ", зона ${m.zone[q]}" else "") + "<br>B ${m.lat[q].fixed(5)}, L ${m.lon[q].fixed(5)}"
+            tip.style.display = "block"
+            val tx = cx + 12
+            tip.style.left = "${min(tx, rect.width - 170).coerceAtLeast(0.0)}px"
+            tip.style.top = "${max(cy - 54, 0.0)}px"
+        } else tip.style.display = "none"
+    }
+    if (svg.getAttribute("data-hover") == null) {
+        svg.setAttribute("data-hover", "1")
+        svg.addEventListener("pointermove", { mapHover?.invoke(it) })
+        svg.addEventListener("pointerdown", { mapHover?.invoke(it) })
+        svg.addEventListener("pointerleave", { tip.style.display = "none" })
+    }
+    mapHover = move
+    // Легенда: градиент −lim … +lim (вся карта в допуске) или −2·допуск … +2·допуск.
+    val stops = (-8..8).joinToString(",") { k -> val v = k * lim / 8; "${mapColor(v, tol, neg, pos, mid, lim)} ${((k + 8) * 100 / 16.0).fixed(1)}%" }
+    val lo = m.ppm.min()
+    val hi = m.ppm.max()
+    el<HTMLElement>("ldpLegend").innerHTML = "<span>${ppm(-lim)}</span><div class=\"bar\" style=\"background:linear-gradient(90deg,$stops)\"></div>" +
+        "<span>${ppm(lim)} ppm</span><span>синий — план короче местности, красный — длиннее; " +
+        (if (lim <= tol) "вся карта в допуске ±${tol.fixed(1)}, шкала растянута; " else "бледнее — в допуске ±${tol.fixed(1)}, насыщенно — вне; ") +
+        "на карте ${ppm(lo)} … ${ppm(hi)}</span>"
 }
 
 private fun escape(s: String) = s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")

@@ -340,6 +340,33 @@ class TransverseMercator:
         n, e = self._raw(np.asarray(B, float), np.asarray(L, float))
         return self.x0 + self.k0 * (n - self.n0), self.y0 + self.k0 * e
 
+    def _factors(self, B, L):
+        phi, lam = np.radians(np.asarray(B, float)), np.radians(np.asarray(L, float) - self.lon0)
+        e, e2 = self.e, self.ellipsoid.e2
+        t = np.sinh(np.arctanh(np.sin(phi)) - e * np.arctanh(e * np.sin(phi)))
+        c = np.cos(lam)
+        xi_p = np.arctan2(t, c)
+        eta_p = np.arcsinh(np.sin(lam) / np.sqrt(t * t + c * c))
+        p, q = 1.0, 0.0
+        for j, a in enumerate(self.alpha, 1):
+            p = p + 2 * j * a * np.cos(2 * j * xi_p) * np.cosh(2 * j * eta_p)
+            q = q + 2 * j * a * np.sin(2 * j * xi_p) * np.sinh(2 * j * eta_p)
+        k = self.k0 * self.A / self.ellipsoid.a * np.sqrt(1 + (1 - e2) * np.tan(phi) ** 2) \
+            / np.sqrt(t * t + c * c) * np.hypot(p, q)
+        gamma = np.arctan2(q, p) + np.arctan2(t * np.tan(lam), np.sqrt(1 + t * t))
+        return k, np.degrees(gamma)
+
+    def scale(self, B, L):
+        """Масштаб в точке (Karney 2011, (25)): k = k0·(A/a)·√(1 + (1 − e²)·tg²B) / √(τ'² + cos²l) · √(p² + q²),
+        τ' = sh(arth sin B − e·arth(e·sin B)), p = 1 + Σ 2j·αj·cos 2jξ'·ch 2jη', q = Σ 2j·αj·sin 2jξ'·sh 2jη'
+        (ξ', η' — как в forward); у осевого меридиана k ≈ k0·(1 + y²/(2R²))."""
+        return self._factors(B, L)[0]
+
+    def convergence(self, B, L):
+        """Сближение меридианов γ, градусы (угол от оси x сетки до направления на север, как в PROJ):
+        γ = atan2(q, p) + atan2(τ'·tg l, √(1 + τ'²))."""
+        return self._factors(B, L)[1]
+
     def inverse(self, x, y):
         """x (север), y (восток) → B, L (градусы)."""
         xi = ((np.asarray(x, float) - self.x0) / self.k0 + self.n0) / self.A

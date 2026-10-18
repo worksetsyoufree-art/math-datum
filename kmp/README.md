@@ -30,7 +30,12 @@
   Точки вне выпуклой оболочки опорных пунктов перечисляются под результатом; флажок «столбцы качества»
   добавляет `outside_m;m_plan;m_H`;
 - пересчитать точки между системами (СК-42, СК-95, ГСК-2011, ПЗ-90.x, WGS-84, ITRF-2008) в форматах
-  BLH, XYZ и Гаусс–Крюгер 6° (раздел 4); путь по параметрам ГОСТ показывается под результатом.
+  BLH, XYZ и Гаусс–Крюгер 6° (раздел 4); путь по параметрам ГОСТ показывается под результатом;
+- спроектировать малоискажающую проекцию (LDP) под объект (раздел 5): вставить контур CSV `name;B;L[;h | ;H]`
+  (площадка или трасса), среднюю высоту и допуск — получить осевой меридиан, k0, ложные смещения, строку PROJ,
+  статистику искажений (min/max/mean/RMS, доля в допуске) в сравнении с ГК 6° и UTM, предложенные зоны и цветную
+  карту искажений (SVG, подсказка со значением в точке; светлая и тёмная тема, ширина от 390 px); скачать JSON и
+  одной кнопкой взять проекцию (или зону) рабочей проекцией локализации (раздел 1, «Рабочая проекция»).
 
 Пересобрать:
 
@@ -68,13 +73,18 @@
   туда-обратно (< 1e-8 м), контрольный пример ГОСТ (все три шага), Гаусс–Крюгер (в том числе принудительная
   зона) и свой поперечный Меркатор, задачи `helmert_7p` 83 регионов, локализация с `gnssDatum`
   (ПЗ-90.11, СК-42, ГСК-2011) и пересчёт точек из другой системы, датум из Python с `gnss_datum`;
+- малоискажающая проекция (`LdpTest`): масштаб и сближение меридианов TM (36 точек, 3 эллипсоида; 1e-13 и 1e-11°),
+  R = √(MN), R/(R + h); подбор TM по 9 объектам (квадрат 20×20 км на 500 м, СКО и WGS-84 без округления, площадка с
+  высотами вершин, трассы 150 км с зонами, нормальные высоты, широкий полигон с зонами-полосами, недостижимый
+  перепад, сетка рельефа с наклоном, заданные L0/k0) — параметры, статистика, ГК/UTM, зоны и границы, узлы карты
+  искажений (до 1e-6 ppm); чтение JSON ldp из Python; локализация в LDP (масштаб ≈ 1, датум из Python с k0, x0, y0);
 - сетки геоида (`GeoidTest`): чтение GGF, GTX, ISG (заголовок, SHA-256, NODATA), 476 значений билинейной и
   бикубической интерполяции и ошибок (вне сетки, NODATA, край) — до 1e-12 м; 9 случаев локализации с моделями
   `geoid` / `geoid_plane` (параметры, диагностика, leave-one-out, предупреждения, пересчёты туда и обратно);
   датум из Python со ссылкой на сетку, проверка SHA-256, переход через 180°.
 
 Эталонные данные генерирует `python tools/gen_kotlin_reference.py`, запускать из корня репозитория
-(`ReferenceData.kt`, `DatumReferenceData.kt`, `GeoidReferenceData.kt`; тестовые сетки — `tests/data/geoid`). Python-эталон сам сверен с PROJ в `tests/`.
+(`ReferenceData.kt`, `DatumReferenceData.kt`, `GeoidReferenceData.kt`, `LdpReferenceData.kt`; тестовые сетки — `tests/data/geoid`). Python-эталон сам сверен с PROJ в `tests/`.
 
 ## API
 
@@ -116,6 +126,23 @@ Datums.blhToXyz(p, Ellipsoid.KRASSOVSKY); Datums.xyzToBlh(xyz, Datums.system("PZ
 GaussKruger.forward(55.752, 37.6175, Ellipsoid.KRASSOVSKY)       // PlanePoint(x, y), y с номером зоны
 GaussKruger.inverse(x, y, Ellipsoid.KRASSOVSKY)                   // зона — по первым цифрам y
 TmProjection(Ellipsoid.KRASSOVSKY, lon0 = 38.48333, x0 = -5712900.566, y0 = 1250000.0).forward(lat, lon)
+TmProjection(Ellipsoid.WGS84, lon0 = 38.0, k0 = 1.000078).scale(lat, lon)   // масштаб в точке, k0·k
+```
+
+Малоискажающая проекция (те же формулы и порядок операций, что `mathdatum/ldp.py` с `type="tm"`; omerc, GeoJSON и
+изолинии — только в Python):
+
+```kotlin
+val contour = LdpContour.parseCsv(csvText)                // name;B;L[;h|;H]; или LdpContour("polygon", listOf(LdpVertex(...)))
+val r = Ldp.design(contour, LdpHeights(constant = 500.0), datum = "GSK-2011", tolerance = 20.0, criterion = "minimax")
+r.projection                                              // LdpProjection(datum, lat0, lon0, k0, x0, y0); .proj — строка PROJ
+r.stats; r.gk.stats; r.utm.stats                          // LdpStats(min, max, mean, rms, maxAbs, доля в допуске)
+r.zones                                                   // зоны, если одна проекция не укладывается
+r.distortionMap(60)                                       // узлы карты: lat, lon, h, zone, k, R/(R+h), ppm, dist
+r.toJson(); Ldp.loadProjection(json, zone = 2)            // JSON mathdatum-ldp (общий с Python)
+Ldp.heightFactor(Ellipsoid.WGS84, lat, h); Ldp.gaussRadius(Ellipsoid.WGS84, lat)
+localizeIn(r.projection, pairs, gnssDatum = "GSK-2011")   // локализация в LDP: масштаб подобия ≈ 1
+localize(pairs, lat0, lon0, ellipsoid, k0 = 1.000078, x0 = 20000.0, y0 = 100000.0)   // или параметры вручную
 ```
 
 Формулы — как в Python-эталоне (см. README в корне): 7 параметров ГОСТ с малыми углами (поворот системы
@@ -132,7 +159,8 @@ let p = datum.toLocal(p: WgsPoint(lat: 55.08, lon: 39.34, h: 230.9))
 ## Модель
 
 1. **Рабочая проекция** — поперечный Меркатор (ряды Крюгера 6-го порядка, как `+proj=tmerc` в PROJ)
-   на эллипсоиде системы ГНСС-измерений (`gnssDatum`, по умолчанию WGS-84) с центром в среднем по точкам;
+   на эллипсоиде системы ГНСС-измерений (`gnssDatum`, по умолчанию WGS-84) с центром в среднем по точкам, k = 1
+   (или заданная: `k0`, `x0`, `y0` — например, LDP; поля JSON датума `k0`, `x0`, `y0`, в старых нет → 1, 0, 0);
    координаты в другую систему не переводятся (обоснование — в README в корне).
 2. **План** — подобие относительно (взвешенного) центроида: `[x, y] = [tx, ty] + [[a, −b], [b, a]]·([N, E] − [Nc, Ec])`.
 3. **Высота** — плоскость `H = h + c0 + c1·(N − Nc) + c2·(E − Ec)` (`heightModel = "plane"`, по умолчанию),

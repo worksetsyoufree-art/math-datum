@@ -12,6 +12,8 @@
       --height-model plane | geoid | geoid_plane, --geoid сетка.gtx|.isg|.tif [--geoid-interpolation bicubic]:
       высота по модели геоида H = h − N(B, L) + c0 (geoid) или с остаточной плоскостью (geoid_plane;
       по умолчанию при --geoid). В датуме — ссылка на сетку (имя файла и SHA-256), не сама сетка.
+      --projection ldp.json [--zone 2] | tm:lon0=..,lat0=..,k0=..,x0=..,y0=.. — своя рабочая проекция
+      (например, спроектированная командой ldp: масштаб подобия остаётся ≈ 1).
 
   python -m mathdatum to-local datum.json wgs.csv -o local.csv [--quality]
       Пересчитать точки name;B;L;h → name;x;y;H.
@@ -43,6 +45,16 @@
   python -m mathdatum systems
       Системы координат и параметры ГОСТ 32453-2017.
 
+  python -m mathdatum ldp contour.csv|.geojson --height 500 [--tolerance 20] [-o ldp.json] [--map map.csv]
+      Проектирование малоискажающей проекции (LDP) под объект: δ = k·R/(R + h) − 1 → 0.
+      Контур: CSV name;B;L[;h|;H] (полигон, если первая вершина = последней, иначе трасса; --kind) или GeoJSON.
+      Высоты: --height (средняя), столбец h/H вершин или --dem сетка рельефа (.gtx/.ggf/.isg/.tif);
+      --height-type normal --geoid сетка — нормальные высоты → эллипсоидальные (h = H + N).
+      --datum GSK-2011 (по умолчанию), --type tm | omerc | auto, --criterion minimax | rms, --step м,
+      --lon0/--lat0/--k0/--x0/--y0 — задать вместо подбора, --round-angle 1 (′), --round-k0 1e-6.
+      Печатает параметры, статистику (min/max/mean/RMS, доля в допуске), сравнение с ГК 6° и UTM, зоны;
+      -o — JSON проекции; --map файл.csv (сетка значений) и/или --map файл.geojson (изолинии) — карта искажений.
+
   python -m mathdatum geoid grid.tif [--at 55.75,37.62] [--points pts.csv -o out.csv]
                                       [--crop 55,56,37,39 -o site.gtx]
       Сведения о сетке геоида, N в точке (точках name;B;L → name;B;L;N), вырезка / перевод в .gtx или .isg.
@@ -53,7 +65,7 @@ import sys
 
 import numpy as np
 
-from . import datums, geoid as geoid_mod
+from . import datums, geoid as geoid_mod, ldp as ldp_mod
 from .io import read_columns, read_pairs, read_points, write_points
 from .localization import LocalizationDatum, LocalizationError, localize, suggest_exclusions
 
@@ -66,6 +78,8 @@ def report(d: LocalizationDatum) -> str:
         s = datums.get_system(d.gnss_system)
         lines.append(f"ГНСС:   {s.name}, рабочая проекция на эллипсоиде {s.ellipsoid.name} ({d.ellipsoid})")
     g = d.geoid
+    if (d.k0, d.x0, d.y0) != (1.0, 0.0, 0.0):
+        lines.append(f"Рабочая проекция задана: {d.projection}")
     lines += [
         f"План:   модель {d.plan_model}; масштаб {d.scale:.9f} ({d.scale_ppm:+.2f} ppm), "
         f"разворот {d.rotation_arcsec:+.2f}″",
@@ -241,6 +255,32 @@ def transform_file(a) -> None:
     print(f"Точек: {len(names)}; {src.name} → {dst.name}: {datums.describe_path(path)}", file=sys.stderr)
 
 
+def ldp_cmd(a) -> None:
+    contour = ldp_mod.read_contour(a.contour, a.kind)
+    heights = ldp_mod.Heights(constant=a.height, dem=a.dem, geoid=a.geoid, height_type=a.height_type)
+    opt = ldp_mod.FitOptions(round_angle=a.round_angle, round_k0=a.round_k0, lon0=a.lon0, lat0=a.lat0, k0=a.k0,
+                             x0=a.x0, y0=a.y0)
+    r = ldp_mod.design(contour, heights, datum=a.datum, tolerance=a.tolerance, criterion=a.criterion, type=a.type,
+                       step=a.step, options=opt)
+    print(r.report())
+    r.save(a.out)
+    print(f"\nПроекция сохранена: {a.out}")
+    for path in a.map or []:
+        m = r.distortion_map(a.map_size)
+        if path.lower().endswith((".geojson", ".json")):
+            m.to_geojson(path)
+        else:
+            m.to_csv(path)
+        print(f"Карта искажений ({m.ppm.shape[0]}×{m.ppm.shape[1]} узлов): {path}")
+
+
+def work_projection(spec: str, zone, system):
+    """--projection: файл ldp (JSON) или tm:lon0=…,k0=… на эллипсоиде системы ГНСС."""
+    if spec.lower().startswith("tm:"):
+        return datums.TransverseMercator(datums.get_system(system), **parse_format(spec)[1])
+    return ldp_mod.load_projection(spec, zone)
+
+
 def systems_report() -> str:
     lines = ["Системы координат:"]
     for s in datums.SYSTEMS.values():
@@ -274,6 +314,8 @@ def main(argv=None):
                    help="модель высоты (по умолчанию plane, с --geoid — geoid_plane)")
     p.add_argument("--geoid", help="сетка высот геоида / аномалий высоты (.gtx, .isg, .tif)")
     p.add_argument("--geoid-interpolation", choices=geoid_mod.INTERPOLATIONS, default="bilinear")
+    p.add_argument("--projection", help="рабочая проекция: JSON ldp или tm:lon0=…,lat0=…,k0=…,x0=…,y0=…")
+    p.add_argument("--zone", type=int, help="зона из JSON ldp (1…n)")
     for name, cols in (("to-local", "B L h → x y H"), ("to-wgs", "x y H → B L h")):
         p = sub.add_parser(name, help=f"пересчёт {cols}")
         p.add_argument("datum")
@@ -297,6 +339,26 @@ def main(argv=None):
     p.add_argument("--epoch", type=float, help="эпоха координат (год); нужны столбцы VX;VY;VZ")
     p.add_argument("--target-epoch", type=float, help="эпоха результата")
     sub.add_parser("systems", help="системы координат и параметры ГОСТ 32453-2017")
+    p = sub.add_parser("ldp", help="проектирование малоискажающей проекции (LDP) под объект")
+    p.add_argument("contour", help="контур: CSV name;B;L[;h|;H] или GeoJSON")
+    p.add_argument("--kind", choices=ldp_mod.KINDS, help="polygon | polyline (по умолчанию — по файлу)")
+    p.add_argument("--height", type=float, help="средняя высота объекта, м")
+    p.add_argument("--height-type", choices=ldp_mod.HEIGHT_TYPES, default="ellipsoidal",
+                   help="высоты --height, z GeoJSON и --dem: эллипсоидальные или нормальные (нужен --geoid)")
+    p.add_argument("--dem", help="сетка высот рельефа (.gtx, .ggf, .isg, .tif)")
+    p.add_argument("--geoid", help="сетка геоида для нормальных высот: h = H + N")
+    p.add_argument("--datum", default=ldp_mod.DEFAULT_DATUM, help="система (эллипсоид) проекции, по умолчанию GSK-2011")
+    p.add_argument("--tolerance", type=float, default=20.0, help="допуск |δ|, ppm (= мм/км)")
+    p.add_argument("--criterion", choices=ldp_mod.CRITERIA, default="minimax")
+    p.add_argument("--type", choices=ldp_mod.TYPES, default="auto")
+    p.add_argument("--step", type=float, help="шаг выборки точек объекта, м")
+    for k in ("lon0", "lat0", "k0", "x0", "y0"):
+        p.add_argument(f"--{k}", type=float, help=f"задать {k} (не подбирать)")
+    p.add_argument("--round-angle", type=float, default=1.0, help="округление L0, B0, азимута, угл. минуты (0 — нет)")
+    p.add_argument("--round-k0", type=float, default=1e-6, help="округление k0 (0 — нет)")
+    p.add_argument("-o", "--out", default="ldp.json")
+    p.add_argument("--map", action="append", help="карта искажений: .csv (сетка) или .geojson (изолинии)")
+    p.add_argument("--map-size", type=int, default=60, help="узлов по длинной стороне карты")
     p = sub.add_parser("geoid", help="сетка геоида: сведения, N в точках, вырезка / перевод формата")
     p.add_argument("grid")
     p.add_argument("--at", help="B,L — значение N в точке")
@@ -317,6 +379,10 @@ def main(argv=None):
                           geoid_interpolation=a.geoid_interpolation)
             elif a.height_model not in (None, "plane"):
                 raise ValueError(f"--height-model {a.height_model}: нужна сетка --geoid.")
+            if a.projection:
+                kw["projection"] = work_projection(a.projection, a.zone, a.gnss_datum)
+            elif a.zone is not None:
+                raise ValueError("--zone: нужен --projection ldp.json.")
             d = localize(pairs, **kw)
             d.save(a.out)
             print(report(d))
@@ -341,6 +407,8 @@ def main(argv=None):
             print(systems_report())
         elif a.cmd == "geoid":
             geoid_cmd(a)
+        elif a.cmd == "ldp":
+            ldp_cmd(a)
     except (LocalizationError, ValueError, KeyError, FileNotFoundError) as e:
         print(f"Ошибка: {e}", file=sys.stderr)
         return 1

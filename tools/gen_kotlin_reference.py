@@ -21,6 +21,12 @@
   - GEOID_VALUES: N в точках (билинейная и бикубическая; NaN — ожидается GeoidException);
   - GEOID_LOC_CASES: локализация с моделями geoid / geoid_plane (параметры, диагностика, пересчёты);
   - PY_GEOID_DATUM_JSON: датум с геоидом, сохранённый Python-эталоном.
+
+и .../LdpReferenceData.kt (малоискажающая проекция, mathdatum.ldp — сама сверена с PROJ get_factors в tests/):
+  - TM_SCALE_CASES: масштаб и сближение меридианов поперечного Меркатора, высотный множитель;
+  - LDP_CASES: подбор TM под объекты (полигоны, трассы, высоты вершин / сетка рельефа, зоны, критерии),
+    статистика, сравнение с ГК и UTM, узлы карты искажений;
+  - PY_LDP_JSON / PY_LDP_LOCALIZE: JSON ldp и локализация в спроектированной проекции.
 """
 
 import itertools
@@ -32,13 +38,14 @@ import numpy as np
 from pyproj import Transformer
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from mathdatum import Pair, datums, localize, read_pairs, suggest_exclusions
+from mathdatum import Pair, datums, ldp, localize, read_pairs, suggest_exclusions
 from mathdatum.geoid import GeoidError, read_grid
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "kmp/localization/src/commonTest/kotlin/ru/mathdatum/localization/ReferenceData.kt"
 OUT_DATUMS = OUT.with_name("DatumReferenceData.kt")
 OUT_GEOID = OUT.with_name("GeoidReferenceData.kt")
+OUT_LDP = OUT.with_name("LdpReferenceData.kt")
 GEOID_DIR = ROOT / "tests/data/geoid"
 GEOID_FILES = ["RU-MOW_truth.ggf", "RU-MOW_truth.gtx", "RU-MOW_truth.isg", "RU-MOW_bump.ggf",
                "nodata.ggf", "nodata.gtx", "nodata.isg"]
@@ -388,6 +395,156 @@ def write_geoid():
     print(f"{OUT_GEOID}: {len(files)} сеток, {len(vals)} значений, {len(loc)} случаев локализации")
 
 
+def ldp_square(B0, L0, half_n, half_e, el="gsk2011"):
+    aux = datums.TransverseMercator(el, L0, B0)
+    return aux.inverse(np.array([-half_n, -half_n, half_n, half_n]), np.array([-half_e, half_e, half_e, -half_e]))
+
+
+def ldp_ground_pairs(site_B, site_L, h0, n=8, el="gsk2011"):
+    """Как tests/test_ldp.py: местные координаты «плоскость = местность» (топоцентрические E, N на высоте участка)."""
+    aux = datums.TransverseMercator(el, site_L, site_B)
+    rng = np.random.default_rng(7)
+    B, L = aux.inverse(rng.uniform(-9e3, 9e3, n), rng.uniform(-9e3, 9e3, n))
+    h = h0 + rng.uniform(-5, 5, n)
+    X, Y, Z = datums.blh_to_xyz(B, L, h, el)
+    X0, Y0, Z0 = datums.blh_to_xyz(site_B, site_L, h0, el)
+    b, l = np.radians(site_B), np.radians(site_L)
+    dx, dy, dz = X - X0, Y - Y0, Z - Z0
+    e = -np.sin(l) * dx + np.cos(l) * dy
+    nn = -np.sin(b) * np.cos(l) * dx - np.sin(b) * np.sin(l) * dy + np.cos(b) * dz
+    u = np.cos(b) * np.cos(l) * dx + np.cos(b) * np.sin(l) * dy + np.sin(b) * dz
+    t = np.radians(0.3)
+    x, y = 5000 + nn * np.cos(t) - e * np.sin(t), 7000 + nn * np.sin(t) + e * np.cos(t)
+    return [Pair(f"P{i}", B[i], L[i], h[i], x[i], y[i], u[i] + 480) for i in range(n)]
+
+
+def opt(v):
+    """Необязательное число для Kotlin: None → null."""
+    return "null" if v is None else d(v)
+
+
+def ldp_stats(st):
+    """n, min, max, mean, rms, maxAbs, share."""
+    return [st["n"], st["min_ppm"], st["max_ppm"], st["mean_ppm"], st["rms_ppm"], st["max_abs_ppm"], st["share_in_tolerance"]]
+
+
+def ldp_cases():
+    rng = np.random.default_rng(5)
+    scale = []
+    for key in ("gsk2011", "wgs84", "krass"):
+        for lon0 in (38.0, 131.9):
+            tm = datums.TransverseMercator(key, lon0)
+            for _ in range(6):
+                b, l = rng.uniform(40, 75), lon0 + rng.uniform(-4.5, 4.5)
+                el = datums.ELLIPSOIDS[key]
+                h = rng.uniform(-50, 3000)
+                scale.append(f'TmScaleCase("{key}", {d(lon0)}, {d(b)}, {d(l)}, {d(float(tm.scale(b, l)))}, '
+                             f'{d(float(tm.convergence(b, l)))}, {d(h)}, {d(float(ldp.gauss_radius(el, b)))}, '
+                             f'{d(float(ldp.height_factor(el, b, h)))})')
+    site = ldp.read_contour(ROOT / "examples/ldp_site.csv")
+    route = ldp.read_contour(ROOT / "examples/ldp_route.csv")
+    B, L = ldp_square(55.5, 38.0, 10e3, 10e3)
+    sq = ldp.Contour("polygon", B, L)
+    Lr = np.linspace(37.0, 37.0 + 150 / (111.3 * np.cos(np.radians(55.0))), 6)
+    ew = ldp.Contour("polyline", np.full(6, 55.0), Lr)
+    B, L = ldp_square(55.0, 38.0, 10e3, 80e3)
+    wide = ldp.Contour("polygon", B, L)
+    B, L = ldp_square(55.0, 38.0, 3e3, 3e3)
+    steep = ldp.Contour("polygon", B, L, z=np.array([0.0, 0.0, 600.0, 600.0]), z_type="ellipsoidal")
+    B, L = ldp_square(55.0, 38.0, 15e3, 2e3)
+    strip = ldp.Contour("polygon", B, L)
+    la, lo = np.arange(54.7, 55.31, 0.02), np.arange(37.8, 38.21, 0.01)
+    dem_vals = 1595.0 * (lo[None, :] - 37.8) + 0 * la[:, None]
+    dem = ldp.GeoidGrid(54.7, 37.8, 0.02, 0.01, dem_vals, "ramp")
+    cases = [
+        ("square_500m", sq, dict(constant=500.0), {}, {}),
+        ("square_rms_wgs_noround", sq, dict(constant=500.0), dict(criterion="rms", datum="WGS-84"),
+         dict(round_angle=0.0, round_k0=0.0)),
+        ("site_vertex_h", site, {}, {}, {}),
+        ("route_ew_150km", ew, dict(constant=200.0), {}, {}),
+        ("route_normal_h", route, {}, dict(tolerance=15.0), {}),
+        ("wide_polygon_strips", wide, dict(constant=300.0), {}, {}),
+        ("steep_unreachable", steep, {}, {}, {}),
+        ("strip_dem_ramp", strip, dict(dem=dem), {}, dict(round_angle=0.0, round_k0=0.0)),
+        ("fixed_lon0_k0", sq, dict(constant=500.0), dict(step=700.0), dict(lon0=38.5, k0=1.0)),
+    ]
+    out = []
+    for name, c, hkw, dkw, okw in cases:
+        r = ldp.design(c, ldp.Heights(**hkw), type="tm", options=ldp.FitOptions(**okw), **dkw)
+        p = r.projection
+        m = r.distortion_map(24)
+        ny, nx = m.ppm.shape
+        nodes = [q for q in (0, 5, nx + 3, (ny // 2) * nx + nx // 2, ny * nx - 1, ny * nx // 3)]
+        mp = []
+        for q in nodes:
+            j, i = divmod(q, nx)
+            mp.append([q, m.B[j, i], m.L[j, i], m.h[j, i], m.zone[j, i], m.ppm[j, i], m.dist[j, i]])
+        zones = [[z.start, z.end, z.projection.lat0, z.projection.lon0, z.projection.k0, z.projection.x0,
+                  z.projection.y0, *ldp_stats(z.stats)] for z in r.zones]
+        bnd = [[*pt] for z in r.zones[1:] for pt in z.boundary]
+        verts = ", ".join(f"LdpVertex({d(b)}, {d(l)}{'' if c.z is None else ', ' + d(z)})"
+                          for b, l, z in zip(c.B, c.L, c.z if c.z is not None else [None] * len(c.B)))
+        dem_kt = "null" if "dem" not in hkw else (
+            f"GeoidGrid(54.7, 37.8, 0.02, 0.01, {dem_vals.shape[0]}, {dem_vals.shape[1]}, "
+            f"doubleArrayOf({', '.join(d(v) for v in dem_vals.ravel())}), \"ramp\")")
+        out.append(
+            f'LdpCase("{name}", "{c.kind}", listOf({verts}), {"null" if c.z_type is None else chr(34) + c.z_type + chr(34)},\n'
+            f'  {opt(hkw.get("constant"))}, {dem_kt}, "{dkw.get("criterion", "minimax")}", "{dkw.get("datum", "GSK-2011")}", '
+            f'{d(dkw.get("tolerance", 20.0))}, {opt(dkw.get("step"))},\n'
+            f'  LdpOptions({d(okw.get("round_angle", 1.0))}, {d(okw.get("round_k0", 1e-6))}, lon0 = {opt(okw.get("lon0"))}, '
+            f'k0 = {opt(okw.get("k0"))}),\n'
+            f'  doubleArrayOf({", ".join(d(v) for v in (p.lat0, p.lon0, p.k0, p.x0, p.y0, r.step))}),\n'
+            f'  doubleArrayOf({", ".join(d(v) for v in ldp_stats(r.stats))}), "{r.stats["measure"]}",\n'
+            f'  doubleArrayOf({", ".join(d(v) for v in ldp_stats(r.comparison["gk"]["stats"]))}), '
+            f'listOf({", ".join(map(str, r.comparison["gk"]["zones"]))}),\n'
+            f'  doubleArrayOf({", ".join(d(v) for v in ldp_stats(r.comparison["utm"]["stats"]))}), '
+            f'listOf({", ".join(map(str, r.comparison["utm"]["zones"]))}),\n'
+            f'  {arr(zones)}, {arr(bnd)}, {len(r.warnings)}, {ny}, {nx}, {arr(mp)})')
+    # JSON ldp (трасса, зоны) и локализация в спроектированной проекции.
+    rr = ldp.design(ew, ldp.Heights(constant=200.0), type="tm")
+    js = json.dumps(rr.to_dict(), indent=1, ensure_ascii=False)
+    sq_r = ldp.design(sq, ldp.Heights(constant=500.0))
+    pairs = ldp_ground_pairs(55.5, 38.0, 500.0)
+    dt = localize(pairs, gnss_datum="GSK-2011", projection=sq_r.projection)
+    chk = np.array([[55.47, 37.95, 503.0], [55.52, 38.08, 497.0]])
+    loc = np.column_stack(dt.to_local(*chk.T))
+    loc_js = json.dumps(dt.to_dict(), indent=1, ensure_ascii=False)
+    return scale, out, js, (pairs, dt, chk, loc, loc_js)
+
+
+def write_ldp():
+    scale, cases, js, (pairs, dt, chk, loc, loc_js) = ldp_cases()
+    OUT_LDP.write_text(
+        "// Сгенерировано tools/gen_kotlin_reference.py из Python-эталона (mathdatum.ldp). Не редактировать вручную.\n"
+        "package ru.mathdatum.localization\n\n"
+        "/** Масштаб k (k0 = 1) и сближение γ (градусы) TM; R = √(MN) и R/(R + h) в той же точке. */\n"
+        "class TmScaleCase(val ellipsoid: String, val lon0: Double, val lat: Double, val lon: Double, val k: Double,\n"
+        "                  val gamma: Double, val h: Double, val r: Double, val hf: Double)\n\n"
+        "/** projection: lat0, lon0, k0, x0, y0, step; stats (и gk, utm): n, min, max, mean, rms, maxAbs, share;\n"
+        " *  zones: start, end, lat0, lon0, k0, x0, y0, n, min, max, mean, rms, maxAbs, share; boundary: точки (B, L);\n"
+        " *  map: узел q, B, L, h, zone, ppm, dist (карта 24 узла по длинной стороне). */\n"
+        "class LdpCase(val name: String, val kind: String, val vertices: List<LdpVertex>, val zType: String?,\n"
+        "              val height: Double?, val dem: GeoidGrid?, val criterion: String, val datum: String, val tolerance: Double,\n"
+        "              val step: Double?, val options: LdpOptions, val projection: DoubleArray, val stats: DoubleArray,\n"
+        "              val measure: String, val gk: DoubleArray, val gkZones: List<Int>, val utm: DoubleArray,\n"
+        "              val utmZones: List<Int>, val zones: List<DoubleArray>, val boundary: List<DoubleArray>, val warnings: Int,\n"
+        "              val mapRows: Int, val mapCols: Int, val map: List<DoubleArray>)\n\n"
+        "val TM_SCALE_CASES = listOf(\n    " + ",\n    ".join(scale) + ",\n)\n\n"
+        + "".join(f"private fun ldp{i}() = {c}\n\n" for i, c in enumerate(cases))
+        + "val LDP_CASES: List<LdpCase> by lazy { listOf(" + ", ".join(f"ldp{i}()" for i in range(len(cases))) + ") }\n\n"
+        + "/** JSON ldp трассы 150 км (2 зоны TM), сохранённый Python-эталоном. */\n"
+        + "val PY_LDP_JSON = " + json.dumps(js).replace("$", "\\$") + "\n\n"
+        + "/** Локализация в LDP квадрата 20×20 км на 500 м: пары, параметры (как RegionCase.expected), контроль. */\n"
+        + f"val PY_LDP_PAIRS = listOf({', '.join(pair_kt(q) for q in pairs)})\n"
+        + f"val PY_LDP_LOCALIZE = doubleArrayOf({', '.join(d(v) for v in params(dt))})\n"
+        + f"val PY_LDP_LOCALIZE_K0 = doubleArrayOf({', '.join(d(v) for v in (dt.k0, dt.x0, dt.y0, dt.scale_ppm))})\n"
+        + f"val PY_LDP_CHECK = {arr(chk)}\n"
+        + f"val PY_LDP_CHECK_LOCAL = {arr(loc)}\n"
+        + "val PY_LDP_DATUM_JSON = " + json.dumps(loc_js).replace("$", "\\$") + "\n",
+        encoding="utf-8")
+    print(f"{OUT_LDP}: {len(scale)} TM-масштабов, {len(cases)} случаев LDP")
+
+
 def arr(m):
     return "listOf(" + ", ".join("doubleArrayOf(" + ", ".join(d(v) for v in row) + ")" for row in m) + ")"
 
@@ -422,6 +579,7 @@ def main():
     print(f"{OUT}: {len(tm)} TM, {len(rg)} регионов, {len(dc)} случаев надёжности")
     write_datums()
     write_geoid()
+    write_ldp()
 
 
 if __name__ == "__main__":

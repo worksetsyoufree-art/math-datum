@@ -265,6 +265,12 @@ class TmProjection(
 
     /** (x, y) → (широта, долгота), градусы. */
     fun inverse(x: Double, y: Double): Pair<Double, Double> = tm.inverse((x - x0) / k0, (y - y0) / k0)
+
+    /** Масштаб в точке: k0·k(B, L). */
+    fun scale(lat: Double, lon: Double): Double = k0 * tm.scale(lat, lon)
+
+    /** Сближение меридианов, градусы. */
+    fun convergence(lat: Double, lon: Double): Double = tm.convergence(lat, lon)
 }
 
 /** Зоны Гаусса–Крюгера 6° (СК-42, СК-95, ГСК-2011): L0 = 6n − 3, k0 = 1, y = n·10⁶ + 500 000 + E. */
